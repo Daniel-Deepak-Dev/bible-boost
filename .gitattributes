@@ -1,0 +1,11 @@
+# Normalise line endings in the repository. Without this, core.autocrlf=true on
+# Windows rewrites every checked-out file to CRLF — which is harmless for the
+# markdown but breaks work/status.sh, since sh treats the trailing \r as part of
+# the command and reports "$'\r': command not found".
+* text=auto
+
+# Shell scripts must stay LF on every platform, including a Windows checkout.
+*.sh text eol=lf
+
+# PowerShell is Windows-only tooling and is happier with CRLF.
+*.ps1 text eol=crlf
