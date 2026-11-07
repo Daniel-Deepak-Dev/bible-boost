@@ -41,8 +41,11 @@ function parseVersionId(raw, preferParallel) {
 // a stored id in the pair.
 function bindVersionField(selectId, customId, key, preferParallel) {
   const sel = $(selectId), custom = $(customId);
-  sel.innerHTML = VERSIONS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')
-    + '<option value="custom">Other (bible.com ID or URL)…</option>';
+  // new Option() sets textContent, so a label can never be parsed as markup.
+  sel.replaceChildren(
+    ...VERSIONS.map(([v, l]) => new Option(l, v)),
+    new Option('Other (bible.com ID or URL)…', 'custom'),
+  );
 
   const commit = (id) => {
     state[key] = id;

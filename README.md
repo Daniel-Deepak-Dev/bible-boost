@@ -46,8 +46,11 @@ A hairline between aligned verse rows, so it stays obvious which verse on the le
 gap the alignment already creates, anchored to the one edge that is identical in both columns, so both sides line up exactly.
 
 It follows bible.com's own theme — `html.light` and `html.dark` each get their own colour — and is deliberately faint
-(about 10% in light, 13% in dark). No line is drawn above the first verse of a chapter, or between a section heading and its own
-first verse. Turn it off with Alt+S or in the popup.
+(about 10% in light, 13% in dark). No line is drawn above the first verse of a chapter.
+
+Where a translation starts a new section, the line is drawn **above** the heading rather than below it, so the heading stays with
+the verses it introduces. Translations divide sections differently, so one column often has a heading where the other has none; the
+column without one is given just enough room to carry its line at the same height. Turn it off with Alt+S or in the popup.
 
 ---
 BibleBoost is an independent project and is not affiliated with or endorsed by YouVersion or Life.Church.

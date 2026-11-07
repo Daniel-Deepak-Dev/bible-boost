@@ -92,17 +92,49 @@
     return (label ? rects[rects.length - 1] : rects[0]).top;
   }
 
-  // bible.com puts section headings (USFM \s1) in their own block before the paragraph they head.
-  // A rule there would cut a heading off from its own first verse.
-  function afterHeading(el) {
+  // The chapter number and the chapter title: furniture that belongs to the chapter, not to any
+  // one section inside it.
+  const BAND_STOP_RE = /(?:^|\s)[^\s]*_(?:label|cl)(?:__[^\s]*)?(?=\s|$)/;
+
+  // bible.com puts a section heading — and anything travelling with it: a psalm title (\d), a
+  // speaker label (\sp), an acrostic label (\qa), a parallel-passage reference (\r) — in its own
+  // block before the paragraph it introduces. Those blocks together are the "band".
+  //
+  // Returns the TOPMOST block of the band, which is where this row's spacer and its separator
+  // belong. That one move does two things: the alignment gap opens ABOVE the heading instead of
+  // between the heading and its own first verse, and the rule is drawn above the heading, so a
+  // heading groups with the verses it introduces instead of being cut off from them.
+  // Returns null when the verse simply follows on from another verse.
+  //
+  // Note it does NOT match on class name. bible.com's current build emits a plain "_s" with no
+  // digit, which is why the old /_s\d/ test never once fired on a live page, and the heading is
+  // often not the immediate previous sibling either (NKJV Psalm 3 runs \s then \d then the verse).
+  // A band block is recognised structurally instead: it contains no verse of its own.
+  //
+  // Pure DOM reading, no geometry, so it is safe to call before the heights are set.
+  function bandTop(el) {
     const block = el.closest('[class*="_p"], [class*="_q"], [class*="_li"]');
-    if (!block) return false;
-    // A paragraph holds several verses, and it often OPENS with the tail of the previous one, so
-    // the verse that sits against the heading is the first one in the block that actually starts.
+    if (!block) return null;
+    // A block holds several verses and often OPENS with the tail of the previous one, so the verse
+    // that sits against the band is the first one in the block that actually STARTS — the first
+    // with a label of its own. (Requiring the literal first node here looks stricter but is wrong:
+    // NIV's Song of Songs 1 opens verse 2's line with a tail of verse 1, and the "She" speaker
+    // label above it would then be missed.)
     const first = [...block.querySelectorAll('[class*="_verse"][data-usfm]')].find(verseLabel);
-    if (first !== el) return false;
-    const prev = block.previousElementSibling;
-    return !!prev && /_s\d/.test(prev.getAttribute('class') || '');
+    if (first !== el) return null;
+
+    let top = null;
+    for (let p = block.previousElementSibling; p; p = p.previousElementSibling) {
+      if (p.querySelector('[class*="_verse"][data-usfm]')) break; // reached the previous verse
+      if (BAND_STOP_RE.test(p.getAttribute('class') || '')) break; // chapter number / chapter title
+      // Anything left is part of the band, but only a block with text of its own may anchor it.
+      // A \b blank line is an empty block, and bible.com drops those between ordinary verses all
+      // over the Psalms: anchoring on one would turn a plain verse row into a heading row and
+      // jump its rule above the blank line. Step over it instead — it stays inside the band, it
+      // just never becomes the anchor, so a \b above a heading keeps the rule on the heading.
+      if (p.textContent.trim()) top = p;
+    }
+    return top;
   }
 
   let marked = new Set();
@@ -113,7 +145,11 @@
     html.removeAttribute('data-bb-sep');
     markedCols.forEach((c) => c.removeAttribute('data-bb-col'));
     markedCols = [];
-    marked.forEach((el) => { el.removeAttribute('data-bb-v'); el.style.removeProperty('--bb-gap'); });
+    marked.forEach((el) => {
+      el.removeAttribute('data-bb-v');
+      el.style.removeProperty('--bb-gap');
+      el.style.removeProperty('--bb-sep-rise');
+    });
     marked = new Set();
   }
 
@@ -123,23 +159,34 @@
     if (!cols) return clearAlign();
 
     const [A, B] = cols.map(firstSpans);
-    const next = new Set([...A.values(), ...B.values()]);
-    marked.forEach((el) => { if (!next.has(el)) { el.removeAttribute('data-bb-v'); el.style.removeProperty('--bb-gap'); } });
+
+    // Where each verse's spacer goes: the top of its heading band when it opens a section, the
+    // verse itself otherwise. Resolved once, up front — bandTop() reads the DOM and nothing else,
+    // so settling this here keeps it out of the measuring loop, which must not disturb layout.
+    const anchor = new Map();
+    for (const el of [...A.values(), ...B.values()]) anchor.set(el, bandTop(el) || el);
+    const at = (el) => anchor.get(el) || el;
+
+    const next = new Set(anchor.values());
+    marked.forEach((el) => {
+      if (next.has(el)) return;
+      el.removeAttribute('data-bb-v');
+      el.style.removeProperty('--bb-gap');
+      el.style.removeProperty('--bb-sep-rise');
+    });
     marked = next;
 
     // Verses present in BOTH columns, in document order.
     const keys = [...A.keys()].filter((k) => B.has(k));
 
-    // A separator is drawn above its verse, so skip the first (no rule under the chapter heading)
-    // and skip any verse that opens a section (no rule between a heading and its own first verse).
+    // A separator is drawn above its anchor, so skip the first (no rule under the chapter
+    // heading). A verse that opens a section is no longer skipped the way it used to be: its
+    // anchor IS the heading band, so the rule lands above the heading instead of between the
+    // heading and its own first verse.
     // Both columns are decided together so the two sides stay symmetric.
     const sep = new Set();
     if (settings.separators) {
-      for (let i = 1; i < keys.length; i++) {
-        const a = A.get(keys[i]), b = B.get(keys[i]);
-        if (afterHeading(a) || afterHeading(b)) continue;
-        sep.add(a); sep.add(b);
-      }
+      for (let i = 1; i < keys.length; i++) { sep.add(at(A.get(keys[i]))); sep.add(at(B.get(keys[i]))); }
     }
 
     // Everything that affects height must be in place BEFORE the measuring pass below, or the gaps
@@ -154,15 +201,57 @@
     marked.forEach((el) => {
       el.setAttribute('data-bb-v', sep.has(el) ? 'sep' : '');
       el.style.setProperty('--bb-gap', '0px');
+      el.style.removeProperty('--bb-sep-rise');
     });
 
     // Walk verses top to bottom. Each gap only shifts what comes after it, so one pass aligns
     // everything; reading topOf() forces the layout the previous gap just invalidated.
+    // The gap is WRITTEN to the anchor but MEASURED at the verse: a gap on a heading grows the
+    // heading's own box downwards from the inside, which carries the heading text and its whole
+    // paragraph down with it, so the verse still moves by exactly the amount asked for.
     for (const k of keys) {
       const a = A.get(k), b = B.get(k);
       const d = Math.round(topOf(b) - topOf(a));
       if (d === 0) continue;
-      (d > 0 ? a : b).style.setProperty('--bb-gap', Math.abs(d) + 'px');
+      at(d > 0 ? a : b).style.setProperty('--bb-gap', Math.abs(d) + 'px');
+    }
+
+    if (settings.separators) levelRules(A, B, keys, at);
+  }
+
+  // Second pass: put both columns' hairlines on the same y.
+  //
+  // The spacer's bottom edge was supposed to be the one y-coordinate identical in both columns,
+  // but it is not. Alignment equalises the verse LABEL's top, while the rule hangs off the bottom
+  // of the spacer, which is the top of the line box the label sits in. A Tamil line box is taller
+  // than a Latin one, so the label sits at a different offset inside it and the two rules end up
+  // about 9px apart on an ordinary row — measured on 16 of 18 rows of Exodus 13. A heading row is
+  // the same fault writ large: there the anchor is the heading, so the two rules are a whole
+  // heading-line apart.
+  //
+  // So: lift the lower rule to meet the higher one with --bb-sep-rise, and grow BOTH spacers by
+  // one shared amount so the lift has box left to sit in — a background is clipped to its own
+  // box, so a rule lifted past the top of the spacer does not move, it vanishes. Growing both
+  // columns by the same amount is what keeps the verse tops aligned and leaves the rows below
+  // untouched.
+  function levelRules(A, B, keys, at) {
+    const read = (n) => {
+      const box = parseFloat(getComputedStyle(n, '::before').height) || 0;
+      // The rule hangs off the spacer's BOTTOM edge, which is where 100% resolves to.
+      return { n, box, em: parseFloat(getComputedStyle(n).fontSize), y: n.getBoundingClientRect().top + box };
+    };
+    for (let i = 1; i < keys.length; i++) {
+      const ms = [read(at(A.get(keys[i]))), read(at(B.get(keys[i])))];
+      const target = Math.min(ms[0].y, ms[1].y);
+      // How far short each spacer falls of hosting the lift that column needs; take the worst.
+      const grow = Math.max(0, ...ms.map((m) => (m.y - target) + 0.28 * m.em - m.box));
+      for (const m of ms) {
+        if (grow) {
+          const had = parseFloat(m.n.style.getPropertyValue('--bb-gap')) || 0;
+          m.n.style.setProperty('--bb-gap', (had + grow) + 'px');
+        }
+        m.n.style.setProperty('--bb-sep-rise', Math.round(m.y - target) + 'px');
+      }
     }
   }
 
@@ -197,11 +286,34 @@
   // The dock sits over the text the whole time it is on screen, so it stays collapsed to the
   // shortcut letter until it is hovered or focused, and only then spells the label out. Both
   // labels are hidden from assistive tech; aria-label carries the real name either way.
-  function switchHtml(key, short, label, on, title) {
-    return `<button class="bb-sw" data-sw="${key}" role="switch" aria-checked="${on}" aria-label="${label}" title="${title}">
-      <span class="bb-track"><span class="bb-thumb"></span></span>
-      <span class="bb-label" aria-hidden="true"><span class="bb-short">${short}</span><span class="bb-full">${label}</span></span>
-    </button>`;
+  const span = (cls, text) => {
+    const el = document.createElement('span');
+    el.className = cls;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  };
+
+  // Built as DOM nodes rather than an HTML string. Every value here is a literal today, so an
+  // innerHTML version was not actually injectable, but textContent keeps it that way for free if a
+  // label ever starts coming from storage or from the page.
+  function switchEl(key, short, label, on, title) {
+    const btn = document.createElement('button');
+    btn.className = 'bb-sw';
+    btn.dataset.sw = key;
+    btn.setAttribute('role', 'switch');
+    btn.setAttribute('aria-checked', String(on));
+    btn.setAttribute('aria-label', label);
+    btn.title = title;
+
+    const track = span('bb-track');
+    track.append(span('bb-thumb'));
+
+    const lab = span('bb-label');
+    lab.setAttribute('aria-hidden', 'true');
+    lab.append(span('bb-short', short), span('bb-full', label));
+
+    btn.append(track, lab);
+    return btn;
   }
 
   function renderDock() {
@@ -224,9 +336,12 @@
     const state = `${!!loc.parallel}|${settings.align}`;
     if (dock.dataset.state === state) return;
     dock.dataset.state = state;
-    dock.innerHTML =
-      switchHtml('parallel', 'P', 'Parallel', !!loc.parallel, 'Toggle parallel mode (Alt+P)') +
-      (loc.parallel ? switchHtml('align', 'A', 'Align verses', settings.align, 'Line up verses side by side (Alt+A)') : '');
+    dock.replaceChildren(
+      switchEl('parallel', 'P', 'Parallel', !!loc.parallel, 'Toggle parallel mode (Alt+P)'),
+      ...(loc.parallel
+        ? [switchEl('align', 'A', 'Align verses', settings.align, 'Line up verses side by side (Alt+A)')]
+        : []),
+    );
   }
 
   // ---------- Settings ----------
@@ -319,6 +434,25 @@
     if (e.code === 'KeyS' && parseUrl()?.parallel && settings.align) { e.preventDefault(); save({ separators: !settings.separators }); }
   });
 
+  // The popup is the only thing that can reach this listener, so msg.url is not attacker-supplied
+  // today. It is still the one place where a value from outside this file goes straight into
+  // location.assign(), so it is worth gating: neither a future sender nor a bug in the popup's
+  // buildUrl() should be able to navigate the reader off bible.com.
+  //
+  // The content script only ever runs on https://www.bible.com/*, which is the same set of pages
+  // this should be willing to send the reader to.
+  function isOwnSiteUrl(raw) {
+    // Resolve against the current page so a relative path is judged on what it would become,
+    // then check the ORIGIN rather than the href: hostname alone would accept http:, and a
+    // substring test would accept "www.bible.com.evil.test".
+    try {
+      const u = new URL(raw, location.href);
+      return u.protocol === 'https:' && u.hostname === 'www.bible.com';
+    } catch {
+      return false; // not a URL at all
+    }
+  }
+
   // Messages from the toolbar popup
   if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
@@ -326,7 +460,10 @@
       // runs nowhere else), which saves it needing the "tabs" permission to read tab.url.
       if (msg?.type === 'state') reply({ parallel: !!parseUrl()?.parallel });
       if (msg?.type === 'setParallel') { setParallel(!!msg.on); reply({ ok: true }); }
-      if (msg?.type === 'go') { location.assign(msg.url); reply({ ok: true }); }
+      if (msg?.type === 'go') {
+        if (isOwnSiteUrl(msg.url)) { location.assign(msg.url); reply({ ok: true }); }
+        else reply({ ok: false, error: 'refused: not a bible.com URL' });
+      }
       // Deliberately synchronous: returning nothing keeps the reply channel valid.
     });
   }

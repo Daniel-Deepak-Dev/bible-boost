@@ -1,11 +1,17 @@
 # Builds BibleBoost's PNG icons (16/32/48/128) from one picture on a flat background colour.
-#   powershell -ExecutionPolicy Bypass -File icons\build-icons.ps1 [-Source other-resource\bibleboost-source.webp]
+#   powershell -ExecutionPolicy Bypass -File icons/build-icons.ps1 -Source <artwork> [-OutDir icons]
 #
 # 1. Headless Chrome decodes the source (System.Drawing can't read WebP).
 # 2. The flat background is keyed out; glow keeps real partial transparency.
-# 3. The artwork is scaled into each size and written next to this script.
+# 3. The artwork is scaled into each size and written to -OutDir (default: beside this script).
 
-param([string]$Source = (Join-Path $PSScriptRoot '..\other-resource\bibleboost-source.webp'))
+# -Source is mandatory on purpose. It used to default to the file now held in
+# other-resource/icons-archive/, which was derived from the YouVersion app icon and must never
+# be rendered into a shipped icon again. See that folder NOTE.txt.
+param(
+    [Parameter(Mandatory = $true)][string]$Source,
+    [string]$OutDir = $PSScriptRoot
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -145,7 +151,7 @@ $keyed = [BibleBoostIcon]::Key($decoded, [ref]$box)
 try {
     Write-Host ('artwork: {0}x{1} at ({2},{3})' -f $box.Width, $box.Height, $box.X, $box.Y)
     foreach ($s in $artSize) {
-        $out = Join-Path $PSScriptRoot ('icon{0}.png' -f $s.Size)
+        $out = Join-Path $OutDir ('icon{0}.png' -f $s.Size)
         [BibleBoostIcon]::Render($keyed, $box, $s.Size, $s.Art, $out)
         Write-Host ('icon{0}.png  (art {1}px)' -f $s.Size, $s.Art)
     }

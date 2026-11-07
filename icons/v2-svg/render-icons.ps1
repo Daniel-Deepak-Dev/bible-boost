@@ -2,7 +2,10 @@
 #   powershell -ExecutionPolicy Bypass -File icons\render-icons.ps1
 # 16/32 come from bibleboost-small.svg (toolbar), 48/128 from bibleboost.svg (extensions page, store).
 
+param([string]$OutDir = (Join-Path $PSScriptRoot '..'))
+
 $ErrorActionPreference = 'Stop'
+if (-not (Test-Path $OutDir)) { throw "No such output directory: $OutDir" }
 
 $chrome = @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
@@ -25,7 +28,7 @@ Add-Type -AssemblyName System.Drawing
 
 foreach ($job in $jobs) {
     $svg = ([System.Uri](Join-Path $PSScriptRoot $job.Src)).AbsoluteUri
-    $out = Join-Path $PSScriptRoot ('icon{0}.png' -f $job.Size)
+    $out = Join-Path $OutDir ('icon{0}.png' -f $job.Size)
     if (Test-Path $out) { Remove-Item $out }
 
     # Headless Chrome won't make a window narrower than ~500px, and a bare SVG would be centred in it

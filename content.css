@@ -15,7 +15,15 @@ html[data-bb-align] [data-bb-col] [data-bb-v]::before {
    it with background-position: 0 calc(100% - …). A border-top would land on the block's TOP edge,
    which is NOT aligned between the columns.
    It is painted as a background rather than a border so it stays out of the box model and cannot
-   perturb the heights align() measures. */
+   perturb the heights align() measures.
+
+   Where a verse opens a section, the marker sits on the heading BLOCK instead of the verse, so the
+   rule is drawn above the heading and the heading travels with the verses it introduces. The ems
+   below are then the heading's own (22px against a verse's 20px), which is what we want: the rule
+   scales with whatever it introduces.
+   --bb-sep-rise lifts the rule off that bottom edge, which is how the column with no heading of
+   its own meets the heading column's rule. levelRules() grows the gap to match, because a
+   background is clipped to its box: lift it past the top and it disappears rather than moves. */
 
 /* ---------- Theme tokens ----------
    Values measured off bible.com's own UI. The page picks its theme with html.light / html.dark
@@ -86,7 +94,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   background-image: linear-gradient(to bottom, var(--bb-sep-color), var(--bb-sep-color));
   background-size: 100% 1px;
   background-repeat: no-repeat;
-  background-position: 0 calc(100% - 0.28em);
+  background-position: 0 calc(100% - 0.28em - var(--bb-sep-rise, 0px));
 }
 
 /* ---------- On-page switch ----------
