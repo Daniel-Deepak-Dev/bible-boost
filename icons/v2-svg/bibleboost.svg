@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- BibleBoost, detailed icon (48 / 128 px). 96px tile + 16px transparent padding, per Chrome Web Store guidance. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c8463e"/>
+      <stop offset="1" stop-color="#78272e"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdf4ea"/>
+      <stop offset="1" stop-color="#f4e4d1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cover -->
+  <rect x="16" y="16" width="96" height="96" rx="22" fill="url(#tile)"/>
+
+  <!-- Two parallel columns: every verse row starts on the same line in both -->
+  <g fill="none" stroke="#fbeee0" stroke-width="4" stroke-linecap="round">
+    <path d="M28 33H58M28 41H50M28 61H58M28 69H44"/>
+    <path d="M70 33H100M70 41H88M70 61H100M70 69H92"/>
+  </g>
+
+  <!-- Verse separator, faint, spanning both columns -->
+  <path d="M28 51H100" fill="none" stroke="#fbeee0" stroke-opacity=".4" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Page edge: rounded left end, curling up into the cover on the right -->
+  <path d="M32 86H88C97 86 103 81 104 72V90C104 97 99 102 92 102H32A8 8 0 0 1 32 86Z" fill="url(#paper)"/>
+
+  <!-- Bookmark ribbon cut as a lightning bolt -->
+  <path d="M38 86H48L44 92H49L38 101L41 95H36Z" fill="#ff4553" stroke-linejoin="round"/>
+</svg>
