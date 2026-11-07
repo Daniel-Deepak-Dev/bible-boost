@@ -19,13 +19,50 @@ manifest's `js` array execute in order, so they can communicate through a
 namespace:
 
 ```js
-// first file
+// src/content/bible-dom.js — the first file
 var BB = (typeof BB !== 'undefined') ? BB : {};
-BB.dom = { parseUrl, columnEls, columns, firstSpans, verseLabel };
+
+(() => {
+  // ... the readers ...
+  BB.dom = { REF_RE, VID_RE, LANG_RE, parseUrl, columnEls, columns, langOf, firstSpans, verseLabel };
+})();
 ```
 
 Order in the manifest array therefore matters: `bible-dom.js` must be listed
 **before** anything that reads `BB.dom`.
+
+### One global scope, so only `BB` may escape
+
+Classic scripts share **one global lexical scope** across files — not just the
+global object. That has two consequences, both verified with `node:vm` (which
+behaves the same way) while doing T-001:
+
+- **A top-level `const` or `let` cannot be declared twice.** If one content
+  script says `const REF_RE = …` at top level and a later one says it again, the
+  later file fails with `SyntaxError: Identifier 'REF_RE' has already been
+  declared` and **none of it runs**. So every content-script file wraps its body
+  in an IIFE and lets exactly one name out: `BB`.
+- **`BB` itself must be `var`**, which, unlike `const`, may be re-declared
+  in another file. With the `typeof` guard, whichever file runs first creates
+  `BB` and later ones add to it, so file order cannot break the namespace.
+
+`content.js` takes what it needs once, at the top of its own IIFE:
+
+```js
+const { parseUrl, columnEls, columns, firstSpans, verseLabel } = BB.dom;
+```
+
+That keeps its alignment code calling the readers by their own names, and if
+`bible-dom.js` failed to load it throws a `ReferenceError` at load instead of
+half-working until the first call.
+
+### Calling `BB.dom` from DevTools
+
+Content-script globals live in the **isolated world**, so typing `BB` in the
+console's default `top` context gives `ReferenceError: BB is not defined`.
+Switch the console's context dropdown (top-left of the Console tab) from `top`
+to the BibleBoost entry first. Reload the extension *and* the tab after any
+change: Chrome does not re-inject content scripts into a tab that is already open.
 
 A content script *can* use dynamic `import()` of an extension URL if the module
 is in `web_accessible_resources`, but it is async and adds ordering complexity.
@@ -42,6 +79,38 @@ on the next event. Consequences:
 - Open IndexedDB lazily per invocation, or guard a cached handle against a closed
   connection.
 - `chrome.storage` is the only reliable place for state between invocations.
+
+## Keyboard shortcuts: `chrome.commands`
+
+Since B-006, `Alt+P` / `Alt+A` / `Alt+S` are declared under `commands` in the
+manifest. `background.js` relays them to the tab as `{type:'command', command}`.
+The in-page keydown listener in `content.js` stays as a fallback. Why: in the
+user's Chrome the page listener never fired, even though bible.com does not
+swallow the keys, and the cause was never found. See B-006.
+
+**It did not fix that case.** The command route stayed silent too, so the cause
+lies outside both routes. B-006 is open with the next checks. Do not assume
+`chrome.commands` is a cure for "the shortcut does nothing"; check
+`chrome://extensions/shortcuts` first.
+
+Confidence: **from Chrome's documentation, not yet verified here**, except where
+B-006's acceptance ticks it.
+
+- **At most four suggested keys per extension.** B-006 uses three, and T-029's
+  `Alt+Shift+N` is the fourth. Any further shortcut has to live in the keydown
+  listener, or be declared with no `suggested_key` so the user binds it by hand.
+- A suggested key needs `Ctrl` or `Alt`, with `Shift` optional.
+- **A key Chrome cannot assign is silently left blank.** That happens when
+  another extension already holds it. The command still exists and can be bound
+  at `chrome://extensions/shortcuts`. That page is the first thing to check
+  when "the shortcut does nothing".
+- `onCommand` gets `(command, tab)`. `chrome.tabs.sendMessage(tab.id, …)` needs
+  no `tabs` permission, so the no-`tabs` rule below still holds.
+- **Content scripts cannot call `chrome.commands`**, so they cannot read the
+  user's actual bindings. The dock tooltips name the default keys.
+- Chrome handles a bound key itself and does not pass it on to the page, so
+  the command and the keydown fallback should never both fire for one press.
+  B-006 checks that Alt+A toggles once.
 
 ## web_accessible_resources
 

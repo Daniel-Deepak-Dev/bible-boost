@@ -23,12 +23,37 @@
       "48": "icons/icon48.png"
     }
   },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "commands": {
+    "toggle-parallel": {
+      "suggested_key": {
+        "default": "Alt+P"
+      },
+      "description": "Toggle parallel mode"
+    },
+    "toggle-align": {
+      "suggested_key": {
+        "default": "Alt+A"
+      },
+      "description": "Line up verses side by side"
+    },
+    "toggle-separators": {
+      "suggested_key": {
+        "default": "Alt+S"
+      },
+      "description": "Show or hide verse separators"
+    }
+  },
   "content_scripts": [
     {
       "matches": [
         "https://www.bible.com/*"
       ],
       "js": [
+        "src/content/bible-dom.js",
         "content.js"
       ],
       "css": [

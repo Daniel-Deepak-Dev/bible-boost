@@ -20,70 +20,16 @@
   let ready = !store; // never persist anything until the stored settings have actually loaded
   const html = document.documentElement;
 
-  // ---------- URL ----------
-  // /bible/339/EXO.13.TAOVBSI?parallel=114
-  // Book codes are always 3 chars (JHN, 1CO, 3JN) and a chapter is always digits, so this also
-  // rejects book-intro refs like "JHN.INTRO1", which bible.com renders with no parallel column.
-  const REF_RE = /^([A-Z0-9]{3})\.(\d+)/;
-
-  function parseUrl(href = location.href) {
-    const u = new URL(href);
-    const m = u.pathname.match(/\/bible\/(\d+)\/([^/?#]+)/);
-    if (!m) return null;
-    const par = u.searchParams.get('parallel');
-    const r = m[2].match(REF_RE); // "JHN.3.16.NIV" -> JHN.3, the chapter, which is what we want
-    return {
-      id: m[1],
-      ref: r ? `${r[1]}.${r[2]}` : null,
-      parallel: par && /^\d+$/.test(par) ? par : null,
-    };
-  }
+  // ---------- Reading the page ----------
+  // How to read bible.com's reader DOM (the URL, the columns, where each verse starts and which
+  // element is its number) lives in src/content/bible-dom.js, which the manifest runs before this
+  // file, so that note capture reads the page through exactly the selectors alignment relies on.
+  // Bound once, here, so the code below keeps calling them by their own names and nothing in
+  // align() had to change. If that file failed to load this line throws, and the extension stops
+  // loudly at load instead of half-working until the first call.
+  const { parseUrl, columnEls, columns, firstSpans, verseLabel } = BB.dom;
 
   // ---------- Alignment ----------
-  // bible.com tags each column with a vidNNN class, but inconsistently: the parallel column is
-  // "version vid59 iso6393eng" while the primary one is a hashed "cat7xG_vid111" with no "version"
-  // class at all. Match the vid token itself instead of either wrapper.
-  const VID_RE = /(?:^|[\s_])vid(\d+)(?:\s|$)/;
-
-  function columnEls() {
-    const hits = [...document.querySelectorAll('div[class*="vid"]')]
-      .filter((c) => VID_RE.test(c.getAttribute('class') || ''));
-    const seen = new Set();
-    return hits.filter((c) => {
-      if (hits.some((o) => o !== c && c.contains(o))) return false; // keep the innermost wrapper
-      const vid = c.getAttribute('class').match(VID_RE)[1];
-      if (seen.has(vid)) return false; // one element per version
-      seen.add(vid);
-      return true;
-    });
-  }
-
-  function columns() {
-    // bible.com hides the 2nd column on narrow screens (display:none -> no client rects)
-    const cols = columnEls().filter((c) => c.getClientRects().length);
-    return cols.length === 2 ? cols : null;
-  }
-
-  // usfm ("JHN.1.5") -> first element of that verse (a verse can be split across paragraphs).
-  // A Map keeps insertion order, which is document order, which is the top-to-bottom order the
-  // single-pass accumulation in align() needs. Keying on the usfm rather than the bare verse
-  // number means two chapters rendered on one page can never collide.
-  function firstSpans(col) {
-    const map = new Map();
-    col.querySelectorAll('[class*="_verse"][data-usfm]').forEach((el) => {
-      const key = el.getAttribute('data-usfm').split('+')[0]; // combined "JHN.1.1+JHN.1.2"
-      if (!map.has(key)) map.set(key, el);
-    });
-    return map;
-  }
-
-  // The verse-number label, and only it: a verse's own label is a direct child, while a footnote
-  // marker is a [class*="_label"] nested deeper inside. A verse element that has no direct label is
-  // a continuation fragment — the tail of a verse that spilled into the next paragraph.
-  function verseLabel(el) {
-    return el.querySelector(':scope > [class*="_label"]');
-  }
-
   function topOf(el) {
     const label = verseLabel(el);
     const rects = (label || el).getClientRects();
@@ -424,14 +370,46 @@
     observedCols = cols;
   }, 1000);
 
-  // Keyboard: Alt+P parallel, Alt+A alignment, Alt+S separators
+  // ---------- Shortcuts ----------
+  // Each shortcut is a named command that can be triggered from two places. The main one, since
+  // B-006, is Chrome's own shortcut system: manifest "commands" -> background.js -> a 'command'
+  // message, handled below. That route exists because on 2026-11-08 Alt+P / Alt+A / Alt+S did
+  // nothing in a real Chrome on Windows while the dock switches, which call this same code,
+  // worked. A key Chrome has bound to a command is caught by Chrome before the page sees it, so
+  // nothing bible.com does can swallow it, and the user can rebind it at
+  // chrome://extensions/shortcuts.
+  //
+  // The keydown listener stays as the fallback for when Chrome could not assign a suggested key
+  // because something else already holds it. The two should never both fire for one key press,
+  // because Chrome does not pass a bound command key on to the page. B-006's acceptance checks that
+  // Alt+A toggles once and not twice, since a double toggle would look exactly like "nothing
+  // happened".
+  //
+  // Each command returns true when it actually did something, so keydown only cancels a key it
+  // used. Alt+A on a single-version page is left alone for whatever else wants it, exactly as the
+  // inline conditions here used to do.
+  const COMMANDS = {
+    'toggle-parallel': () => { setParallel(!parseUrl()?.parallel); return true; },
+    'toggle-align': () => {
+      if (!parseUrl()?.parallel) return false;
+      save({ align: !settings.align });
+      return true;
+    },
+    'toggle-separators': () => {
+      if (!parseUrl()?.parallel || !settings.align) return false;
+      save({ separators: !settings.separators });
+      return true;
+    },
+  };
+
+  // Keyboard fallback: Alt+P parallel, Alt+A alignment, Alt+S separators
+  const KEY_COMMANDS = { KeyP: 'toggle-parallel', KeyA: 'toggle-align', KeyS: 'toggle-separators' };
   document.addEventListener('keydown', (e) => {
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     const t = e.target;
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-    if (e.code === 'KeyP') { e.preventDefault(); setParallel(!parseUrl()?.parallel); }
-    if (e.code === 'KeyA' && parseUrl()?.parallel) { e.preventDefault(); save({ align: !settings.align }); }
-    if (e.code === 'KeyS' && parseUrl()?.parallel && settings.align) { e.preventDefault(); save({ separators: !settings.separators }); }
+    const run = COMMANDS[KEY_COMMANDS[e.code]];
+    if (run && run()) e.preventDefault();
   });
 
   // The popup is the only thing that can reach this listener, so msg.url is not attacker-supplied
@@ -464,6 +442,9 @@
         if (isOwnSiteUrl(msg.url)) { location.assign(msg.url); reply({ ok: true }); }
         else reply({ ok: false, error: 'refused: not a bible.com URL' });
       }
+      // A shortcut from Chrome's own shortcut system, relayed by background.js. ok is false for an
+      // unknown name, or for one that did not apply here, such as Alt+A on a single-version page.
+      if (msg?.type === 'command') reply({ ok: !!COMMANDS[msg.command]?.() });
       // Deliberately synchronous: returning nothing keeps the reply channel valid.
     });
   }

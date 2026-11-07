@@ -16,7 +16,11 @@ without a bundler. Making it the single owner of the data layer is what lets the
 project stay dependency-free while still having one definition of a valid note,
 one id generator and one validator.
 
-The extension has **no background script at all** today, so this is new ground.
+**`background.js` already exists** since B-006, holding only the
+`chrome.commands` listener that relays the `Alt+P/A/S` shortcuts to the tab. The
+manifest's `background` key (R1) is already in place. This task adds the router
+**next to** that listener and leaves it alone: `onCommand` and `onMessage` are
+separate entry points.
 
 ## Scope
 
@@ -69,9 +73,9 @@ idle. Hold no state in module scope that cannot be rebuilt.
 
 ## Files
 
-- `background.js` — new
+- `background.js` — exists (B-006); add the router beside the commands listener
 - `src/shared/schema.js` — new
-- `manifest.json` — add the `background` key
+- `manifest.json` — the `background` key is already there (B-006); check it matches R1
 
 ## Reference
 

@@ -13,6 +13,7 @@ three.
 | panel iframe | content script | `window.parent.postMessage` |
 | worker | everyone | **no broadcast** — bump `notesRev`, see below |
 | popup | content script | `chrome.tabs.sendMessage` (existing) |
+| worker | content script | `chrome.tabs.sendMessage` — keyboard shortcuts only (B-006) |
 
 ## Existing messages — do not break these
 
@@ -23,6 +24,13 @@ Handled in `content.js`, synchronous, replying from the listener body:
 | `{type:'state'}` | `{parallel: boolean}` |
 | `{type:'setParallel', on}` | `{ok: true}` |
 | `{type:'go', url}` | `{ok:true}` or `{ok:false, error}` |
+| `{type:'command', command}` | `{ok: boolean}`: false for an unknown name, or one that did not apply (Align on a single-version page) |
+
+`command` comes from `background.js`, relaying a `chrome.commands` key press
+(B-006). Its names, `toggle-parallel`, `toggle-align` and `toggle-separators`,
+are the manifest's `commands` keys and the keys of `COMMANDS` in `content.js`.
+All three lists must match. It is the one existing message the worker sends,
+and it goes to a **tab**, so it does not break the "no broadcast" rule.
 
 Two things to preserve:
 

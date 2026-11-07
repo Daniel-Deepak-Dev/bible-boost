@@ -40,6 +40,10 @@ How to pick up and finish a task in `work/requirements/`.
 
 A `Blocked` task must say what it is blocked on, in its Notes section.
 
+Write the value **and nothing else** in the Status cell. `work/status.sh` matches
+the whole cell, so `Done — with a caveat` is counted as "not started" on the
+board. Put the caveat in the task's body.
+
 ## Seeing the board
 
 ```bash

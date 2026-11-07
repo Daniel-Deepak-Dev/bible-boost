@@ -1,6 +1,6 @@
 # bible.com — URLs and routing
 
-Confidence: **verified** against live pages and `content.js`.
+Confidence: **verified** against live pages and `src/content/bible-dom.js`.
 
 ## Reader URL shape
 
@@ -17,8 +17,10 @@ https://www.bible.com/bible/<versionId>/<BOOK>.<chapter>.<ABBR>?parallel=<versio
 | `ABBR` | abbreviation of the **primary** version only | **Not present for the parallel column** |
 | `parallel` query param | numeric id of the second version | Absent when reading a single version |
 
-`parseUrl()` in `content.js` is the canonical parser. It returns
-`{ id, ref: 'EXO.13' or null, parallel: '114' or null }`.
+`BB.dom.parseUrl()` in `src/content/bible-dom.js` is the canonical parser (moved
+out of `content.js` in T-001). It returns
+`{ id, ref: 'EXO.13' or null, parallel: '114' or null }`. It does **not** return
+the version abbreviation; T-011 reads that itself.
 
 ## Traps
 

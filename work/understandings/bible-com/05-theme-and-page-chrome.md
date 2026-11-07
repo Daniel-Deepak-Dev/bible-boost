@@ -66,6 +66,31 @@ reason. Bundling a font would also force a `web_accessible_resources` entry.
 Use `line-height: normal` on anything showing text at small sizes; the dock
 clipped descenders until this was fixed.
 
+## Keyboard
+
+**Verified 2026-11-08** on `/bible/339/EXO.13.TAOVBSI`, in the Claude desktop
+app's built-in browser with no extension loaded. With focus on the reader
+(`<main>`), real `Alt+P`, `Alt+A` and `Alt+S` key presses reached a `window`
+capture-phase listener, a `document` bubble-phase listener and a `window`
+bubble-phase listener. Every one had `defaultPrevented: false` and
+`ctrlKey: false`. bible.com does **not** swallow these keys, so the plain
+bubble-phase `document` listener in `content.js` is enough. Do not move it to the
+capture phase to "fix" a shortcut that seems dead.
+
+If the shortcuts do nothing while the dock switches work, the key press most
+likely never reached the page. Both of these suspects are **unconfirmed**:
+
+- **Focus is elsewhere**, for example in DevTools after using the console, or in
+  the address bar. Click the chapter text first.
+- **AltGr.** On keyboard layouts that have an AltGr key, Windows reports right
+  Alt as Ctrl+Alt. The handler deliberately returns early when `e.ctrlKey` is
+  set, so use the **left** Alt.
+
+This happened for real on 2026-11-08 (B-006). Neither the page listener nor
+`chrome.commands` responded to `Alt+P/A/S`, which suggests the key press never
+reached Chrome, or the commands were never assigned. Either way it is **not
+bible.com**. The cause is still open; B-006 lists the next checks.
+
 ## A deliberate colour departure
 
 `--bb-track-on` uses the extension's red rather than bible.com's own switch

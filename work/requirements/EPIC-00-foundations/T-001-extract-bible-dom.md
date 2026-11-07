@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-00 Foundations |
-| Status | Not started |
+| Status | Done |
 | Depends on | — |
 | Blocks | T-008, T-009, T-010, T-011 |
 | Size | S |
@@ -75,18 +75,50 @@ absent. Nothing consumes it yet; T-011 will.
 
 ## Acceptance
 
-- [ ] On `/bible/339/EXO.13.TAOVBSI?parallel=114`, verses align exactly as before
-- [ ] Verse separators draw, including above section headings
-- [ ] `Alt+P`, `Alt+A`, `Alt+S` all still work
-- [ ] Changing the reader's "Aa" font size still re-aligns
-- [ ] Navigating to another chapter client-side still re-aligns
-- [ ] A single-version page (no `parallel` param) shows the dock with only the
+- [x] On `/bible/339/EXO.13.TAOVBSI?parallel=114`, verses align exactly as before
+- [x] Verse separators draw, including above section headings
+- [ ] `Alt+P`, `Alt+A`, `Alt+S` all still work — **failing in the live test
+      2026-11-08**, while the dock's switches work. Under investigation: the
+      keydown handler is byte-identical to the pre-T-001 build and handles
+      synthetic Alt+P/A in both, so the cause is suspected to be outside the
+      code: keyboard focus or AltGr. **bible.com is ruled out**, because real
+      Alt+P/A/S presses reach `document` unprevented
+      (`understandings/bible-com/05-theme-and-page-chrome.md`, Keyboard).
+      A test `keydown` listener pasted into the user's console logged nothing
+      for Alt+P. It also logged nothing for a plain `P`, so that listener was
+      never running and the result proves nothing either way. **Moved to
+      [B-006](../EPIC-08-maintenance/B-006-shortcuts-dead-in-chrome.md)**, which
+      delivers the shortcuts through `chrome.commands` instead.
+- [x] Changing the reader's "Aa" font size still re-aligns
+- [x] Navigating to another chapter client-side still re-aligns
+- [x] A single-version page (no `parallel` param) shows the dock with only the
       Parallel switch, and no alignment artefacts
-- [ ] `BB.dom.langOf()` returns `'eng'` for the NKJV column and `'tam'` for the
-      TAOVBSI column
-- [ ] `git diff` shows the moved functions unchanged apart from indentation
+- [x] `BB.dom.langOf()` returns `'eng'` for the NKJV column and `'tam'` for the
+      TAOVBSI column — `BB.dom.columns().map(BB.dom.langOf)` gave
+      `['tam', 'eng']` on the live page, 2026-11-08
+- [x] `git diff` shows the moved functions unchanged apart from indentation
+      — byte-for-byte, indentation included, since `bible-dom.js` keeps them
+      inside an IIFE at the same depth. Checked by comparing the moved ranges of
+      `HEAD:content.js` against the new file.
 
 ## Notes
 
 Verify by **using** the extension, not by reading the diff. Alignment bugs are
 visual and the measuring code is order-sensitive.
+
+**Done with one box unticked, on purpose.** `Alt+P/A/S` did nothing in the
+user's Chrome. The handler is not part of this change, and the same failure
+persisted after the shortcuts were moved to `chrome.commands`, so it is tracked
+in B-006 rather than holding this task open. The box stays empty because nobody
+saw the shortcuts work.
+
+**How R4 is met.** `content.js` takes the readers from `BB.dom` once, by
+destructuring at the top of its IIFE, rather than writing `BB.dom.parseUrl()` at
+every call site. Qualified calls would have meant editing `align()`, `bandTop()`
+and `topOf()`, which Scope / Out forbids. Destructuring is the one reading of R4
+that satisfies both.
+
+**Why `bible-dom.js` is an IIFE behind a `var BB`.** Classic content scripts
+share one global lexical scope, so a top-level `const REF_RE` would block any
+later content script from declaring its own. See
+`work/understandings/extension/05-mv3-constraints.md`.

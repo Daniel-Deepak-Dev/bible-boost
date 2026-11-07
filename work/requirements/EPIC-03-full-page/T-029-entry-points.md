@@ -46,6 +46,12 @@ from `Alt+B` and `Alt+N`, which are bible.com-only and therefore live in
 }
 ```
 
+> **Since B-006:** `Alt+P/A/S` are also `chrome.commands`, so the manifest
+> already has a `commands` block. Add `open-notes` to it. That is the **fourth
+> and last** suggested key Chrome allows. B-006 also changed the reasoning above:
+> a bible.com-only shortcut can still go through `chrome.commands` when the page
+> listener proves unreliable. Comment both reasons.
+
 **R3. Reuse an existing tab.** Query for an open notes tab first; focus it and
 update its hash rather than opening a second one. A user who hits the shortcut
 five times should have one tab, not five.

@@ -16,6 +16,7 @@ knowing before seven epics are built on top.
 | [B-003](B-003-duplicated-defaults.md) | `DEFAULTS` duplicated across two files | No |
 | [B-004](B-004-stale-doc-paths.md) | Stale paths in docs and script headers | No |
 | [B-005](B-005-no-www-host.md) | A bare `bible.com` host is not matched | No |
+| [B-006](B-006-shortcuts-dead-in-chrome.md) | `Alt+P/A/S` do nothing in a real Chrome | No |
 
 ## How these relate to the notes project
 

@@ -18,8 +18,25 @@ const VID_RE = /(?:^|[\s_])vid(\d+)(?:\s|$)/;
 document.querySelectorAll('div[class*="vid"]')   // then filter by VID_RE
 ```
 
-`columnEls()` then keeps the **innermost** matching wrapper and de-duplicates by
-vid, so there is exactly one element per version.
+`BB.dom.columnEls()` (`src/content/bible-dom.js`, moved out of `content.js` in
+T-001) then keeps the **innermost** matching wrapper and de-duplicates by vid, so
+there is exactly one element per version.
+
+**Re-checked 2026-11-08** on `/bible/339/EXO.13.TAOVBSI?parallel=114`. The two
+elements `columns()` returned had **identical** class shapes:
+
+```
+version vid339 iso6393tam    ← primary (left), TAOVBSI
+version vid114 iso6393eng    ← parallel (right), NKJV
+```
+
+So on that page the primary column *does* have the plain `version` class. The
+`cat7xG_vid111` row above was recorded earlier, with NIV as the primary. Either
+it is an outer wrapper that `columnEls()` now steps past to an inner `version`
+element, or bible.com has changed its build since then. Which one is not yet
+known. Either way the rule stands: match the vid token, never a wrapper class.
+The comment above `VID_RE` in `bible-dom.js` still describes the older
+observation; it was moved verbatim in T-001, so it was deliberately left unchanged.
 
 ## Visibility
 
@@ -36,9 +53,23 @@ unless exactly two are visible. Any parallel-dependent feature must treat
 The `iso6393eng` token is an **ISO 639-3 language code**. Worth capturing on a
 saved verse: it tells you the script without guessing from the text.
 
+`BB.dom.langOf(col)` in `src/content/bible-dom.js` reads it, with the same token
+boundaries as `VID_RE`:
+
 ```js
 const LANG_RE = /(?:^|[\s_])iso6393([a-z]{3})(?:\s|$)/;
 ```
+
+It returns `null` when the token is absent: never a default language and never
+a throw, so an unrecognised version cannot block a save (T-011 R3, R4).
+
+**Verified 2026-11-08:** both columns carry the token. On
+`/bible/339/EXO.13.TAOVBSI?parallel=114`, `BB.dom.columns().map(BB.dom.langOf)`
+gave `['tam', 'eng']` in the live page (see the classes recorded above).
+
+If a column ever comes back `null`, T-011 must fall back to the version table
+or leave the language unknown. It must **never** borrow the other column's
+code, which on a Tamil/English pair would label the Tamil verse as English.
 
 ## Resolving a version abbreviation
 
