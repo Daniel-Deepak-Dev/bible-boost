@@ -119,6 +119,22 @@ workflow — a branch only adds a merge step nobody wanted. If a general default
 says to branch before committing on the default branch, **that default does not
 apply here**; this instruction overrides it.
 
+**A git worktree is allowed, but ask first — every single time.** It is the one
+sanctioned exception to the rule above, for work that genuinely needs isolation:
+a risky refactor, or two things in flight at once. Note that `git worktree add`
+checks out a branch, so creating one necessarily creates a branch — which is
+precisely why it needs a yes rather than being covered by the rule above.
+
+Ask **before** creating it, say why it is needed and where it will live, then
+wait for an answer.
+
+> **Auto-approval never grants this.** A session running in auto, accept-edits,
+> bypass or any other pre-approved mode still asks in the conversation. A yes
+> given earlier covers that worktree only, never the next one.
+
+Remove the worktree once the work is done, and say where any commits in it
+ended up.
+
 Commit only when asked. Push only when asked.
 
 Commit messages are conventional and imperative, explaining *why* in the body

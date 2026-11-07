@@ -12,9 +12,13 @@ adds only what is specific to working in Claude Code.
 
 **Never create a git branch unless explicitly asked.** Commit to `main`.
 
-Restated here, and not only in `AGENTS.md`, because a general "branch before
-committing on the default branch" default would otherwise win by accident. It
-does not apply to this repository.
+**A worktree is allowed, but ask every time — auto mode does not count as a
+yes.** Running with pre-approved permissions still means asking in the
+conversation first, and an earlier yes covers only that worktree.
+
+Both rules are restated here rather than left to the `@AGENTS.md` import,
+because a general "branch before committing on the default branch" default would
+otherwise win by accident. It does not apply to this repository.
 
 ## Before you start
 
