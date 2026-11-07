@@ -17,17 +17,37 @@ Lines up verses side by side in bible.com's parallel mode: verse N starts on the
 It keeps bible.com's own verses, so tapping a verse still opens Highlight / Copy / Compare / Share.
 
 **Use**
-- Floating switch, bottom-right: **Parallel** (on/off) and **Align verses** (on/off).
-- Shortcuts: Alt+P parallel, Alt+A align.
-- Toolbar popup: same toggles, show/hide the on-page switch, and the version used when turning parallel on.
-- Change versions with bible.com's own pickers; the last parallel version you pick is remembered.
+- Floating switch, bottom-right: **Parallel** and **Align verses**. It stays out of the way — at rest it
+  collapses to the two shortcut letters (`P` / `A`) and dims; hovering or tabbing into it spells the labels out.
+  The on/off tracks never collapse, so you can still read the state at a glance without reaching for it.
+- Shortcuts: Alt+P parallel, Alt+A align, Alt+S separators.
+- Toolbar popup: all the toggles including **Verse separators**, show/hide the on-page switch, and both versions.
+- Separators are deliberately not on the floating switch — it is set once and then left alone, so it lives in
+  the popup and on Alt+S. Hide the switch entirely in the popup if you prefer the shortcuts.
 
 **How it works**
 Each verse's first span gets a small invisible block before it (CSS ::before). This starts every verse on a new line, and its height
 is set so the higher column is pushed down to match the other. Nothing is removed or re-rendered, so all native features keep working.
 It re-aligns automatically on chapter change, version change, window resize, and the reader's text-size setting.
 
-Note: on narrow windows (under ~768px) bible.com itself hides the second column, so there's nothing to align.
+Note: at phone width bible.com itself drops back to a single column, so there is nothing to align and BibleBoost removes its spacing again. Around 700px both columns were still shown in testing, so the cut-off is bible.com's to decide, not ours.
+
+### Open parallel reading
+A button at the top of the toolbar popup opens bible.com straight into parallel mode, at the chapter you last read, with the two
+versions you last used. If the tab you are on is already bible.com it navigates there; otherwise it opens a new tab.
+
+Both versions and your last chapter are remembered as you read — change them with bible.com's own pickers, or set them directly in
+the popup (**Left version** / **Right version**, each accepting a bible.com ID or a pasted URL).
+
+Picking the same version on both sides is refused: bible.com collapses to a single column when the two match.
+
+### Verse separators
+A hairline between aligned verse rows, so it stays obvious which verse on the left goes with which on the right. It is drawn in the
+gap the alignment already creates, anchored to the one edge that is identical in both columns, so both sides line up exactly.
+
+It follows bible.com's own theme — `html.light` and `html.dark` each get their own colour — and is deliberately faint
+(about 10% in light, 13% in dark). No line is drawn above the first verse of a chapter, or between a section heading and its own
+first verse. Turn it off with Alt+S or in the popup.
 
 ---
 BibleBoost is an independent project and is not affiliated with or endorsed by YouVersion or Life.Church.

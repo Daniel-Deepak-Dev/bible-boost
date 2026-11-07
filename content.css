@@ -1,13 +1,41 @@
 /* ---------- Verse alignment ----------
    Each verse's first span gets a zero-content block before it: this starts the verse on a new line,
-   and its height (--bb-gap, set by content.js) pushes the higher column down to match the other. */
-html[data-bb-align] .version [data-bb-v]::before {
+   and its height (--bb-gap, set by content.js) pushes the higher column down to match the other.
+   [data-bb-col] scopes this to the two reader columns, so verse nodes bible.com clones into
+   popovers / share sheets keep no stray spacing. */
+html[data-bb-align] [data-bb-col] [data-bb-v]::before {
   content: "";
   display: block;
   height: calc(var(--bb-gap, 0px) + 0.3em);
 }
 
-/* ---------- On-page switch ---------- */
+/* ---------- Verse separators ----------
+   A hairline between aligned verse rows. The gap block's BOTTOM edge is the one y-coordinate that is
+   identical in both columns (that is exactly what alignment guarantees), so the rule is anchored to
+   it with background-position: 0 calc(100% - …). A border-top would land on the block's TOP edge,
+   which is NOT aligned between the columns.
+   It is painted as a background rather than a border so it stays out of the box model and cannot
+   perturb the heights align() measures. */
+
+/* Fallback first: an undefined --bb-sep-color would make the gradient invalid at computed-value
+   time, and the separator would vanish silently. */
+:root      { --bb-sep-color: rgba(128, 128, 128, 0.14); }
+html.light { --bb-sep-color: rgba(8, 7, 7, 0.10); }
+html.dark  { --bb-sep-color: rgba(255, 255, 255, 0.13); }
+
+html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
+  height: calc(var(--bb-gap, 0px) + 0.6em);
+  background-image: linear-gradient(to bottom, var(--bb-sep-color), var(--bb-sep-color));
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 calc(100% - 0.28em);
+}
+
+/* ---------- On-page switch ----------
+   The dock sits over the text for as long as it is on screen, so at rest it shrinks to the two
+   shortcut letters (P / A) and dims slightly. Hovering or tabbing into it spells the labels out.
+   The toggle tracks never collapse, so the on/off state stays readable at a glance without
+   having to reach for it. */
 #bb-dock {
   position: fixed;
   right: 20px;
@@ -21,12 +49,17 @@ html[data-bb-align] .version [data-bb-v]::before {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(8px);
   font: 600 12.5px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+  opacity: 0.62;
+  transition: opacity 0.18s ease;
 }
+#bb-dock:hover,
+#bb-dock:focus-within { opacity: 1; }
+
 #bb-dock .bb-sw {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 11px 6px 7px;
+  padding: 6px 10px 6px 7px;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -34,6 +67,24 @@ html[data-bb-align] .version [data-bb-v]::before {
   font: inherit;
   cursor: pointer;
 }
+
+/* Label: the short form and the full form swap places on a width transition, so the pill grows
+   and shrinks smoothly instead of snapping. */
+#bb-dock .bb-label { display: flex; align-items: center; min-width: 0; }
+#bb-dock .bb-short,
+#bb-dock .bb-full {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.18s ease, opacity 0.14s ease;
+}
+#bb-dock .bb-short { max-width: 1.5em; opacity: 1; }
+#bb-dock .bb-full { max-width: 0; opacity: 0; }
+#bb-dock:hover .bb-short,
+#bb-dock:focus-within .bb-short { max-width: 0; opacity: 0; }
+#bb-dock:hover .bb-full,
+#bb-dock:focus-within .bb-full { max-width: 8em; opacity: 1; }
+
 #bb-dock .bb-sw:hover { background: rgba(255, 255, 255, 0.08); }
 #bb-dock .bb-sw:focus-visible { outline: 2px solid #4c8dff; outline-offset: 1px; }
 #bb-dock .bb-track {
@@ -60,4 +111,14 @@ html[data-bb-align] .version [data-bb-v]::before {
 
 @media (max-width: 767px) {
   #bb-dock { bottom: 96px; right: 12px; }
+}
+
+/* Last in the file on purpose: these selectors tie with the ones above, so source order is what
+   makes them win. */
+@media (prefers-reduced-motion: reduce) {
+  #bb-dock,
+  #bb-dock .bb-short,
+  #bb-dock .bb-full,
+  #bb-dock .bb-track,
+  #bb-dock .bb-thumb { transition: none; }
 }
