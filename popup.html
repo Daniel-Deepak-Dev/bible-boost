@@ -4,17 +4,6 @@
 <meta charset="utf-8">
 <title>BibleBoost</title>
 <style>
-  /* Inter, latin subset, variable 400-700. SIL OFL 1.1 - see fonts/OFL.txt.
-     bible.com sets "aktiv-grotesk, Inter, Arial, sans-serif"; Aktiv Grotesk is
-     licensed, so we ship their own second choice and match the rest of the chain. */
-  @font-face {
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 400 700;
-    font-display: swap;
-    src: url('fonts/Inter-latin.woff2') format('woff2');
-  }
-
   /* Semantic tokens measured off bible.com. Their gray ramp is absolute and only
      the semantic layer flips by theme, so only this layer is redeclared below. */
   :root {
@@ -30,8 +19,11 @@
     --switch-off:  #DDDBDB;
     --knob:        #FFFFFF;
     --focus:       #3D79C2;  /* their blue-30 */
-    --brand:       #FF3D4D;  /* YouVersion red */
-    --brand-hover: #EB3847;
+    /* A deepened YouVersion red. The brand #FF3D4D is only 3.48:1 against white, which
+       passes AA as large text but not at a button label this size; #DE2E3C is 4.60:1.
+       The dock keeps the brighter red because its switch track carries no text. */
+    --brand:       #DE2E3C;
+    --brand-hover: #C72736;
     --chevron:     #636161;
   }
 
@@ -53,10 +45,13 @@
   *, *::before, *::after { box-sizing: border-box; }
 
   body {
-    width: 360px;              /* bible.com's own settings-panel width */
+    width: 340px;
     margin: 0;
-    padding: 16px 16px 10px;
-    font: 400 14px/1.45 Inter, 'Segoe UI', system-ui, Arial, sans-serif;
+    padding: 12px 12px 10px;
+    /* The OS UI stack. Segoe UI Variable Text is installed on Windows 11 but measures
+       identical in width to Segoe UI, so it is not listed: it would buy nothing and only
+       add a resolution risk. system-ui resolves to Segoe UI here. */
+    font: 400 13px/1.45 system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: var(--canvas);
     color: var(--text-1);
   }
@@ -64,24 +59,22 @@
   select, input, button, kbd { font-family: inherit; }
 
   /* ---- header --------------------------------------------------------- */
-  .brand { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
-  .brand img { width: 24px; height: 24px; border-radius: 6px; }
+  .brand { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+  .brand img { width: 20px; height: 20px; border-radius: 5px; }
   h1 {
     margin: 0;
     /* bible.com's scripture serif - the one place their serif voice belongs. */
-    font: 700 20px/1.2 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    font: 700 15px/1.2 'Source Serif 4', Georgia, 'Times New Roman', serif;
     letter-spacing: -0.01em;
     color: var(--text-1);
   }
 
   /* ---- primary action -------------------------------------------------- */
   #open {
-    display: block; width: 100%; height: 48px;
+    display: block; width: 100%; height: 34px;
     border: 0; border-radius: 999px;
     background: var(--brand); color: #fff;
-    /* 20px/700 keeps white-on-#FF3D4D (3.48:1) above the 3:1 AA bar for large
-       text, and matches bible.com's own red CTA. Do not shrink this. */
-    font-size: 20px; font-weight: 700; line-height: 1;
+    font-size: 13px; font-weight: 700; line-height: 1;
     cursor: pointer;
     transition: background-color 120ms ease;
   }
@@ -91,38 +84,39 @@
 
   #openNote {
     margin-top: 6px;
-    font-size: 12px; line-height: 1.4;
+    font-size: 11px; line-height: 1.4;
     text-align: center;
     color: var(--text-3);
   }
 
   /* ---- section --------------------------------------------------------- */
   h2 {
-    margin: 12px 0 8px;
-    font-size: 13px; font-weight: 700;
+    margin: 12px 0 6px;
+    font-size: 11px; font-weight: 700;
     color: var(--text-2);
   }
 
   /* ---- settings rows (filled cards, 4px radius - their pattern) --------- */
-  .rows { display: flex; flex-direction: column; gap: 5px; }
+  .rows { display: flex; flex-direction: column; gap: 4px; }
   .row {
-    display: flex; align-items: center; gap: 16px;
-    min-height: 44px; padding: 8px 16px;
+    display: flex; align-items: center; gap: 10px;
+    min-height: 32px; padding: 6px 10px;
     border-radius: 4px;
     background: var(--surface-2);
     cursor: pointer; user-select: none;
   }
   .row .label {
     flex: 1; min-width: 0;
-    font-size: 13px; font-weight: 500;
+    font-size: 12px; font-weight: 500;
     color: var(--text-3);
   }
-  .row .note { font-weight: 400; font-size: 12px; color: var(--text-3); }
+  .row .note { font-weight: 400; font-size: 11px; color: var(--text-3); }
   .row.disabled { opacity: 0.45; pointer-events: none; }
 
   /* ---- toggle: a real checkbox, hidden but focusable; siblings styled ---- */
-  /* bible.com's switch is 64x32 with a 32x24 knob; scaled 0.875 to fit a 44px row. */
-  .switch { position: relative; flex: none; width: 56px; height: 28px; }
+  /* Exactly half of bible.com's 64x32 track with its 32x24 stadium knob, which is also
+     the size the on-page dock uses, so both surfaces show the same control. */
+  .switch { position: relative; flex: none; width: 32px; height: 16px; }
   .switch input {
     position: absolute; width: 1px; height: 1px;
     margin: 0; padding: 0; opacity: 0;
@@ -135,37 +129,37 @@
     transition: background-color 150ms ease;
   }
   .switch .knob {
-    position: absolute; top: 4px; left: 4px;
-    width: 28px; height: 20px;   /* a stadium, not a circle - as on bible.com */
+    position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 12px;   /* a stadium, not a circle - as on bible.com */
     border-radius: 999px;
     background: var(--knob);
     transition: transform 150ms ease;
   }
   .switch input:checked ~ .track { background: var(--switch-on); }
-  .switch input:checked ~ .knob  { transform: translateX(20px); }
+  .switch input:checked ~ .knob  { transform: translateX(12px); }
   .switch input:focus-visible ~ .track { outline: 2px solid var(--focus); outline-offset: 2px; }
 
   /* ---- version fields --------------------------------------------------- */
   .field { margin-top: 8px; }
   .field-label {
     display: block; margin-bottom: 4px;
-    font-size: 13px; font-weight: 500;
+    font-size: 11px; font-weight: 500;
     color: var(--text-3);
   }
   .select { position: relative; }
   .select::after {               /* chevron drawn in CSS so it inherits the theme */
     content: '';
-    position: absolute; right: 16px; top: 50%;
-    width: 7px; height: 7px; margin-top: -5px;
-    border-right: 2px solid var(--chevron);
-    border-bottom: 2px solid var(--chevron);
+    position: absolute; right: 12px; top: 50%;
+    width: 6px; height: 6px; margin-top: -4px;
+    border-right: 1.5px solid var(--chevron);
+    border-bottom: 1.5px solid var(--chevron);
     transform: rotate(45deg);
     pointer-events: none;
   }
   select {
-    width: 100%; height: 44px;
-    padding: 0 40px 0 14px;
-    font-size: 14px; font-weight: 500;
+    width: 100%; height: 32px;
+    padding: 0 30px 0 10px;
+    font-size: 12.5px; font-weight: 500;
     color: var(--text-1);
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -175,13 +169,13 @@
   }
   select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-  /* The 1.5px transparent border is load-bearing: popup.js signals a bad paste with
+  /* The transparent border is load-bearing: popup.js signals a bad paste with
      custom.style.borderColor = '#d33', which needs a non-zero border-width to show. */
   .custom {
     display: none;
-    width: 100%; height: 40px; margin-top: 8px;
-    padding: 0 12px;
-    font-size: 13px;
+    width: 100%; height: 30px; margin-top: 6px;
+    padding: 0 10px;
+    font-size: 12px;
     color: var(--text-1);
     background: var(--surface-2);
     border: 1.5px solid transparent;
@@ -191,13 +185,13 @@
   .custom:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
   /* ---- footer ----------------------------------------------------------- */
-  .hint { margin-top: 12px; font-size: 12px; line-height: 1.45; color: var(--text-3); }
+  .hint { margin-top: 10px; font-size: 11px; line-height: 1.5; color: var(--text-3); }
   kbd {
-    display: inline-block; padding: 1px 5px;
-    font-size: 11px; font-weight: 600; line-height: 1.5;
+    display: inline-block; padding: 1px 4px;
+    font-size: 10px; font-weight: 600; line-height: 1.5;
     color: var(--text-2);
     background: var(--surface-3);
-    border-radius: 4px;
+    border-radius: 3px;
   }
 
   @media (prefers-reduced-motion: reduce) {

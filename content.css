@@ -121,7 +121,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   /* bible.com's own stack. The content script runs on their page, where aktiv-grotesk is
      already loaded, so the dock gets the real UI face for nothing - no bundled font and no
      web_accessible_resources entry, which an extension-hosted @font-face would have needed. */
-  font: 700 12.5px/1 aktiv-grotesk, Inter, Arial, sans-serif;
+  font: 600 12px/1 aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
   color: var(--bb-text);
   /* Dimmer at rest, but less so than when the pill was dark-on-light: a surface-matched pill
      has only its border and shadow to hold the shape, so it needs the extra few percent. */
@@ -145,13 +145,21 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 }
 
 /* Label: the short form and the full form swap places on a width transition, so the pill grows
-   and shrinks smoothly instead of snapping. */
+   and shrinks smoothly instead of snapping.
+
+   line-height must be `normal`, never 1. overflow:hidden is here to clip the WIDTH animation,
+   but it clips vertically too, and a line box of 1 is shorter than the font: Aktiv Grotesk at
+   12px measures ascent 12 + descent 4, so a 12px box cropped the tail off every g, j, p, q and
+   y by 1-1.5px. `normal` lets whichever font resolves set its own box - 16px here, the same
+   height as the switch track beside it, so the dock does not grow. A fixed 1.5 was measured
+   still marginally short at this size, which is why this is a keyword and not a number. */
 #bb-dock .bb-label { display: flex; align-items: center; min-width: 0; }
 #bb-dock .bb-short,
 #bb-dock .bb-full {
   display: block;
   overflow: hidden;
   white-space: nowrap;
+  line-height: normal;
   transition: max-width 0.18s ease, opacity 0.14s ease;
 }
 #bb-dock .bb-short { max-width: 1.5em; opacity: 1; }
