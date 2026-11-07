@@ -8,6 +8,14 @@ The project's instructions live in [`AGENTS.md`](AGENTS.md), imported above so
 they apply to every session here. Everything in that file is binding; this page
 adds only what is specific to working in Claude Code.
 
+## Stay on main
+
+**Never create a git branch unless explicitly asked.** Commit to `main`.
+
+Restated here, and not only in `AGENTS.md`, because a general "branch before
+committing on the default branch" default would otherwise win by accident. It
+does not apply to this repository.
+
 ## Before you start
 
 Load the context the task needs, in this order:

@@ -111,7 +111,19 @@ Stay inside the task's **Scope / Out** list. If you find other work, write a new
 task file — `B-NNN` in `work/requirements/EPIC-08-maintenance/` for a defect —
 rather than widening the one you are on.
 
-## Commits
+## Git
 
-Conventional, imperative, explaining why in the body when it is not obvious.
-Reference the task id: `T-004: guard the observer against BibleBoost's own DOM`.
+**Work on `main`. Never create a branch unless the user explicitly asks for
+one.** This is a solo repository with a linear history and no pull-request
+workflow — a branch only adds a merge step nobody wanted. If a general default
+says to branch before committing on the default branch, **that default does not
+apply here**; this instruction overrides it.
+
+Commit only when asked. Push only when asked.
+
+Commit messages are conventional and imperative, explaining *why* in the body
+when it is not obvious. Reference the task id:
+
+```
+T-004: guard the observer against BibleBoost's own DOM
+```
