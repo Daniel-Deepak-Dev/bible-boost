@@ -1,45 +1,251 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
+<title>BibleBoost</title>
 <style>
-  body { width: 290px; margin: 0; padding: 14px; font: 13px/1.4 system-ui, sans-serif; color: #222; }
-  h1 { font-size: 15px; margin: 0 0 10px; }
-  h2 { font-size: 11px; margin: 16px 0 2px; text-transform: uppercase; letter-spacing: 0.05em; color: #777; }
-  label.field { display: block; margin: 12px 0 4px; font-weight: 600; }
-  select, input[type=text] { width: 100%; padding: 6px; font: inherit; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid #eee; cursor: pointer; }
-  .row input { width: 16px; height: 16px; cursor: pointer; }
+  /* Inter, latin subset, variable 400-700. SIL OFL 1.1 - see fonts/OFL.txt.
+     bible.com sets "aktiv-grotesk, Inter, Arial, sans-serif"; Aktiv Grotesk is
+     licensed, so we ship their own second choice and match the rest of the chain. */
+  @font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('fonts/Inter-latin.woff2') format('woff2');
+  }
+
+  /* Semantic tokens measured off bible.com. Their gray ramp is absolute and only
+     the semantic layer flips by theme, so only this layer is redeclared below. */
+  :root {
+    color-scheme: light dark;
+    --canvas:      #FFFFFF;
+    --surface-2:   #F6F4F4;  /* row + field fill (their surface-elevated-secondary) */
+    --surface-3:   #EDEBEB;  /* chips, disabled button (gray-10) */
+    --border:      #DDDBDB;
+    --text-1:      #121212;
+    --text-2:      #636161;
+    --text-3:      #828080;
+    --switch-on:   #121212;
+    --switch-off:  #DDDBDB;
+    --knob:        #FFFFFF;
+    --focus:       #3D79C2;  /* their blue-30 */
+    --brand:       #FF3D4D;  /* YouVersion red */
+    --brand-hover: #EB3847;
+    --chevron:     #636161;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas:     #121212;
+      --surface-2:  #353333;
+      --surface-3:  #474545;
+      --border:     #353333;
+      --text-1:     #FFFFFF;
+      --text-2:     #BFBDBD;
+      --text-3:     #828080;
+      --switch-on:  #636161;
+      --switch-off: #474545;
+      --chevron:    #BFBDBD;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    width: 360px;              /* bible.com's own settings-panel width */
+    margin: 0;
+    padding: 16px 16px 10px;
+    font: 400 14px/1.45 Inter, 'Segoe UI', system-ui, Arial, sans-serif;
+    background: var(--canvas);
+    color: var(--text-1);
+  }
+
+  select, input, button, kbd { font-family: inherit; }
+
+  /* ---- header --------------------------------------------------------- */
+  .brand { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+  .brand img { width: 24px; height: 24px; border-radius: 6px; }
+  h1 {
+    margin: 0;
+    /* bible.com's scripture serif - the one place their serif voice belongs. */
+    font: 700 20px/1.2 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    letter-spacing: -0.01em;
+    color: var(--text-1);
+  }
+
+  /* ---- primary action -------------------------------------------------- */
+  #open {
+    display: block; width: 100%; height: 48px;
+    border: 0; border-radius: 999px;
+    background: var(--brand); color: #fff;
+    /* 20px/700 keeps white-on-#FF3D4D (3.48:1) above the 3:1 AA bar for large
+       text, and matches bible.com's own red CTA. Do not shrink this. */
+    font-size: 20px; font-weight: 700; line-height: 1;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+  #open:hover:not(:disabled) { background: var(--brand-hover); }
+  #open:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  #open:disabled { background: var(--surface-3); color: var(--text-2); cursor: default; }
+
+  #openNote {
+    margin-top: 6px;
+    font-size: 12px; line-height: 1.4;
+    text-align: center;
+    color: var(--text-3);
+  }
+
+  /* ---- section --------------------------------------------------------- */
+  h2 {
+    margin: 12px 0 8px;
+    font-size: 13px; font-weight: 700;
+    color: var(--text-2);
+  }
+
+  /* ---- settings rows (filled cards, 4px radius - their pattern) --------- */
+  .rows { display: flex; flex-direction: column; gap: 5px; }
+  .row {
+    display: flex; align-items: center; gap: 16px;
+    min-height: 44px; padding: 8px 16px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    cursor: pointer; user-select: none;
+  }
+  .row .label {
+    flex: 1; min-width: 0;
+    font-size: 13px; font-weight: 500;
+    color: var(--text-3);
+  }
+  .row .note { font-weight: 400; font-size: 12px; color: var(--text-3); }
   .row.disabled { opacity: 0.45; pointer-events: none; }
-  .hint { color: #777; font-size: 12px; margin-top: 10px; }
-  kbd { font: 11px/1 ui-monospace, monospace; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #f6f6f6; }
-  .custom { display: none; margin-top: 6px; }
-  #open { width: 100%; padding: 9px; font: 600 13px/1 system-ui, sans-serif; color: #fff; background: #2f80ed; border: 0; border-radius: 8px; cursor: pointer; }
-  #open:hover:not(:disabled) { background: #2468c0; }
-  #open:disabled { background: #b9c6d6; cursor: default; }
-  #openNote { margin-top: 6px; }
+
+  /* ---- toggle: a real checkbox, hidden but focusable; siblings styled ---- */
+  /* bible.com's switch is 64x32 with a 32x24 knob; scaled 0.875 to fit a 44px row. */
+  .switch { position: relative; flex: none; width: 56px; height: 28px; }
+  .switch input {
+    position: absolute; width: 1px; height: 1px;
+    margin: 0; padding: 0; opacity: 0;
+    pointer-events: none;       /* the wrapping <label> owns the click */
+  }
+  .switch .track {
+    position: absolute; inset: 0;
+    border-radius: 999px;
+    background: var(--switch-off);
+    transition: background-color 150ms ease;
+  }
+  .switch .knob {
+    position: absolute; top: 4px; left: 4px;
+    width: 28px; height: 20px;   /* a stadium, not a circle - as on bible.com */
+    border-radius: 999px;
+    background: var(--knob);
+    transition: transform 150ms ease;
+  }
+  .switch input:checked ~ .track { background: var(--switch-on); }
+  .switch input:checked ~ .knob  { transform: translateX(20px); }
+  .switch input:focus-visible ~ .track { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* ---- version fields --------------------------------------------------- */
+  .field { margin-top: 8px; }
+  .field-label {
+    display: block; margin-bottom: 4px;
+    font-size: 13px; font-weight: 500;
+    color: var(--text-3);
+  }
+  .select { position: relative; }
+  .select::after {               /* chevron drawn in CSS so it inherits the theme */
+    content: '';
+    position: absolute; right: 16px; top: 50%;
+    width: 7px; height: 7px; margin-top: -5px;
+    border-right: 2px solid var(--chevron);
+    border-bottom: 2px solid var(--chevron);
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+  select {
+    width: 100%; height: 44px;
+    padding: 0 40px 0 14px;
+    font-size: 14px; font-weight: 500;
+    color: var(--text-1);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    appearance: none; -webkit-appearance: none;
+    cursor: pointer;
+  }
+  select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* The 1.5px transparent border is load-bearing: popup.js signals a bad paste with
+     custom.style.borderColor = '#d33', which needs a non-zero border-width to show. */
+  .custom {
+    display: none;
+    width: 100%; height: 40px; margin-top: 8px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--text-1);
+    background: var(--surface-2);
+    border: 1.5px solid transparent;
+    border-radius: 4px;
+  }
+  .custom::placeholder { color: var(--text-3); }
+  .custom:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+  /* ---- footer ----------------------------------------------------------- */
+  .hint { margin-top: 12px; font-size: 12px; line-height: 1.45; color: var(--text-3); }
+  kbd {
+    display: inline-block; padding: 1px 5px;
+    font-size: 11px; font-weight: 600; line-height: 1.5;
+    color: var(--text-2);
+    background: var(--surface-3);
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
 </style>
 </head>
 <body>
-  <h1>BibleBoost</h1>
+  <div class="brand">
+    <img src="icons/icon48.png" alt="">
+    <h1>BibleBoost</h1>
+  </div>
 
   <button id="open">Open parallel reading</button>
-  <div class="hint" id="openNote"></div>
+  <div id="openNote"></div>
 
   <h2>Parallel reading</h2>
 
-  <label class="row" id="parallelRow"><span>Parallel mode <span id="parallelNote" class="hint"></span></span><input type="checkbox" id="parallel"></label>
-  <label class="row"><span>Align verses side by side</span><input type="checkbox" id="align"></label>
-  <label class="row"><span>Verse separators</span><input type="checkbox" id="separators"></label>
-  <label class="row"><span>Show switch on the page</span><input type="checkbox" id="showSwitch"></label>
+  <div class="rows">
+    <label class="row" id="parallelRow">
+      <span class="label">Parallel mode <span id="parallelNote" class="note"></span></span>
+      <span class="switch"><input type="checkbox" id="parallel"><span class="track"></span><span class="knob"></span></span>
+    </label>
+    <label class="row">
+      <span class="label">Align verses side by side</span>
+      <span class="switch"><input type="checkbox" id="align"><span class="track"></span><span class="knob"></span></span>
+    </label>
+    <label class="row">
+      <span class="label">Verse separators</span>
+      <span class="switch"><input type="checkbox" id="separators"><span class="track"></span><span class="knob"></span></span>
+    </label>
+    <label class="row">
+      <span class="label">Show switch on the page</span>
+      <span class="switch"><input type="checkbox" id="showSwitch"><span class="track"></span><span class="knob"></span></span>
+    </label>
+  </div>
 
-  <label class="field" for="leftVersion">Left version</label>
-  <select id="leftVersion"></select>
-  <input type="text" class="custom" id="leftCustom" placeholder="e.g. 1588 or a bible.com/bible/… URL">
+  <div class="field">
+    <label class="field-label" for="leftVersion">Left version</label>
+    <div class="select"><select id="leftVersion"></select></div>
+    <input type="text" class="custom" id="leftCustom" placeholder="e.g. 1588 or a bible.com/bible/… URL">
+  </div>
 
-  <label class="field" for="rightVersion">Right version</label>
-  <select id="rightVersion"></select>
-  <input type="text" class="custom" id="rightCustom" placeholder="e.g. 1588 or a bible.com/bible/… URL">
+  <div class="field">
+    <label class="field-label" for="rightVersion">Right version</label>
+    <div class="select"><select id="rightVersion"></select></div>
+    <input type="text" class="custom" id="rightCustom" placeholder="e.g. 1588 or a bible.com/bible/… URL">
+  </div>
 
   <div class="hint">Shortcuts on bible.com: <kbd>Alt</kbd>+<kbd>P</kbd> parallel, <kbd>Alt</kbd>+<kbd>A</kbd> align, <kbd>Alt</kbd>+<kbd>S</kbd> separators.<br>
   Both versions and your last chapter are remembered as you read.</div>

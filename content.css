@@ -17,11 +17,69 @@ html[data-bb-align] [data-bb-col] [data-bb-v]::before {
    It is painted as a background rather than a border so it stays out of the box model and cannot
    perturb the heights align() measures. */
 
-/* Fallback first: an undefined --bb-sep-color would make the gradient invalid at computed-value
-   time, and the separator would vanish silently. */
-:root      { --bb-sep-color: rgba(128, 128, 128, 0.14); }
-html.light { --bb-sep-color: rgba(8, 7, 7, 0.10); }
-html.dark  { --bb-sep-color: rgba(255, 255, 255, 0.13); }
+/* ---------- Theme tokens ----------
+   Values measured off bible.com's own UI. The page picks its theme with html.light / html.dark
+   independently of the OS, so that class has to win: it scores (0,1,1) against :root at (0,1,0),
+   which it beats whatever the source order. :root therefore carries a light default and the
+   prefers-color-scheme block a dark one, covering only the case where the page sets no class
+   (the first paint, or a layout that never adds one).
+
+   Fallbacks first, and never omitted: an undefined custom property makes the separator's
+   gradient invalid at computed-value time and the hairline vanishes silently.
+
+   One deliberate departure: --bb-track-on is the extension's red, not bible.com's switch
+   colour. Theirs is #121212 on light (fine, 5.6:1 against the off track) but #636161 on dark,
+   which lands 1.55:1 against its own off state of #474545 - measured, not guessed. Their
+   switch can carry that because it is twice this size and sits on a lighter row; this one is
+   16px tall on the dark page itself, and the dock exists to be read at a glance. Red fixes
+   dark mode and matches the popup's button, so "on" means one colour across both surfaces. */
+:root {
+  --bb-sep-color:  rgba(128, 128, 128, 0.14);
+  --bb-surface:    rgba(255, 255, 255, 0.92);
+  --bb-border:     #DDDBDB;
+  --bb-text:       #121212;
+  --bb-hover:      rgba(8, 7, 7, 0.08);
+  --bb-track-off:  #DDDBDB;
+  --bb-track-on:   #FF3D4D;
+  --bb-thumb:      #FFFFFF;
+  --bb-shadow:     0 4px 16px rgba(8, 7, 7, 0.14);
+  --bb-focus:      #3D79C2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bb-sep-color: rgba(255, 255, 255, 0.13);
+    --bb-surface:   rgba(18, 18, 18, 0.92);
+    --bb-border:    #353333;
+    --bb-text:      #FFFFFF;
+    --bb-hover:     rgba(255, 255, 255, 0.15);
+    --bb-track-off: #474545;
+    --bb-track-on:  #FF3D4D;
+    --bb-shadow:    0 4px 16px rgba(0, 0, 0, 0.45);
+  }
+}
+
+html.light {
+  --bb-sep-color: rgba(8, 7, 7, 0.10);
+  --bb-surface:   rgba(255, 255, 255, 0.92);
+  --bb-border:    #DDDBDB;
+  --bb-text:      #121212;
+  --bb-hover:     rgba(8, 7, 7, 0.08);
+  --bb-track-off: #DDDBDB;
+  --bb-track-on:  #FF3D4D;
+  --bb-shadow:    0 4px 16px rgba(8, 7, 7, 0.14);
+}
+
+html.dark {
+  --bb-sep-color: rgba(255, 255, 255, 0.13);
+  --bb-surface:   rgba(18, 18, 18, 0.92);
+  --bb-border:    #353333;
+  --bb-text:      #FFFFFF;
+  --bb-hover:     rgba(255, 255, 255, 0.15);
+  --bb-track-off: #474545;
+  --bb-track-on:  #FF3D4D;
+  --bb-shadow:    0 4px 16px rgba(0, 0, 0, 0.45);
+}
 
 html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   height: calc(var(--bb-gap, 0px) + 0.6em);
@@ -39,17 +97,27 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 #bb-dock {
   position: fixed;
   right: 20px;
-  bottom: 24px;
+  /* bible.com publishes the height of its own bottom chrome, so the dock can clear it at any
+     width instead of guessing. Both read 0px when the bar is absent, which makes this the
+     correct expression on desktop too. See the note on the media query below. */
+  bottom: calc(24px + var(--tabbar-h, 0px) + var(--audio-bar-h, 0px));
   z-index: 2147483000;
   display: flex;
   gap: 4px;
   padding: 5px;
   border-radius: 999px;
-  background: rgba(28, 28, 30, 0.92);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background: var(--bb-surface);
+  border: 1px solid var(--bb-border);
+  box-shadow: var(--bb-shadow);
   backdrop-filter: blur(8px);
-  font: 600 12.5px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
-  opacity: 0.62;
+  /* bible.com's own stack. The content script runs on their page, where aktiv-grotesk is
+     already loaded, so the dock gets the real UI face for nothing - no bundled font and no
+     web_accessible_resources entry, which an extension-hosted @font-face would have needed. */
+  font: 700 12.5px/1 aktiv-grotesk, Inter, Arial, sans-serif;
+  color: var(--bb-text);
+  /* Dimmer at rest, but less so than when the pill was dark-on-light: a surface-matched pill
+     has only its border and shadow to hold the shape, so it needs the extra few percent. */
+  opacity: 0.7;
   transition: opacity 0.18s ease;
 }
 #bb-dock:hover,
@@ -63,7 +131,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #f2f2f2;
+  color: var(--bb-text);
   font: inherit;
   cursor: pointer;
 }
@@ -82,17 +150,23 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 #bb-dock .bb-full { max-width: 0; opacity: 0; }
 #bb-dock:hover .bb-short,
 #bb-dock:focus-within .bb-short { max-width: 0; opacity: 0; }
+/* 9em, not 8: the label is bolder than it was, and "Align verses" has to clear it or the
+   expanded pill clips its own text. */
 #bb-dock:hover .bb-full,
-#bb-dock:focus-within .bb-full { max-width: 8em; opacity: 1; }
+#bb-dock:focus-within .bb-full { max-width: 9em; opacity: 1; }
 
-#bb-dock .bb-sw:hover { background: rgba(255, 255, 255, 0.08); }
-#bb-dock .bb-sw:focus-visible { outline: 2px solid #4c8dff; outline-offset: 1px; }
+#bb-dock .bb-sw:hover { background: var(--bb-hover); }
+#bb-dock .bb-sw:focus-visible { outline: 2px solid var(--bb-focus); outline-offset: 1px; }
+
+/* bible.com's switch is a 64x32 track holding a 32x24 knob - a stadium, not a circle, inset
+   4px at both ends. This is that geometry at half scale, so the dock reads as the same
+   control as the ones in their own settings panel. */
 #bb-dock .bb-track {
   position: relative;
-  width: 28px;
+  width: 32px;
   height: 16px;
   border-radius: 999px;
-  background: #5a5a5e;
+  background: var(--bb-track-off);
   transition: background 0.15s;
   flex-shrink: 0;
 }
@@ -100,17 +174,32 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 12px;
+  width: 16px;
   height: 12px;
-  border-radius: 50%;
-  background: #fff;
+  border-radius: 999px;
+  background: var(--bb-thumb);
   transition: transform 0.15s;
 }
-#bb-dock .bb-sw[aria-checked="true"] .bb-track { background: #2f80ed; }
+#bb-dock .bb-sw[aria-checked="true"] .bb-track { background: var(--bb-track-on); }
 #bb-dock .bb-sw[aria-checked="true"] .bb-thumb { transform: translateX(12px); }
 
+/* bible.com swaps its left rail for a bottom tab bar on narrow viewports and publishes that
+   bar's height as --tabbar-h: measured 72px at phone widths, 95px at 800px, and already back
+   to 0px by 1010px. --audio-bar-h is the player that stacks above it, 0px unless something is
+   playing. The base rule above therefore lands correctly at every width, which is the point of
+   reading their value rather than guessing a breakpoint of our own - the hardcoded
+   "bottom: 96px below 767px" this replaces was tuned against the 72px bar alone (72 + 24), so
+   at ~800px, where the query stopped applying and the bar grew to 95px, the dock sat inside it.
+
+   The floor below is kept only where the old code had it. var() cannot tell a missing custom
+   property from one set to 0px, so max() has to be scoped to widths where a tab bar is a safe
+   assumption: applied any wider it fires at 1010px too, where the bar is legitimately gone, and
+   strands the dock 96px up with nothing under it. */
 @media (max-width: 767px) {
-  #bb-dock { bottom: 96px; right: 12px; }
+  #bb-dock {
+    bottom: max(96px, calc(24px + var(--tabbar-h, 0px) + var(--audio-bar-h, 0px)));
+    right: 12px;
+  }
 }
 
 /* Last in the file on purpose: these selectors tie with the ones above, so source order is what
