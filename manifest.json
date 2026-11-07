@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "BibleBoost — Power-ups for Bible.com",
+  "short_name": "BibleBoost",
+  "version": "2.1.0",
+  "description": "Power-ups for Bible.com. Starts with parallel reading: two versions side by side, verses lined up. Keeps highlight, copy and share.",
+  "permissions": [
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "BibleBoost"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.bible.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

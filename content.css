@@ -1,0 +1,63 @@
+/* ---------- Verse alignment ----------
+   Each verse's first span gets a zero-content block before it: this starts the verse on a new line,
+   and its height (--bb-gap, set by content.js) pushes the higher column down to match the other. */
+html[data-bb-align] .version [data-bb-v]::before {
+  content: "";
+  display: block;
+  height: calc(var(--bb-gap, 0px) + 0.3em);
+}
+
+/* ---------- On-page switch ---------- */
+#bb-dock {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 2147483000;
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgba(28, 28, 30, 0.92);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  font: 600 12.5px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+#bb-dock .bb-sw {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px 6px 7px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #f2f2f2;
+  font: inherit;
+  cursor: pointer;
+}
+#bb-dock .bb-sw:hover { background: rgba(255, 255, 255, 0.08); }
+#bb-dock .bb-sw:focus-visible { outline: 2px solid #4c8dff; outline-offset: 1px; }
+#bb-dock .bb-track {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: #5a5a5e;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+#bb-dock .bb-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+#bb-dock .bb-sw[aria-checked="true"] .bb-track { background: #2f80ed; }
+#bb-dock .bb-sw[aria-checked="true"] .bb-thumb { transform: translateX(12px); }
+
+@media (max-width: 767px) {
+  #bb-dock { bottom: 96px; right: 12px; }
+}

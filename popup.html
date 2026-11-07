@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { width: 290px; margin: 0; padding: 14px; font: 13px/1.4 system-ui, sans-serif; color: #222; }
+  h1 { font-size: 15px; margin: 0 0 10px; }
+  h2 { font-size: 11px; margin: 12px 0 2px; text-transform: uppercase; letter-spacing: 0.05em; color: #777; }
+  label.field { display: block; margin: 14px 0 4px; font-weight: 600; }
+  select, input[type=text] { width: 100%; padding: 6px; font: inherit; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid #eee; cursor: pointer; }
+  .row input { width: 16px; height: 16px; cursor: pointer; }
+  .row.disabled { opacity: 0.45; pointer-events: none; }
+  .hint { color: #777; font-size: 12px; margin-top: 10px; }
+  kbd { font: 11px/1 ui-monospace, monospace; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #f6f6f6; }
+  #custom { display: none; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <h1>BibleBoost</h1>
+
+  <h2>Parallel reading</h2>
+
+  <label class="row" id="parallelRow"><span>Parallel mode <span id="parallelNote" class="hint"></span></span><input type="checkbox" id="parallel"></label>
+  <label class="row"><span>Align verses side by side</span><input type="checkbox" id="align"></label>
+  <label class="row"><span>Show switch on the page</span><input type="checkbox" id="showSwitch"></label>
+
+  <label class="field" for="version">Version used when turning parallel on</label>
+  <select id="version">
+    <option value="114">NKJV — New King James</option>
+    <option value="1">KJV — King James</option>
+    <option value="111">NIV</option>
+    <option value="59">ESV</option>
+    <option value="100">NASB1995</option>
+    <option value="116">NLT</option>
+    <option value="339">TAOVBSI — Tamil O.V. (BSI)</option>
+    <option value="custom">Other (bible.com ID or URL)…</option>
+  </select>
+  <input type="text" id="custom" placeholder="e.g. 1588 or a bible.com/bible/… URL">
+
+  <div class="hint">Shortcuts on bible.com: <kbd>Alt</kbd>+<kbd>P</kbd> parallel on/off, <kbd>Alt</kbd>+<kbd>A</kbd> align on/off.<br>
+  The last parallel version you pick on bible.com is remembered automatically.</div>
+<script src="popup.js"></script>
+</body>
+</html>
