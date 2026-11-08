@@ -86,6 +86,13 @@ Confidence: **from Chrome's documentation and the HTML spec, not verified here**
 Each of these fails in a way that looks like something else, which is why they
 are written down before T-003 needs them.
 
+T-002's acceptance run on 2026-11-09 confirmed the working side of two of them,
+in a real Chrome. `ping` from an extension page got its reply through
+`dispatch(...).then(reply); return true;`. And after the worker had gone inactive,
+the next `ping` woke it and was answered, so a listener registered at the top
+level does receive the message that started the worker. The failures themselves
+were not provoked.
+
 - **Register every listener synchronously, at the top level of
   `background.js`.** When an event wakes a stopped worker, Chrome delivers it to
   the listeners that exist once the script has finished its first run. A

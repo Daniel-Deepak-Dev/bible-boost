@@ -21,6 +21,9 @@ const HANDLERS = Object.freeze({
   throwsString: async () => { throw 'plain string'; },
   throwsNull: async () => { throw null; },
   throwsObject: async () => { throw { code: 42 }; },
+  throwsNoProto: async () => { throw Object.create(null); },
+  throwsEmptyString: async () => { throw ''; },
+  throwsEmptyError: async () => { throw new Error(''); },
 });
 
 // A throw is logged on purpose (the stack belongs in the worker's console). Silence it here, and
@@ -43,6 +46,11 @@ test('the handler receives the whole message', async () => {
 test('an unknown type gets the unknown reply', async () => {
   assert.deepEqual(await dispatch(HANDLERS, { type: 'nope' }), UNKNOWN);
   assert.deepEqual(await dispatch(HANDLERS, { type: 42 }), UNKNOWN);
+});
+
+// Object.hasOwn coerces its key, so an array holding a real name would otherwise pass as that name.
+test('a type that only coerces to a known name is unknown', async () => {
+  assert.deepEqual(await dispatch(HANDLERS, { type: ['ping'] }), UNKNOWN);
 });
 
 test('a missing type or a missing message gets the unknown reply', async () => {
@@ -78,11 +86,13 @@ test('a rejected promise resolves to ok:false', async (t) => {
 });
 
 // sendResponse serializes the reply as JSON, and an Error or an arbitrary object comes out of that
-// as {} or worse. Whatever was thrown, the caller must get a readable string.
+// as {} or worse. Whatever was thrown, the caller must get a readable string. Object.create(null)
+// is the sharp one: String() throws on it, inside dispatch's catch, and an unguarded dispatch then
+// rejects, so reply is never called.
 test('whatever is thrown, error is a non-empty string', async (t) => {
   quietErrors(t);
   assert.deepEqual(await dispatch(HANDLERS, { type: 'throwsString' }), { ok: false, error: 'plain string' });
-  for (const type of ['throwsNull', 'throwsObject']) {
+  for (const type of ['throwsNull', 'throwsObject', 'throwsNoProto', 'throwsEmptyString', 'throwsEmptyError']) {
     const res = await dispatch(HANDLERS, { type });
     assert.equal(res.ok, false, type);
     assert.equal(typeof res.error, 'string', type);

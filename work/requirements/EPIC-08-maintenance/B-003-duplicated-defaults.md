@@ -19,7 +19,7 @@ The settings object is defined twice:
 
 ```js
 const DEFAULTS = {
-  align: true, separators: true,
+  align: true, separators: false,
   primaryId: '111', parallelId: '114',
   lastRef: 'JHN.1', showSwitch: true,
 };

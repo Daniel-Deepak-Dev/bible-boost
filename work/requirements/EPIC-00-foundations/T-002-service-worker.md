@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-00 Foundations |
-| Status | In progress |
+| Status | Done |
 | Depends on | — |
 | Blocks | T-003, T-005, and every data operation after it |
 | Size | S |
@@ -92,15 +92,15 @@ idle. Hold no state in module scope that cannot be rebuilt.
 
 ## Acceptance
 
-- [ ] The worker appears in `chrome://extensions` with no load error
-- [ ] From the panel-less console of any extension page,
+- [x] The worker appears in `chrome://extensions` with no load error
+- [x] From the panel-less console of any extension page,
       `chrome.runtime.sendMessage({type:'ping'})` resolves to
       `{ ok: true, schemaVersion: 1 }`
-- [ ] An unknown type resolves to `{ ok: false, error: ... }` rather than hanging
-- [ ] A handler that throws resolves to `{ ok: false, error: ... }`
-- [ ] The popup's existing `state` / `setParallel` / `go` messages still reach
+- [x] An unknown type resolves to `{ ok: false, error: ... }` rather than hanging
+- [x] A handler that throws resolves to `{ ok: false, error: ... }`
+- [x] The popup's existing `state` / `setParallel` / `go` messages still reach
       the **content script** and are unaffected
-- [ ] After leaving the extension idle for a minute, `ping` still works (the
+- [x] After leaving the extension idle for a minute, `ping` still works (the
       worker restarts cleanly)
 
 ## Notes
@@ -114,7 +114,10 @@ proven against `dispatch()` itself by `test/router.test.js` (`node --test`),
 including the `toString` / `constructor` prototype-key case and throws of
 non-`Error` values. No handler that throws ships in the worker, so the throw item
 has no by-hand check. The other items need the unpacked extension loaded in
-Chrome and are ticked only once someone has done that.
+Chrome and are ticked only once someone has done that. Reload the extension
+**and then any open bible.com tab** before checking: Chrome does not inject
+content scripts into a tab that is already open, so the popup item fails for a
+reason that has nothing to do with this task (B-007).
 
 **Found along the way:** the documented test command `node --test test/` runs
 nothing on Node 21+. It is now bare `node --test` everywhere, and the reason is

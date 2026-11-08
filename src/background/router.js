@@ -21,6 +21,8 @@
 //   object, by convention { ok: true, ... }.
 // - An unknown type, a missing type or a missing msg resolves to
 //   { ok: false, error: 'unknown message type' } (R5).
+// - Only a STRING type counts. Object.hasOwn coerces its key, so { type: ['ping'] } would pass the
+//   own-key test as 'ping' and run that handler for a message nobody meant to send.
 // - Only the table's OWN keys count. handlers['toString'] finds Object.prototype.toString through
 //   the prototype chain, and calling it would "succeed" with the string "[object Undefined]".
 //   'constructor' and '__proto__' do the same kind of thing.
@@ -30,5 +32,31 @@
 //   console.error, where it shows in the worker's own DevTools (chrome://extensions, "service
 //   worker" link).
 export async function dispatch(handlers, msg) {
-  // TODO(human)
+  const type = msg?.type;
+  if (typeof type !== 'string' || !Object.hasOwn(handlers, type)) {
+    return { ok: false, error: 'unknown message type' };
+  }
+  try {
+    // The await has to be inside the try. Returning the bare promise would let an async rejection
+    // leave this function uncaught, which is the hang R4 exists to prevent.
+    return await handlers[type](msg);
+  } catch (err) {
+    console.error('[BibleBoost] handler failed:', type, err);
+    return { ok: false, error: errorText(err) };
+  }
+}
+
+// ---------- Error text ----------
+// Always a non-empty string, and it must not throw, because it runs inside dispatch's catch where
+// nothing is left to catch it. String() does throw on a value with no way to become a primitive,
+// such as Object.create(null), and dispatch would then reject, which is the same silent hang again.
+//
+// || rather than ??, because new Error('') has a message that is present but says nothing. Falling
+// through gives String(err), "Error". A bare throw '' is empty both ways, hence the last fallback.
+function errorText(err) {
+  try {
+    return String(err?.message || err) || 'handler failed';
+  } catch {
+    return 'handler failed';
+  }
 }

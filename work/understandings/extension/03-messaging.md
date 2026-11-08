@@ -35,8 +35,11 @@ and it goes to a **tab**, so it does not break the "no broadcast" rule.
 Two things to preserve:
 
 1. **A reply to `state` is how the popup learns the tab is bible.com.** The
-   content script runs nowhere else, so a failed reply means "not bible.com".
-   This is why the extension needs no `tabs` permission.
+   content script runs nowhere else, so a reply proves it, which is why the
+   extension needs no `tabs` permission. **Silence does not prove the opposite**
+   (B-007): a bible.com tab also says nothing while it is still loading, or if
+   it was already open when the extension was installed or reloaded. So the
+   popup keeps asking for 10 s, and its note says "open or reload".
 2. **`go` is gated by `isOwnSiteUrl()`** — origin check, `https:` plus
    `www.bible.com`. Any **new** inbound message that navigates must reuse it.
    Checking hostname alone would accept `http:`; a substring test would accept
@@ -52,7 +55,7 @@ exactly one reply. The rules belong to `dispatch`, not to each handler, and
 | Situation | Reply |
 |---|---|
 | known type | whatever `handlers[type](msg)` resolves to, by convention `{ ok: true, ... }` |
-| unknown or missing type, missing `msg` | `{ ok: false, error: 'unknown message type' }` |
+| unknown, missing or non-string type, missing `msg` | `{ ok: false, error: 'unknown message type' }` |
 | a name inherited from `Object.prototype` (`toString`, `constructor`, …) | the same unknown reply, **not** a call to that function |
 | the handler throws or rejects, with anything | `{ ok: false, error: <string> }`, plus a `console.error` in the worker |
 
@@ -60,6 +63,17 @@ exactly one reply. The rules belong to `dispatch`, not to each handler, and
 JSON and an `Error` object comes out of that as `{}`. Look for the stack in the
 worker's own console (`chrome://extensions` → the "service worker" link), not in
 the caller's.
+
+Two traps in that table, both held by a test:
+
+- **`Object.hasOwn` coerces its key.** A non-string `type` is refused before the
+  lookup, because `{ type: ['ping'] }` would otherwise pass as `'ping'` and run
+  that handler.
+- **Building the `error` text can throw.** `String()` throws on a value with no
+  way to become a primitive, such as `Object.create(null)`. Unguarded, that
+  happens inside `dispatch`'s own `catch`, the promise rejects, `reply` never
+  runs and the caller hangs. Such a value, or a bare `throw ''`, replies
+  `error: 'handler failed'`.
 
 A smoke test that needs nothing else built, from any extension page's console:
 

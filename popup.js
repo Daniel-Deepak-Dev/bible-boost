@@ -2,7 +2,7 @@
 // missing, so an older install picks these up without a migration step.
 const DEFAULTS = {
   align: true,
-  separators: true,
+  separators: false,
   primaryId: '111',
   parallelId: '114',
   lastRef: 'JHN.1',
@@ -124,16 +124,39 @@ chrome.storage.sync.get(DEFAULTS, (s) => {
   refreshOpen();
 });
 
-// Parallel mode acts on the current bible.com tab
+// ---------- Parallel mode ----------
+// Acts on the current bible.com tab. A reply to 'state' proves the tab is bible.com, but silence
+// does not prove it isn't, because a bible.com tab is silent in two other situations (B-007):
+//
+// - It is still loading. Content scripts run at document_idle, so every page load has a window with
+//   nothing listening yet. Asking again closes that one by itself, which is why the row can come
+//   back here instead of staying grey until the popup is closed and reopened.
+// - It was already open when the extension was installed, updated or reloaded. Chrome does not
+//   inject content scripts into a tab that is already open, so no amount of asking helps until that
+//   tab is reloaded, which is what the note has to say. Without the tabs permission the popup cannot
+//   tell this from "some other site", so the one note covers both.
+//
+// 20 tries at 500 ms gives up after 10 s, a guess at how long anyone waits on a popup rather than a
+// measurement. Reading lastError on each failure marks it as expected, so the retries log nothing.
+const STATE_TRIES = 20;
+const STATE_RETRY_MS = 500;
+
 chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-  const off = () => { $('parallelRow').classList.add('disabled'); $('parallelNote').textContent = '(open a bible.com chapter)'; };
+  const off = () => { $('parallelRow').classList.add('disabled'); $('parallelNote').textContent = '(open or reload a bible.com chapter)'; };
+  const on = () => { $('parallelRow').classList.remove('disabled'); $('parallelNote').textContent = ''; };
   if (!tab) return off();
-  chrome.tabs.sendMessage(tab.id, { type: 'state' }, (res) => {
-    if (chrome.runtime.lastError || !res) return off();
+  const ask = (triesLeft) => chrome.tabs.sendMessage(tab.id, { type: 'state' }, (res) => {
+    if (chrome.runtime.lastError || !res) {
+      off();
+      if (triesLeft > 1) setTimeout(ask, STATE_RETRY_MS, triesLeft - 1);
+      return;
+    }
+    on();
     $('parallel').checked = res.parallel;
     $('parallel').onchange = (e) => {
       chrome.tabs.sendMessage(tab.id, { type: 'setParallel', on: e.target.checked });
       window.close();
     };
   });
+  ask(STATE_TRIES);
 });
