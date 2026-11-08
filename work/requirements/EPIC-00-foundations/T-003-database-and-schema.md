@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-00 Foundations |
-| Status | Not started |
+| Status | Done |
 | Depends on | T-002 |
 | Blocks | T-005 |
 | Size | M |
@@ -55,9 +55,15 @@ must not corrupt a newer database.
 **R5.** Add `"unlimitedStorage"` to the manifest permissions. It lifts the
 `storage.local` cap **and** exempts IndexedDB from quota eviction.
 
-**R6.** Call `navigator.storage.persist()` once on `chrome.runtime.onInstalled`,
-and record the result in `storage.local` so T-049 can tell the user whether
-persistence was granted.
+**R6.** Call `navigator.storage.persist()` from the **popup**, on each open until
+it is granted, and record the result in `storage.local` under `persistence`
+(`{ granted, at }`) so T-049 can tell the user whether persistence was granted.
+
+This first said to call it from `chrome.runtime.onInstalled` in the worker. That
+cannot work: `persist()` is `[Exposed=Window]` and is `undefined` in a worker
+(measured in Chromium 152). So it runs on the first popup open rather than at
+install, and until then `unlimitedStorage` (R5) is what exempts the database from
+eviction. `background.js` still adds `onInstalled`, to create the database.
 
 **R7.** Handle a blocked upgrade: if another tab holds an old connection, the
 `blocked` event fires. Log it and surface a message rather than hanging silently.
@@ -69,7 +75,8 @@ this avoids a special row that import, export and delete all have to know about.
 
 - `src/background/db.js` — new
 - `src/background/migrate.js` — new
-- `src/shared/schema.js` — extend with record defaults and validators
+- `test/migrate.test.js` — new, on the T-007 R1 convention
+- `popup.js` — the `persist()` call (R6)
 - `background.js` — call the opener; add `onInstalled`
 - `manifest.json` — add `unlimitedStorage`
 
@@ -81,17 +88,29 @@ this avoids a special row that import, export and delete all have to know about.
 
 ## Acceptance
 
-- [ ] On first load, DevTools → Application → IndexedDB shows `bibleboost` with
+- [x] On first load, DevTools → Application → IndexedDB shows `bibleboost` with
       all four stores and every index listed in R2
-- [ ] `meta` contains `schemaVersion: 1`
-- [ ] Reloading the extension does not re-run the v1 migration
-- [ ] `node --test test/migrate.test.js` covers the ladder running from empty to
+- [x] `meta` contains `schemaVersion: 1`
+- [x] Reloading the extension does not re-run the v1 migration
+- [x] `node --test test/migrate.test.js` covers the ladder running from empty to
       v1, and the refuse-on-newer case
-- [ ] `navigator.storage.persisted()` reports true, or the refusal is recorded
-- [ ] Opening the extension in two tabs and reloading does not hang
+- [x] `navigator.storage.persisted()` reports true, or the refusal is recorded
+- [x] Opening the extension in two tabs and reloading does not hang
 
 ## Notes
 
 Multi-entry indexes need a flat array of scalars, which is why a note carries
 both `verses` (rich) and `verseKeys` (flat). Keeping them in sync is T-005's job
 and must happen in exactly one function.
+
+**How the acceptance items are covered.** The ladder and refuse-on-newer item is
+proven by `test/migrate.test.js`, against a fake that records calls. The real
+`db.js` and `migrate.js` were also run against real IndexedDB in a Chromium 152
+page on 2026-11-09: the stores and indexes came out as R2 says, and the reopen,
+newer, blocked and rollback paths all behaved. The other items were checked by
+hand in the loaded extension the same day. When repeating them, reload it **and
+then any open bible.com tab** first (B-007).
+
+**"Refuse to write" refuses reads too.** IndexedDB will not open a database at a
+lower version than the one on disk, so a build that finds a newer database cannot
+read it without guessing at a schema it has never seen.

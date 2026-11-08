@@ -1,6 +1,6 @@
 /*
  * BibleBoost — service worker
- * Two separate entry points, which should stay separate:
+ * Three separate entry points, which should stay separate:
  *
  * - chrome.commands: the Parallel / Align / Separators keyboard shortcuts, passed on to the tab that
  *   was in front when the key was pressed (B-006).
@@ -8,6 +8,8 @@
  *   script ask the worker for data this way, and the worker is the only IndexedDB client
  *   (architecture rule 1). The popup does NOT come through here: it talks to the content script
  *   with chrome.tabs.sendMessage, which never reaches the worker.
+ * - chrome.runtime.onInstalled: creates or upgrades the database as soon as the extension is
+ *   installed or updated (T-003).
  *
  * Why the shortcuts come through here at all (B-006): on 2026-11-08 Alt+P / Alt+A / Alt+S did
  * nothing in a real Chrome on Windows, while the dock switches, which run the very same code,
@@ -22,6 +24,7 @@
  */
 import { SCHEMA_VERSION } from './src/shared/schema.js';
 import { dispatch } from './src/background/router.js';
+import { openDb } from './src/background/db.js';
 
 // ---------- Keyboard shortcuts ----------
 // The command names are declared in manifest.json "commands", and content.js maps the same names
@@ -32,6 +35,18 @@ import { dispatch } from './src/background/router.js';
 chrome.commands.onCommand.addListener((command, tab) => {
   if (!tab?.id) return;
   chrome.tabs.sendMessage(tab.id, { type: 'command', command }, () => void chrome.runtime.lastError);
+});
+
+// ---------- Install ----------
+// Opens the database once, as soon as the extension is installed or updated, which creates it or
+// runs any new step of the ladder before the first note needs it. Nothing is waiting on this open,
+// so a failure has only the worker's console to go to. The next handler that needs the database
+// gets the same error back through the router.
+//
+// Registered at the top level for the same reason as the message listener below: this is the event
+// that started the worker, and a listener added any later would miss it.
+chrome.runtime.onInstalled.addListener(() => {
+  openDb().catch((err) => console.error('[BibleBoost] could not open the notes database:', err));
 });
 
 // ---------- Message router ----------

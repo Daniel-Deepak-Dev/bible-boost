@@ -7,7 +7,7 @@ Confidence: **design decision**, approved. Schema is normative.
 | Where | What | Why |
 |---|---|---|
 | IndexedDB `bibleboost` | notes, topics, tags, meta | indexed queries, partial reads, scales |
-| `chrome.storage.local` | panel open/pinned/width, last filter, `notesRev`, `lastExportAt` | per-device UI state and the change signal |
+| `chrome.storage.local` | panel open/pinned/width, last filter, `notesRev`, `lastExportAt`, `persistence` | per-device UI state and the change signal |
 | `chrome.storage.sync` | **existing settings only** | already working — do not migrate |
 
 ### Do not move the existing settings
@@ -35,6 +35,27 @@ tags    keyPath 'name'      // already normalized
 
 meta    keyPath 'key'       // { key: 'schemaVersion', value: 1 }
 ```
+
+### How IndexedDB treats this schema
+
+Confidence: **measured**, by running `db.js` and `migrate.js` against real
+IndexedDB in a Chromium 152 page on 2026-11-09.
+
+- **A `null` is not a valid key, so a row whose indexed field is null is not in
+  that index at all.** Of two notes, one with `topicId: null, deletedAt: null`,
+  `byTopic` and `byDeleted` each held one row. That makes `byDeleted` exactly the
+  Trash list, but `byTopic` cannot find Uncategorized notes, `byParent` cannot
+  find root topics, and neither can answer "everything not deleted". Those need
+  a walk of another index.
+- **A database newer than the code fails at `open()` with `VersionError`**, before
+  `meta` can be read. `db.js` reports it with the same message as a newer `meta`
+  row.
+- **A ladder step that throws rolls everything back.** The store it had half made
+  was gone, and the version and the data were unchanged.
+- **`blocked` leaves the open pending.** `db.js` answers the caller at once, and
+  closes the connection when the upgrade eventually finishes.
+- **Inside a transaction, await only IndexedDB.** After a 50 ms timer, the next
+  request threw `TransactionInactiveError`, synchronously.
 
 ## Records
 
@@ -112,7 +133,8 @@ extension destroys every note, with no recovery. Mitigations, none of them a
 solution:
 
 - `unlimitedStorage` permission (also exempts IndexedDB from eviction)
-- `navigator.storage.persist()` on first run
+- `navigator.storage.persist()`, from the popup because a worker cannot call it,
+  with the answer in `storage.local` as `persistence`
 - one-click backup, `lastExportAt`, a nag after 30 days
 
 **Never tell the user their notes are safe.** Sync is a post-v1 item; the schema

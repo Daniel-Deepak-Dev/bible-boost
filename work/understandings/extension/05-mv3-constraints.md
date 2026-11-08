@@ -108,6 +108,10 @@ were not provoked.
 - **A static `import` of a missing or misspelled file fails the whole worker.**
   The registration error shows on `chrome://extensions`, and neither listener
   runs, so the keyboard shortcuts go silent as well.
+- **`navigator.storage.persist()` does not exist in a worker.** The Storage spec
+  marks it `[Exposed=Window]`, and in a dedicated worker in Chromium 152 it was
+  `undefined` while `persisted()` and `estimate()` were functions. The popup makes
+  the call instead (T-003 R6).
 - **`onMessage` listeners return `true`; they are not `async`.** Returning
   literally `true` is the documented way to keep the reply channel open. An
   `async` listener returns a Promise, and on a Chrome that does not take a
@@ -175,6 +179,12 @@ per-item limit. This is why the split in `02-storage-model.md` exists.
 `unlimitedStorage` does double duty: it lifts the `storage.local` cap **and**
 exempts the origin's IndexedDB from quota eviction. Pair it with
 `navigator.storage.persist()`.
+
+**Expect that call to be refused.** In the user's Chrome on 2026-11-09, with
+`unlimitedStorage` granted and the extension freshly loaded, the popup's
+`persist()` was recorded as `granted: false` and `persisted()` agreed. Why Chrome
+refused was not established. Treat `false` as the normal case: protection from
+eviction then rests on `unlimitedStorage` alone.
 
 ## Side panel
 

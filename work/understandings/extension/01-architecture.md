@@ -58,6 +58,8 @@ suggestion.
 | Hosting / sizing / theming the panel iframe | `src/content/panel-host.js` |
 | Existing alignment and separators | `content.js` (unchanged in spirit) |
 | Any read or write of notes data | `src/background/*` |
+| Opening the database, turning IndexedDB events into promises | `src/background/db.js` |
+| What each schema version looks like, and the upgrade steps | `src/background/migrate.js` |
 | Turning a message into a reply (lookup, unknown type, throws) | `src/background/router.js` (`dispatch`); the handler table is in `background.js` |
 | Schema version, `newId()`, record defaults | `src/shared/schema.js` |
 | Any rendering of notes | `src/ui/app/*` |

@@ -103,3 +103,8 @@ a failure does not half-apply.
 
 Resist adding convenience wrappers elsewhere later. If a surface needs a new
 query, it belongs here.
+
+**A `null` field is not in its index** (`02-storage-model.md`, measured during
+T-003). R6's "use the indexes" cannot apply to `topicId: null` (Uncategorized) or
+to "not deleted", because `byTopic` and `byDeleted` do not hold those rows. Walk
+`byUpdated` with a cursor and skip instead.

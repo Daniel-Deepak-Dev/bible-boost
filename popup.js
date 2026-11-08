@@ -160,3 +160,22 @@ chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
   });
   ask(STATE_TRIES);
 });
+
+// ---------- Durable storage ----------
+// Asks Chrome not to evict this extension's data under disk pressure, and records the answer in
+// storage.local for T-049 to show, because a refusal changes the real risk.
+//
+// It is here, and not in the service worker where T-003 R6 first put it, because persist() exists
+// only on pages. In a worker navigator.storage.persisted() is a function and persist() is undefined
+// (measured in Chromium 152, and the Storage spec marks it [Exposed=Window]). The popup is the only
+// page this extension has so far, so this runs the first time the popup opens rather than at
+// install. Until then unlimitedStorage is what exempts the database from eviction.
+//
+// Asked again on every open until it is granted, since Chrome answers without prompting and can
+// change its mind. The comparison keeps a repeated refusal from rewriting the same record.
+chrome.storage.local.get('persistence', ({ persistence }) => {
+  if (persistence?.granted) return;
+  navigator.storage.persist().then((granted) => {
+    if (persistence?.granted !== granted) chrome.storage.local.set({ persistence: { granted, at: Date.now() } });
+  });
+});
