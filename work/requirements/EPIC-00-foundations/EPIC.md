@@ -30,7 +30,7 @@ order. T-003 needs T-002. T-005 needs T-003.
 - [ ] `sh work/status.sh` shows all seven Done
 - [ ] Parallel alignment and separators behave exactly as before — verified by
       hand on a live chapter
-- [ ] `node --test test/` passes
+- [ ] `node --test` passes
 - [ ] No new dependency, no `package.json` in the extension root
 
 ## Risks

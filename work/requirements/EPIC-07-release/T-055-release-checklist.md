@@ -58,7 +58,7 @@ likely failure given how often this page re-renders.
 **R6.** Run the full manual matrix from `ROADMAP.md`'s verification section, plus
 every epic's definition of done.
 
-**R7.** `node --test test/` passes, with no `package.json` and no
+**R7.** `node --test` passes, with no `package.json` and no
 `node_modules` anywhere in the repo.
 
 **R8.** Audit the manifest: every permission justified, `web_accessible_resources`
@@ -94,7 +94,7 @@ it is still in anyone's head.
 - [ ] Twenty chapter navigations leave node and listener counts stable
 - [ ] The full manual matrix passes
 - [ ] Every epic's definition of done is ticked
-- [ ] `node --test test/` passes on a clean checkout with no install
+- [ ] `node --test` passes on a clean checkout with no install
 - [ ] Manifest audited; no debug flag left on
 - [ ] The R9 greps come back clean
 - [ ] EPIC-08 resolved or deferred with a recorded decision

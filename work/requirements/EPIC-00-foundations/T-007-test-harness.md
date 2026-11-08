@@ -12,9 +12,10 @@
 ## Why
 
 The project has no tests, no CI and no `package.json`, and that tool-free
-character is worth keeping. Node 18+ ships a **built-in** test runner, so the
+character is worth keeping. Node ships a **built-in** test runner (22+ here — see
+`conventions/01-code-style.md` for why, and why the command takes no path), so the
 pure logic can be covered with **zero dependencies and no manifest file** —
-`node --test test/`.
+`node --test`.
 
 Pure logic is where silent bugs live: a ref parser that mishandles `1CO`, a
 normalizer that uses `toLowerCase()` instead of `toLocaleLowerCase()`, a CSV
@@ -35,7 +36,7 @@ task's acceptance list.
 `node:test` and `node:assert/strict`. Run with:
 
 ```bash
-node --test test/
+node --test
 ```
 
 **R2.** **No `package.json`, no dependencies, no config file.** If a change seems
@@ -56,6 +57,8 @@ testing detail: keep browser APIs out of those files.
 
 **R5.** `migrate.test.js` arrives with T-003; `csv.test.js` with T-046;
 `search.test.js` with T-038. Each of those tasks owns its own test file.
+`router.test.js` and `schema.test.js` already arrived with T-002, so `test/`
+exists; this task still owns `test/README.md`.
 
 **R6.** Document the command in `README.md` and in
 `work/understandings/conventions/01-code-style.md`.
@@ -80,7 +83,7 @@ not (anything needing a browser), so the boundary does not erode.
 
 ## Acceptance
 
-- [ ] `node --test test/` passes with no install step, on a clean checkout
+- [ ] `node --test` passes with no install step, on a clean checkout
 - [ ] No `package.json` and no `node_modules` anywhere in the repo
 - [ ] A deliberately broken assertion makes the command exit non-zero
 - [ ] `refs.js` handles `1CO`, `3JN`, `JHN.INTRO1` and combined `data-usfm`

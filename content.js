@@ -9,7 +9,7 @@
   // missing, so adding a key here migrates existing installs for free.
   const DEFAULTS = {
     align: true,
-    separators: true,
+    separators: false,
     primaryId: '111',
     parallelId: '114',
     lastRef: 'JHN.1',

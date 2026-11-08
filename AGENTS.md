@@ -82,10 +82,12 @@ found twice.
 ## Tests
 
 ```bash
-node --test test/
+node --test
 ```
 
-Node 18+ built-in runner. **No `package.json`, no dependencies.** Covers pure
+Node 22+ built-in runner, run from the repository root with **no path**:
+`node --test test/` fails on Node 21+ (see `conventions/01-code-style.md`).
+**No `package.json`, no dependencies.** Covers pure
 logic only — refs, normalization, CSV, migrations, search ranking. Keep
 `src/shared/*` free of `chrome.*` and DOM APIs so it stays runnable there.
 

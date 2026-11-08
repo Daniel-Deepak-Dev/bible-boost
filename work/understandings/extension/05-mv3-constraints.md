@@ -80,6 +80,34 @@ on the next event. Consequences:
   connection.
 - `chrome.storage` is the only reliable place for state between invocations.
 
+### What a module worker may not do
+
+Confidence: **from Chrome's documentation and the HTML spec, not verified here**.
+Each of these fails in a way that looks like something else, which is why they
+are written down before T-003 needs them.
+
+- **Register every listener synchronously, at the top level of
+  `background.js`.** When an event wakes a stopped worker, Chrome delivers it to
+  the listeners that exist once the script has finished its first run. A
+  listener added after an `await`, such as after opening the database, misses the
+  very message that started the worker, and the caller hangs.
+- **No top-level `await`, and no dynamic `import()`.** A service-worker module
+  graph has to evaluate synchronously, and `import()` is refused in a worker
+  scope. So T-003 cannot `await openDb()` at load: open it lazily, inside a
+  handler, as the "Service worker lifetime" bullets above already say. It also
+  means you cannot `import()` a module from the worker's DevTools console to try
+  it out, which is why `dispatch()` lives in `src/background/router.js`, where
+  `node --test` can reach it.
+- **A static `import` of a missing or misspelled file fails the whole worker.**
+  The registration error shows on `chrome://extensions`, and neither listener
+  runs, so the keyboard shortcuts go silent as well.
+- **`onMessage` listeners return `true`; they are not `async`.** Returning
+  literally `true` is the documented way to keep the reply channel open. An
+  `async` listener returns a Promise, and on a Chrome that does not take a
+  returned Promise as the reply, the caller's `sendMessage` resolves to
+  `undefined`. `background.js` therefore does `dispatch(...).then(reply); return
+  true;`.
+
 ## Keyboard shortcuts: `chrome.commands`
 
 Since B-006, `Alt+P` / `Alt+A` / `Alt+S` are declared under `commands` in the

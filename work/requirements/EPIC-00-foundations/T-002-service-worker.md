@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-00 Foundations |
-| Status | Not started |
+| Status | In progress |
 | Depends on | — |
 | Blocks | T-003, T-005, and every data operation after it |
 | Size | S |
@@ -75,6 +75,11 @@ idle. Hold no state in module scope that cannot be rebuilt.
 
 - `background.js` — exists (B-006); add the router beside the commands listener
 - `src/shared/schema.js` — new
+- `src/background/router.js` — new. `dispatch(handlers, msg)`, the R3–R5 contract
+  as a pure function. It lives apart from `background.js` so `node --test` can
+  prove the throw case: inside the live worker that needs a handler that throws,
+  and a service worker cannot `import()` one from the console.
+- `test/router.test.js`, `test/schema.test.js` — new, on the T-007 R1 convention
 - `manifest.json` — the `background` key is already there (B-006); check it matches R1
 
 ## Reference
@@ -103,3 +108,14 @@ idle. Hold no state in module scope that cannot be rebuilt.
 The popup talks to the content script with `chrome.tabs.sendMessage`; the new
 surfaces talk to the worker with `chrome.runtime.sendMessage`. These are
 different channels and both listeners coexist. Do not consolidate them.
+
+**How the acceptance items are covered.** The unknown-type and throw items are
+proven against `dispatch()` itself by `test/router.test.js` (`node --test`),
+including the `toString` / `constructor` prototype-key case and throws of
+non-`Error` values. No handler that throws ships in the worker, so the throw item
+has no by-hand check. The other items need the unpacked extension loaded in
+Chrome and are ticked only once someone has done that.
+
+**Found along the way:** the documented test command `node --test test/` runs
+nothing on Node 21+. It is now bare `node --test` everywhere, and the reason is
+in `conventions/01-code-style.md`.

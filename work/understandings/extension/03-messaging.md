@@ -42,12 +42,53 @@ Two things to preserve:
    Checking hostname alone would accept `http:`; a substring test would accept
    `www.bible.com.evil.test`.
 
+## The worker's router (T-002)
+
+`background.js` holds a `HANDLERS` table keyed by `msg.type`, and
+`dispatch(HANDLERS, msg)` in `src/background/router.js` turns each message into
+exactly one reply. The rules belong to `dispatch`, not to each handler, and
+`test/router.test.js` holds them:
+
+| Situation | Reply |
+|---|---|
+| known type | whatever `handlers[type](msg)` resolves to, by convention `{ ok: true, ... }` |
+| unknown or missing type, missing `msg` | `{ ok: false, error: 'unknown message type' }` |
+| a name inherited from `Object.prototype` (`toString`, `constructor`, …) | the same unknown reply, **not** a call to that function |
+| the handler throws or rejects, with anything | `{ ok: false, error: <string> }`, plus a `console.error` in the worker |
+
+`error` is always a **string**, because `sendResponse` serializes the reply as
+JSON and an `Error` object comes out of that as `{}`. Look for the stack in the
+worker's own console (`chrome://extensions` → the "service worker" link), not in
+the caller's.
+
+A smoke test that needs nothing else built, from any extension page's console:
+
+```js
+await chrome.runtime.sendMessage({ type: 'ping' })   // { ok: true, schemaVersion: 1 }
+```
+
+### Two consequences of a router that answers everything
+
+1. **`chrome.tabs.sendMessage` never reaches the worker.** It goes only to
+   listeners inside that tab: its content scripts and, possibly, an extension
+   page framed in it, such as the future panel iframe (not verified). That is why the popup's `state`,
+   `setParallel` and `go` cannot be intercepted by the router, and why the
+   router does not need to know about them.
+2. **No extension page may use `chrome.runtime.onMessage` to receive from another
+   extension page.** `runtime.sendMessage` goes to every extension context at
+   once, the first reply wins, and the worker replies to *every* type, even if
+   only with "unknown message type". A notes page listening for something the
+   panel sent would lose that race at random. Pages coordinate through
+   `chrome.storage.onChanged` (`notesRev`, below) instead.
+
 ## New message catalogue
 
 Namespaced `area/verb`. Every worker handler returns a promise and the listener
 returns `true` to keep the channel open.
 
 ```
+ping              {}                         -> { ok, schemaVersion }
+
 notes/create      { draft }                  -> { ok, note }
 notes/update      { id, patch }              -> { ok, note }
 notes/get         { id }                     -> { ok, note }

@@ -76,8 +76,30 @@ the understanding file stops the next session from rediscovering it.
 
 ## Tests
 
-`node --test test/` — Node 18+ has a built-in runner, so there is **no
+`node --test` — Node has a built-in runner, so there is **no
 package.json and no dependencies**. Cover pure logic only: ref parsing,
 normalization, CSV quoting, migrations, search ranking. DOM and integration
 behaviour is verified manually against live bible.com, per each task's acceptance
 list.
+
+### The command takes no path
+
+Run it from the repository root exactly as `node --test`. The form this project
+first documented, `node --test test/`, **does not run anything** on Node 21 and
+later: it fails with `Cannot find module '…\test'`, because those versions read
+each argument as a file or a glob pattern, not as a directory to search. Bare
+`node --test` searches by itself and picks up every `test/*.test.js`. Naming one
+file, `node --test test/router.test.js`, works too. Verified on Node 24.14.1
+during T-002.
+
+### Node 22 or later
+
+Two things set that floor, and neither can be fixed with a config file, because
+there must not be one:
+
+- **The tests are ES modules with no `package.json` to say so.** Node runs an
+  `import` in a plain `.js` file only because it detects module syntax, which
+  is on by default since Node 22.7 (from Node's changelog, not tested here).
+  Older versions stop at `Cannot use import statement outside a module`.
+- **`src/shared/schema.js` calls the global `crypto.randomUUID()`**, which the
+  service worker has and Node only has globally since 19.

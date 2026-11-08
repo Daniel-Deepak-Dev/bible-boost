@@ -56,7 +56,7 @@ the rest.
 **R5.** Keep the existing disclaimer that BibleBoost is independent and not
 affiliated with or endorsed by YouVersion or Life.Church.
 
-**R6.** Document `node --test test/` for contributors, and point at
+**R6.** Document `node --test` for contributors, and point at
 `work/README.md` for the task and understanding system.
 
 **R7.** Fix the existing documentation errors tracked in EPIC-08 — the missing
@@ -92,7 +92,7 @@ would be a misleading claim.
       deletes notes, without softening
 - [ ] Every permission is listed with a plain reason
 - [ ] The YouVersion disclaimer is intact
-- [ ] `node --test test/` is documented
+- [ ] `node --test` is documented
 - [ ] `work/` is cross-linked
 - [ ] The stale references from EPIC-08 are corrected
 - [ ] Screenshots in both themes
