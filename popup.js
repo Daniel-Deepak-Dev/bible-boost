@@ -1,3 +1,5 @@
+import { VERSIONS } from './src/shared/refs.js';
+
 // Keep in sync with content.js. chrome.storage.sync.get(DEFAULTS) fills in whatever a profile is
 // missing, so an older install picks these up without a migration step.
 const DEFAULTS = {
@@ -9,16 +11,6 @@ const DEFAULTS = {
   showSwitch: true,
 };
 const $ = (id) => document.getElementById(id);
-
-const VERSIONS = [
-  ['114', 'NKJV — New King James'],
-  ['1', 'KJV — King James'],
-  ['111', 'NIV'],
-  ['59', 'ESV'],
-  ['100', 'NASB1995'],
-  ['116', 'NLT'],
-  ['339', 'TAOVBSI — Tamil O.V. (BSI)'],
-];
 
 let state = { ...DEFAULTS };
 
@@ -43,7 +35,7 @@ function bindVersionField(selectId, customId, key, preferParallel) {
   const sel = $(selectId), custom = $(customId);
   // new Option() sets textContent, so a label can never be parsed as markup.
   sel.replaceChildren(
-    ...VERSIONS.map(([v, l]) => new Option(l, v)),
+    ...[...VERSIONS].map(([id, { name }]) => new Option(name, id)),
     new Option('Other (bible.com ID or URL)…', 'custom'),
   );
 
@@ -66,7 +58,7 @@ function bindVersionField(selectId, customId, key, preferParallel) {
   };
 
   return (id) => {
-    const known = VERSIONS.some(([v]) => v === id);
+    const known = VERSIONS.has(id);
     sel.value = known ? id : 'custom';
     custom.style.display = known ? 'none' : 'block';
     if (!known) custom.value = id;

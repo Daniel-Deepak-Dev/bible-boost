@@ -52,7 +52,7 @@ suggestion.
 | Need | Lives in |
 |---|---|
 | Reading bible.com's DOM | `src/content/bible-dom.js` (`BB.dom`) |
-| Detecting a selection, extracting verse text | `src/content/capture.js` |
+| Detecting a selection, extracting verse text, naming a column's version | `src/content/capture.js` |
 | Injecting into bible.com's menu | `src/content/menu.js` |
 | Fallback save affordance + shortcut | `src/content/quickbar.js` |
 | Hosting / sizing / theming the panel iframe | `src/content/panel-host.js` |
@@ -64,6 +64,7 @@ suggestion.
 | Note, topic and tag operations, the `notesRev` signal, choosing an index | `src/background/repo.js`; every write goes through its private `mutate()` |
 | Schema version, `newId()`, record defaults, validators and normalizers | `src/shared/schema.js` |
 | Reading a verse key, canonical order, range captions | `src/shared/refs.js` |
+| The versions the popup offers | `src/shared/versions.js`, loaded by content scripts and re-exported by `refs.js` |
 | NFC, case folding and tokenizing, for anything that compares text | `src/shared/normalize.js` |
 | Any rendering of notes | `src/ui/app/*` |
 | Things both the worker and pages need | `src/shared/*` |

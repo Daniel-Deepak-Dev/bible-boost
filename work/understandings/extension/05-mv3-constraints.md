@@ -56,6 +56,25 @@ That keeps its alignment code calling the readers by their own names, and if
 `bible-dom.js` failed to load it throws a `ReferenceError` at load instead of
 half-working until the first call.
 
+### One file that both kinds of script can load
+
+A value needed by a content script **and** a module cannot live in an ES module,
+because `export` is a syntax error in a classic script. `src/shared/versions.js`
+(T-011) shows the form that works with no copy and no build step: no `export`, and
+the value written through `globalThis`.
+
+```js
+(globalThis.BB ??= {}).VERSIONS = new Map([ /* … */ ]);
+```
+
+Listed in the manifest it runs as a classic script, and in the isolated world
+`globalThis.BB` is the same variable as `bible-dom.js`'s `var BB`, in either file
+order (`test/bible-dom.test.js`). A module loads it with a bare
+`import './versions.js'` and then reads `globalThis.BB`, and `refs.js` does that
+once so that everything else can use an ordinary named import. Both routes were
+confirmed in a real Chrome on 2026-11-09: the content scripts reading
+`BB.VERSIONS`, and the popup importing it through `refs.js`.
+
 ### Calling `BB.dom` from DevTools
 
 Content-script globals live in the **isolated world**, so typing `BB` in the

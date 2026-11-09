@@ -1,6 +1,7 @@
 /*
  * BibleBoost — verse references
- * Reading a data-usfm key, putting verses in canonical order, and captioning a set of them.
+ * Reading a data-usfm key, putting verses in canonical order, captioning a set of them, and the table
+ * of versions the popup offers.
  * work/understandings/bible-com/02-verse-dom.md documents the key this file parses.
  *
  * The key is the only thing here that is stable across versions and languages. Localized book names
@@ -10,6 +11,14 @@
  * Nothing in here may touch chrome.* or the DOM. The file has to load in plain Node so that
  * `node --test` can cover it (T-007 R3).
  */
+
+import './versions.js';
+
+// ---------- Versions ----------
+// Defined in versions.js because a content script has to read it too, and a content script cannot
+// import this file. Re-exported here so that a module gets it the ordinary way and only one file has
+// to know about globalThis.
+export const VERSIONS = globalThis.BB.VERSIONS;
 
 // ---------- Books ----------
 // The canonical order, and the only source of it (T-028 R2). Sorting by code instead puts 1CO before

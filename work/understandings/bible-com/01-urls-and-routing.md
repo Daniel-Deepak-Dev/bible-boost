@@ -14,13 +14,13 @@ https://www.bible.com/bible/<versionId>/<BOOK>.<chapter>.<ABBR>?parallel=<versio
 | `versionId` | numeric id of the **primary** version | 339 = TAOVBSI, 114 = NKJV, 111 = NIV |
 | `BOOK` | USFM book code | Always 3 characters: JHN, 1CO, 3JN, EXO |
 | `chapter` | digits | |
-| `ABBR` | abbreviation of the **primary** version only | **Not present for the parallel column** |
+| `ABBR` | abbreviation of the **primary** version only | **Not present for the parallel column**, and optional even for the primary (trap 4) |
 | `parallel` query param | numeric id of the second version | Absent when reading a single version |
 
 `BB.dom.parseUrl()` in `src/content/bible-dom.js` is the canonical parser (moved
 out of `content.js` in T-001). It returns
-`{ id, ref: 'EXO.13' or null, parallel: '114' or null }`. It does **not** return
-the version abbreviation; T-011 reads that itself.
+`{ id, ref: 'EXO.13' or null, parallel: '114' or null, abbr: 'TAOVBSI' or null }`.
+`abbr` belongs to the version at `id`, and is decoded.
 
 ## Traps
 
@@ -34,8 +34,13 @@ the version abbreviation; T-011 reads that itself.
    the popup's Open button.
 
 3. **The parallel version's abbreviation is NOT in the URL.** Only its numeric
-   id. To get NKJV you must read it from the column header chip in the DOM, or
-   map the id through the VERSIONS table. See `03-columns-and-versions.md`.
+   id. To get NKJV, read a link in the page that names that id, or map the id
+   through the VERSIONS table. See `03-columns-and-versions.md`.
+
+4. **The abbreviation is not always there, or always third.** `/bible/111/JHN.1`
+   is served as it is, with no redirect, and it is the URL the popup's Open button
+   builds. On a verse URL, `JHN.3.16.NIV`, it is the fourth dot-part, and a menu
+   link can read `EXO.13.1-2,4.TAOVBSI`. `parseUrl` handles all of these.
 
 ## SPA navigation
 
@@ -58,6 +63,11 @@ height without any DOM change.
 
 **If you add a feature that must survive navigation, hook `schedule()` — do not
 add a fifth polling loop.**
+
+To drive the same client-side navigation by hand, from the page's own console
+context, use `window.next.router.push('/bible/339/EXO.13.TAOVBSI?parallel=1588')`.
+Code injected for a test survives it, where `location.href =` would wipe it. Seen
+working 2026-11-09.
 
 ## Content-script match pattern
 

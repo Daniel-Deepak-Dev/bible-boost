@@ -46,9 +46,10 @@ Long prose block comments above each function explaining **why**, not what. They
 cite measured values, specific verses, and bible.com quirks. Examples from the
 source:
 
-> bible.com tags each column with a vidNNN class, but inconsistently: the
-> parallel column is "version vid59 iso6393eng" while the primary one is a hashed
-> "cat7xG_vid111" with no "version" class at all. Match the vid token itself.
+> bible.com tags each column with a vidNNN class, in a shape that depends on the
+> version: most are "version vid59 iso6393eng", while NIV is a hashed
+> "cat7xG_vid111" with no "version" class at all, in either column. Match the vid
+> token itself.
 
 > Note it does NOT match on class name. bible.com's current build emits a plain
 > "_s" with no digit, which is why the old /_s\d/ test never once fired on a live

@@ -53,10 +53,10 @@ bible.com selector rots silently when only one copy gets fixed.
 
 **R1.** Define `DEFAULTS` once, in `src/shared/settings.js`.
 
-**R2.** The **popup** imports it directly — it is an extension page, so it can be
-`<script type="module">`. [T-011](../EPIC-01-capture/T-011-version-resolution.md)
-already proposes making the popup a module in order to share the `VERSIONS`
-table; do both in one change.
+**R2.** The **popup** imports it directly.
+[T-011](../EPIC-01-capture/T-011-version-resolution.md) already made the popup a
+`<script type="module">` in order to share the `VERSIONS` table, so this is only
+an `import`.
 
 **R3.** The **content script** cannot import. Options, in order of preference:
 
@@ -67,6 +67,9 @@ table; do both in one change.
    mirrored classic copy with a **single** "generated from" comment.
 
 **Prefer option 1.** One file, no generation step, consistent with T-001.
+`src/shared/versions.js` (T-011) already does this and also serves modules; see
+"One file that both kinds of script can load" in
+`work/understandings/extension/05-mv3-constraints.md`.
 
 **R4.** Keep `chrome.storage.sync` and the existing key names. The
 `store.get(DEFAULTS, cb)` backfill is the project's migration mechanism for

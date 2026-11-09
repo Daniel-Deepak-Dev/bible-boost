@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BOOKS, parseUsfm, compareUsfm, formatRange } from '../src/shared/refs.js';
+import { BOOKS, VERSIONS, parseUsfm, compareUsfm, formatRange } from '../src/shared/refs.js';
 
 // ---------- parseUsfm ----------
 test('parseUsfm splits a key into book, chapter and verse', () => {
@@ -62,6 +62,37 @@ test('BOOKS puts each testament where it belongs', () => {
 test('BOOKS cannot be changed by a caller', () => {
   assert.ok(Object.isFrozen(BOOKS));
   assert.throws(() => BOOKS.push('XXX'), TypeError);
+});
+
+// ---------- VERSIONS ----------
+test('VERSIONS maps an id to its abbreviation', () => {
+  assert.equal(VERSIONS.get('339').abbr, 'TAOVBSI');
+  assert.equal(VERSIONS.get('114').abbr, 'NKJV');
+  assert.equal(VERSIONS.get('100').abbr, 'NASB1995');
+});
+
+// The order is the popup's, and it is why this is a Map. An object keyed by these ids would visit
+// them in ascending numeric order and put KJV first.
+test('VERSIONS keeps the order the popup lists them in', () => {
+  assert.deepEqual([...VERSIONS.keys()], ['114', '1', '111', '59', '100', '116', '339']);
+});
+
+test('VERSIONS carries the labels the popup has always shown', () => {
+  assert.deepEqual([...VERSIONS.values()].map(({ name }) => name), [
+    'NKJV — New King James',
+    'KJV — King James',
+    'NIV',
+    'ESV',
+    'NASB1995',
+    'NLT',
+    'TAOVBSI — Tamil O.V. (BSI)',
+  ]);
+});
+
+// T-011 R6: other code trusts this table, so what a page reveals must not be written into it.
+test('VERSIONS entries cannot be changed by a caller', () => {
+  for (const entry of VERSIONS.values()) assert.ok(Object.isFrozen(entry));
+  assert.throws(() => { VERSIONS.get('114').abbr = 'X'; }, TypeError);
 });
 
 // ---------- compareUsfm ----------

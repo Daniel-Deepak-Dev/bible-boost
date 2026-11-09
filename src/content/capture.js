@@ -1,6 +1,7 @@
 /*
  * BibleBoost — which verses are selected right now, and what they say
  * Answers those two questions for the features that save a verse, and says when the selection changes.
+ * Also names the version a column is showing, which those features store beside the verse.
  * What bible.com actually does on a selection is written down in
  * work/understandings/bible-com/06-verse-action-menu.md; this file is the code that relies on it.
  *
@@ -18,7 +19,7 @@
 var BB = (typeof BB !== 'undefined') ? BB : {};
 
 (() => {
-  const { VERSE_SEL, VID_RE, parseUrl, columnEls, firstSpans, usfmOf } = BB.dom;
+  const { VERSE_SEL, VID_RE, parseUrl, columnEls, langOf, firstSpans, usfmOf } = BB.dom;
 
   // ---------- Reading verses ----------
   // Every verse element in the reader columns, fragments included, in document order. All three
@@ -285,6 +286,79 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     }
   }
 
+  // ---------- Version identity ----------
+  // Links on the page name a version by its numeric id, which is the one thing a column knows about
+  // itself. Read instead of the version chip, the obvious place to look, for two reasons. The chips
+  // sit in a docked row outside both columns and nothing in their markup says whose they are, so
+  // reading one means matching it to a column by position on screen. And on a single-version page the
+  // chip has no box at all, while the chapter arrows are still there to read.
+  //
+  // In parallel mode the only link naming the second version is the X beside the FIRST chip, because
+  // closing TAOVBSI leaves you on /bible/114/EXO.13.NKJV. That looks backwards but does not matter
+  // here: the id in the href says whose abbreviation it is, wherever the link happens to sit.
+  //
+  // The id is compared again after parsing because the selector also matches a path that only
+  // appears in a query string.
+  function abbrFromLinks(vid) {
+    const main = document.querySelector('main');
+    if (!main) return null;
+    for (const a of main.querySelectorAll(`a[href*="/bible/${vid}/"]`)) {
+      const link = parseUrl(a.href);
+      if (link?.id === vid && link.abbr) return link.abbr;
+    }
+    return null;
+  }
+
+  // Which source names this version, as { abbr, source }: the chain in T-011 R2, first answer wins.
+  //
+  // The URL names one version only, so its abbreviation counts only when its id is this column's.
+  // That comparison is the whole of "primary column only", and it is why neither DOM order nor which
+  // side a column is on comes into it. Without it, a parallel NKJV column would be labelled TAOVBSI.
+  //
+  // BB.VERSIONS is read through ?. so that a versions.js that failed to load costs this one step and
+  // not the save (R4). The last step cannot miss.
+  function answerVersion(vid) {
+    const url = parseUrl();
+    if (url?.id === vid && url.abbr) return { abbr: url.abbr, source: 'url' };
+    const linked = abbrFromLinks(vid);
+    if (linked) return { abbr: linked, source: 'link' };
+    const known = BB.VERSIONS?.get(vid)?.abbr;
+    if (known) return { abbr: known, source: 'table' };
+    return { abbr: vid, source: 'id' };
+  }
+
+  // Remembered per version, unlike reportSource above, because the two columns usually answer from
+  // different sources and a single "last source" would log on every call.
+  const versionSources = new Map();
+  function reportVersionSource(vid, source) {
+    if (versionSources.get(vid) === source) return;
+    versionSources.set(vid, source);
+    console.debug('[BibleBoost] capture: version', vid, 'answered by', source);
+  }
+
+  // col (one of columnEls()) -> { versionId, abbr, lang, source }, and never a throw (R4): an unknown
+  // version is an ordinary event, and this runs in the middle of saving somebody's note. Whatever was
+  // learned before a failure is kept, so the worst outcome is a note labelled with a bare id.
+  //
+  // lang is null for more than the odd case: NIV's column is "cat7xG_vid111" with no iso6393 token,
+  // in either position. R3 reads the token and nothing else, so NIV stays unknown here. A wrapper
+  // above each column does carry a lang attribute, but in a two-letter code where the token is three
+  // letters, and B-010 is where that gets decided.
+  function resolveVersion(col) {
+    let versionId = '';
+    let lang = null;
+    try {
+      versionId = col.getAttribute('class').match(VID_RE)[1];
+      lang = langOf(col);
+      const { abbr, source } = answerVersion(versionId);
+      reportVersionSource(versionId, source);
+      return { versionId, abbr, lang, source };
+    } catch (err) {
+      console.debug('[BibleBoost] capture: resolveVersion failed', err);
+      return { versionId, abbr: versionId, lang, source: 'id' };
+    }
+  }
+
   // ---------- Notifying ----------
   const listeners = new Set();
   let lastKey = '';
@@ -326,6 +400,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     onChange,
     noteMutations,
     verseText,
+    resolveVersion,
     // For the console, from the extension's own context: the acceptance check that overwrites the
     // cached class to prove it gets rediscovered needs some way to reach it.
     debug: {

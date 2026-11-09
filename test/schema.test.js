@@ -241,6 +241,17 @@ test('a verse keeps only the known fields, on both sides', () => {
   assert.equal(v.displayRef, 'யாத்திராகமம் 13:2');
 });
 
+// T-011 R4: what resolveVersion returns for a version nothing could name, source field included.
+// An unknown language comes back as null, and that must not be what stops the save.
+test('a verse from a version nothing could name is still accepted', () => {
+  const [v] = clean({
+    verses: [verse('EXO.13.2', {
+      primary: { versionId: '999999', abbr: '999999', lang: null, source: 'id', text: 'வசனம்' },
+    })],
+  }).fields.verses;
+  assert.deepEqual(v.primary, { versionId: '999999', abbr: '999999', lang: '', text: 'வசனம்' });
+});
+
 test('a missing parallel is null, and a missing display reference is empty', () => {
   const [v] = clean({ verses: [verse('EXO.13.2')] }).fields.verses;
   assert.equal(v.parallel, null);

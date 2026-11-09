@@ -4,12 +4,12 @@ Confidence: **verified**.
 
 ## Finding the columns
 
-bible.com tags each reader column with a `vidNNN` class, but **inconsistently**:
+bible.com tags each reader column with a `vidNNN` class, in **two shapes**:
 
-| Column | Actual class |
+| Actual class | Seen on |
 |---|---|
-| parallel (right) | `version vid59 iso6393eng` |
-| primary (left) | `cat7xG_vid111` — hashed, **no** `version` class |
+| `version vid59 iso6393eng` | ESV, NKJV, TAOVBSI, AMP |
+| `cat7xG_vid111` — hashed, **no** `version` class, **no** `iso6393` token | NIV |
 
 So match the vid token itself, never either wrapper:
 
@@ -18,25 +18,26 @@ const VID_RE = /(?:^|[\s_])vid(\d+)(?:\s|$)/;
 document.querySelectorAll('div[class*="vid"]')   // then filter by VID_RE
 ```
 
+The filter is not optional: the substring query also matches Tailwind's
+`divide-y-small` on unrelated `div`s.
+
 `BB.dom.columnEls()` (`src/content/bible-dom.js`, moved out of `content.js` in
 T-001) then keeps the **innermost** matching wrapper and de-duplicates by vid, so
 there is exactly one element per version.
 
-**Re-checked 2026-11-08** on `/bible/339/EXO.13.TAOVBSI?parallel=114`. The two
-elements `columns()` returned had **identical** class shapes:
+**The shape follows the version, not the position.** This file used to say the
+hashed shape marked the primary column. Measured on 2026-11-09, with
+`columnEls()`'s own query:
 
-```
-version vid339 iso6393tam    ← primary (left), TAOVBSI
-version vid114 iso6393eng    ← parallel (right), NKJV
-```
+| Page | Left | Right |
+|---|---|---|
+| `/bible/339/EXO.13.TAOVBSI?parallel=114` | `version vid339 iso6393tam` | `version vid114 iso6393eng` |
+| `/bible/111/JHN.1?parallel=114` | `cat7xG_vid111` | `version vid114 iso6393eng` |
+| `/bible/114/JHN.1.NKJV?parallel=111` | `version vid114 iso6393eng` | `cat7xG_vid111` |
 
-So on that page the primary column *does* have the plain `version` class. The
-`cat7xG_vid111` row above was recorded earlier, with NIV as the primary. Either
-it is an outer wrapper that `columnEls()` now steps past to an inner `version`
-element, or bible.com has changed its build since then. Which one is not yet
-known. Either way the rule stands: match the vid token, never a wrapper class.
-The comment above `VID_RE` in `bible-dom.js` still describes the older
-observation; it was moved verbatim in T-001, so it was deliberately left unchanged.
+There is no outer wrapper involved: on those NIV pages `cat7xG_vid111` is the only
+element carrying `vid111`. Whether this is NIV alone or a class of versions is not
+known, since only a handful of versions have been looked at.
 
 ## Visibility
 
@@ -74,25 +75,85 @@ const LANG_RE = /(?:^|[\s_])iso6393([a-z]{3})(?:\s|$)/;
 It returns `null` when the token is absent: never a default language and never
 a throw, so an unrecognised version cannot block a save (T-011 R3, R4).
 
-**Verified 2026-11-08:** both columns carry the token. On
-`/bible/339/EXO.13.TAOVBSI?parallel=114`, `BB.dom.columns().map(BB.dom.langOf)`
-gave `['tam', 'eng']` in the live page (see the classes recorded above).
+**Verified 2026-11-08:** on `/bible/339/EXO.13.TAOVBSI?parallel=114`,
+`BB.dom.columns().map(BB.dom.langOf)` gave `['tam', 'eng']` in the live page.
 
-If a column ever comes back `null`, T-011 must fall back to the version table
-or leave the language unknown. It must **never** borrow the other column's
-code, which on a Tamil/English pair would label the Tamil verse as English.
+**It is `null` for NIV**, whichever column NIV is in, because that shape has no
+token (see above). `resolveVersion` leaves the language unknown: the `VERSIONS`
+table has no language to offer. It must **never** borrow the other column's code,
+which on a Tamil/English pair would label the Tamil verse as English.
+
+**The page does state the language another way, in a different code.** Each column
+sits four levels inside a `div` with a `lang` attribute, so `col.closest('[lang]')`
+reaches it. Measured 2026-11-09 with `<html lang="en">`:
+
+| Column | `iso6393` token | wrapper `lang` |
+|---|---|---|
+| TAOVBSI | `tam` | `ta` |
+| NKJV | `eng` | `en` |
+| NIV | none | `en` |
+
+So the wrapper follows the version, not the interface, and it exists for NIV. But
+it is ISO 639-1, two letters, where the token is ISO 639-3, three. T-011 R3 reads
+the token only. [B-010](../../requirements/EPIC-08-maintenance/B-010-language-without-iso-token.md)
+is whether to use the wrapper for a version with no token.
 
 ## Resolving a version abbreviation
 
-The URL carries the abbreviation for the **primary column only**. Resolution
-order for either column:
+`BB.capture.resolveVersion(col)` in `src/content/capture.js`, for either column:
 
-1. URL path third segment: `EXO.13.TAOVBSI` gives TAOVBSI. Primary only.
-2. The column header chip text — the version button above each column. Works for
-   both. **Exact selector unverified — inspect before coding.**
-3. The VERSIONS table (currently `popup.js:13`, to be promoted to
-   `src/shared/refs.js`).
-4. Fall back to the raw numeric id. Never fail a save over a missing abbr.
+| Step | `source` | Reads | Misses when |
+|---|---|---|---|
+| 1 | `url` | `parseUrl().abbr`, primary column only | the URL has none, as the popup's URLs do |
+| 2 | `link` | a link in `main` naming this column's numeric id | no such link is in the page |
+| 3 | `table` | `VERSIONS` in `src/shared/versions.js` | the id is not one the popup offers |
+| 4 | `id` | the numeric id as a string | never, and a save never fails over it |
+
+### Why step 2 reads links and not the version chip
+
+The chip was the original plan. It is real and here is its selector, but it is the
+weaker source.
+
+In parallel mode at desktop width, `main` holds a docked row with one cell per
+column, **outside both columns**:
+
+```
+main … div.grid-cols-2
+  div                                   ← one per column
+    div > button[aria-expanded]         ← the chip; its text is the abbreviation
+    a[aria-label="Close NKJV"]          ← the X
+```
+
+- **Nothing in the markup ties a chip to its column.** No `href`, no data
+  attribute, no vid. Only position does: the chip's left edge equals its column's
+  (342 and 910 at a 1600px viewport).
+- **On a single-version page the chip has no box.** A copy exists in the DOM at
+  width 0.
+- Class names here are Tailwind utilities, which `AGENTS.md` rule 5 would have us
+  avoid matching anyway.
+
+Links, by contrast, carry the numeric id:
+
+```
+/bible/114/EXO.13.NKJV                     aria-label="Close TAOVBSI"
+/bible/339/EXO.13.TAOVBSI                  aria-label="Close NKJV"
+/bible/339/EXO.12.TAOVBSI?parallel=114     aria-label="Previous Chapter"
+/bible/339/EXO.14.TAOVBSI?parallel=114     aria-label="Next Chapter"
+```
+
+**The X names the other version**, since closing TAOVBSI leaves you on NKJV. So on
+a parallel page the second version's abbreviation appears in exactly one link, the
+X on the first chip. The `aria-label` is not read: it is interface text, and it
+describes the chip rather than the target.
+
+Percent-encoding is real. Version 48's link is `CUNPSS-%E7%A5%9E` and its chip
+reads `CUNPSS-神`, so `parseUrl` decodes.
+
+One thing not established: on `/bible/339/EXO.13.TAOVBSI?parallel=48` both chips
+rendered, but no element carried `vid48`, after 3 seconds on a full load and 6 on
+client-side navigation. `resolveVersion` is only ever given a column that exists,
+so this does not affect it. Whether that version renders a second column at all
+was not looked into.
 
 ## Known version ids
 

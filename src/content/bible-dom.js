@@ -27,6 +27,24 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // rejects book-intro refs like "JHN.INTRO1", which bible.com renders with no parallel column.
   const REF_RE = /^([A-Z0-9]{3})\.(\d+)/;
 
+  // The version abbreviation, which is whatever follows BOOK.CHAPTER and any verses:
+  //   EXO.13.TAOVBSI   JHN.3.16.NIV   EXO.13.1-2,4.TAOVBSI   JHN.INTRO1.NIV
+  // Not "the third part", because a verse URL puts it fourth. It can also be missing altogether:
+  // /bible/111/JHN.1 is a real page that bible.com serves without redirecting, and it is the URL the
+  // popup's Open button builds. A chapter-and-verse slug with no abbreviation, JHN.3.16, would then
+  // read as "the abbreviation is 16", which is what the lookahead refuses.
+  const ABBR_RE = /^[A-Z0-9]{3}\.[A-Z0-9]+(?:\.[\d,-]+)?\.(?![\d,-]+$)(.+)$/;
+
+  // Decoded because bible.com writes it percent-encoded: version 48 links to
+  // /bible/48/EXO.13.CUNPSS-%E7%A5%9E while its own chip reads CUNPSS-神. The catch is not padding.
+  // align() calls parseUrl on every pass, and decodeURIComponent throws on a stray %, so a mistyped
+  // URL would otherwise take the alignment down over a field it never reads.
+  function abbrOfSlug(slug) {
+    const m = slug.match(ABBR_RE);
+    if (!m) return null;
+    try { return decodeURIComponent(m[1]); } catch { return null; }
+  }
+
   function parseUrl(href = location.href) {
     const u = new URL(href);
     const m = u.pathname.match(/\/bible\/(\d+)\/([^/?#]+)/);
@@ -37,13 +55,14 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
       id: m[1],
       ref: r ? `${r[1]}.${r[2]}` : null,
       parallel: par && /^\d+$/.test(par) ? par : null,
+      abbr: abbrOfSlug(m[2]), // of the version at id, and null when the URL does not carry one
     };
   }
 
   // ---------- Columns ----------
-  // bible.com tags each column with a vidNNN class, but inconsistently: the parallel column is
-  // "version vid59 iso6393eng" while the primary one is a hashed "cat7xG_vid111" with no "version"
-  // class at all. Match the vid token itself instead of either wrapper.
+  // bible.com tags each column with a vidNNN class, in a shape that depends on the version: most are
+  // "version vid59 iso6393eng", while NIV is a hashed "cat7xG_vid111" with no "version" class at all,
+  // in either column. Match the vid token itself instead of either wrapper.
   const VID_RE = /(?:^|[\s_])vid(\d+)(?:\s|$)/;
 
   function columnEls() {

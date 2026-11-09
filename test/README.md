@@ -29,6 +29,10 @@ against a stand-in for bible.com proves nothing about bible.com.
 - **Every `.js` file under `test/` is executed**, not only the `*.test.js` ones. A
   helper left here runs as a test of its own and is counted in the total. Keep it
   in the test file that uses it, or outside this folder.
+- A classic content script cannot be imported, but a function in one that needs
+  no DOM can still be tested by running the file through `node:vm`, as
+  `bible-dom.test.js` does. Hand in only what a bare context lacks, such as `URL`.
+  Results come from another realm, so compare their fields, not whole objects.
 - Text handling needs **real Tamil**, not transliteration, which passes and
   proves nothing.
 - Write a decomposed Tamil string as `\u` escapes and assert that it differs from
