@@ -52,11 +52,51 @@ el.querySelector(':scope > [class*="_label"]')   // the verse NUMBER
 - A verse element with **no direct label** is a *continuation fragment* — the
   tail of a verse that spilled into the next paragraph.
 
-To extract clean verse text: clone the node, remove the direct-child label (the
-number) **and** the deeper label nodes (footnote markers), then read
-`textContent`. Removing every `_label` descendant happens to achieve both, but be
-deliberate about it and say so in a comment, because the two cases are different
-things that happen to share a class fragment.
+## What a note is — removing the labels is not enough
+
+The marker is only half of a note. Measured on live bible.com on 2026-11-09:
+
+```html
+<span class="cat7xG_verse" data-usfm="EXO.13.2">
+  <span class="cat7xG_label">2</span>
+  <span class="cat7xG_note cat7xG_x">
+    <span class="cat7xG_label">#</span>
+    <span class="cat7xG_body">Ex. 13:12, 13, 15; 22:29; …</span>
+  </span>
+  <span class="cat7xG_content">“Consecrate to Me all the firstborn, …</span>
+</span>
+```
+
+- `_note _x` is a cross-reference. A bare `_note` is a footnote, whose `_body`
+  holds further spans: hashed `_fr`, `_fq` and `_fqa`, and a plain, unhashed `ft`.
+  NIV John 3 has the second kind, and CEV Romans 1 has both.
+- `_label` and `_body` inside a note are both `display:none`, measured on the
+  cross-reference in NKJV Exodus 13:2 and on all 9 footnotes in NIV John 3. The
+  note's text never shows on the page, **but `textContent` reads it**, and
+  `innerText` does not. So a bad extraction looks fine on screen and is only
+  wrong in the data.
+- Removing only `_label` left note text in 73 of 134 verses across six English
+  chapters. Exodus 13:2 in NKJV came out as
+  `Ex. 13:12, 13, 15; … Luke 2:23“Consecrate to Me…`.
+- **Tamil hides this.** Exodus 13, Romans 1 and Psalms 3 and 23 in TAOVBSI have
+  no notes at all, while NKJV has them on 20 of the 22 verses of Exodus 13.
+
+To extract clean verse text: clone the node, remove every `_label` (the number)
+**and** every `_note` (the footnote, whole), then read `textContent`.
+`BB.capture.verseText` does this, and says so in a comment, because the two are
+different things that happen to share a class fragment.
+
+## Poetry and what else is inside a verse
+
+- **Each line of a poem is its own verse element**, inside its own `_q1` or `_q2`
+  block. Psalm 23:1 in NKJV has two, so anything reading a verse's text has to
+  collect them all. A verse can also change block type part-way: in NKJV Psalm 3:2
+  the last fragment, "Selah", sits in a `_p`.
+- **"Selah" is a `_qs` span and counts as verse text.** It is printed in the
+  verse and belongs to it.
+- Inline styling wraps `_content` and is kept: `_it`, `_sc`, `_bd`, `_wj`.
+- bible.com's own text has doubled spaces ("The Lord  is  my shepherd"), so
+  collapse whitespace rather than trust it.
 
 ## Measuring a verse's top
 

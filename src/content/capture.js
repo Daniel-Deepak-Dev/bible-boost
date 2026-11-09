@@ -1,6 +1,6 @@
 /*
- * BibleBoost — which verses are selected right now
- * Answers that one question for the features that save a verse, and says when the answer changes.
+ * BibleBoost — which verses are selected right now, and what they say
+ * Answers those two questions for the features that save a verse, and says when the selection changes.
  * What bible.com actually does on a selection is written down in
  * work/understandings/bible-com/06-verse-action-menu.md; this file is the code that relies on it.
  *
@@ -204,6 +204,53 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     return null;
   }
 
+  // ---------- Verse text ----------
+  // What has to come out before a verse can be read. These are two different things that happen to
+  // share a class fragment, which is exactly why both are named here:
+  //   _label  the verse's own number, a direct child of the verse element
+  //   _note   a whole footnote or cross-reference, wherever in the verse it sits
+  //
+  // Removing every _label is NOT enough, even though a note's marker is a _label too. A note is that
+  // marker (a "#") beside a _body holding the note itself, and the _body has to go with it. bible.com
+  // sets it to display:none, so the page shows nothing wrong, but textContent reads hidden text. With
+  // labels alone, Exodus 13:2 in NKJV starts "Ex. 13:12, 13, 15; 22:29; ...", and 73 of the 134 verses
+  // measured in six English chapters came out polluted like that. The TAOVBSI chapters measured beside
+  // them carry no notes at all, so a check in Tamil alone would pass.
+  const NON_TEXT_SEL = '[class*="_label"], [class*="_note"]';
+
+  // A clone, always: this is bible.com's own verse DOM, and tap-to-highlight, Copy, Compare and Share
+  // all depend on it staying as it is. A detached copy produces no mutation records either.
+  function fragmentText(el) {
+    const copy = el.cloneNode(true);
+    copy.querySelectorAll(NON_TEXT_SEL).forEach((n) => n.remove());
+    return copy.textContent;
+  }
+
+  // usfm + one of columnEls() -> the verse's clean, complete text, or '' when the column does not have
+  // it. The '' needs no branch: no elements join to an empty string.
+  //
+  // Every element of the verse counts, which rules out firstSpans(): it keeps only the first, and in
+  // NKJV the text of Psalm 23:1 is in two elements, one per line of the poem. The comparison goes
+  // through usfmOf rather than a [data-usfm="..."] selector because CEV writes Romans 1:3-4 as
+  // "ROM.1.3+ROM.1.4", which an exact match on ROM.1.3 would miss.
+  //
+  // The single-space join is what separates those two lines. Collapsing afterwards deals with
+  // everything else: the doubled spaces already in bible.com's text ("The Lord  is  my shepherd"), and
+  // the whitespace-only fragment that follows most verses in TAOVBSI. \s and trim() both include
+  // U+00A0, so non-breaking spaces need no case of their own.
+  //
+  // NFC last, because this string gets stored and searched: the same Tamil word can arrive composed
+  // or decomposed, and the two compare unequal (07-i18n-and-scripts.md).
+  function verseText(usfm, col) {
+    return [...col.querySelectorAll(VERSE_SEL)]
+      .filter((el) => usfmOf(el) === usfm)
+      .map(fragmentText)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .normalize('NFC');
+  }
+
   // ---------- Answering ----------
   function answer() {
     const byMenu = readMenu();
@@ -278,6 +325,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     getSelection,
     onChange,
     noteMutations,
+    verseText,
     // For the console, from the extension's own context: the acceptance check that overwrites the
     // cached class to prove it gets rediscovered needs some way to reach it.
     debug: {
