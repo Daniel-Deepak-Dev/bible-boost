@@ -31,8 +31,8 @@ editing work).
 **R1.** A multi-verse selection creates **one** note with one `VerseRef` per
 verse, each carrying its own primary and parallel text. Not one note per verse.
 
-**R2.** `src/shared/refs.js` gains `formatRange(usfms) -> string`, collapsing
-contiguous runs and joining gaps with commas:
+**R2.** `formatRange(usfms) -> string` in `src/shared/refs.js`, already written
+and tested by T-007, collapses contiguous runs and joins gaps with commas:
 
 ```
 ['EXO.13.2','EXO.13.3','EXO.13.4']          -> 'EXO.13.2-4'
@@ -63,9 +63,9 @@ before saving rather than refusing.
 
 ## Files
 
-- `src/shared/refs.js` — `formatRange`, canonical book order
+- `src/shared/refs.js` — `formatRange` and `compareUsfm` exist since T-007
 - `src/content/capture.js` — multi-verse draft assembly
-- `test/refs.test.js` — range collapsing cases
+- `test/refs.test.js` — the R2 and cross-chapter cases exist since T-007
 
 ## Reference
 
@@ -92,3 +92,7 @@ before saving rather than refusing.
 
 Psalm 119 is the test case for R7, and `1CO` versus `ACT` is the test case for
 R4. Both are cheap to check and both are easy to get wrong.
+
+`refs.js` is an ES module and `capture.js` is a classic script, so `capture.js`
+cannot import `compareUsfm`. R4's sort has to happen in the worker, which also
+fits the rule that content scripts send raw drafts.

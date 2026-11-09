@@ -19,6 +19,7 @@ knowing before seven epics are built on top.
 | [B-006](B-006-shortcuts-dead-in-chrome.md) | `Alt+P/A/S` do nothing in a real Chrome | No |
 | [B-007](B-007-popup-parallel-disabled.md) | The popup's Parallel switch is disabled on a live chapter | No |
 | [B-008](B-008-dock-tokens-no-fallback.md) | The dock reads its theme tokens with no fallback | No |
+| [B-009](B-009-schema-duplicates-shared-rules.md) | `schema.js` keeps its own copy of the verse and text rules | No |
 
 ## How these relate to the notes project
 
@@ -29,6 +30,10 @@ recurring. Fixing it is cheap once T-002 lands.
 **B-001 and B-002 are release blockers that the notes work will not touch.** They
 should be resolved deliberately — not discovered at submission time, after the
 feature is finished.
+
+**B-009 is the exception to "none of these were introduced by the notes work".**
+It comes from the notes work itself: T-002 and T-007 each defined the same rules,
+because T-007's Files list did not include `schema.js`.
 
 ## Adding to this epic
 

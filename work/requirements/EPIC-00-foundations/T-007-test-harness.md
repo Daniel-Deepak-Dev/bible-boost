@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-00 Foundations |
-| Status | Not started |
+| Status | Done |
 | Depends on | — |
 | Blocks | — (but every later task should add to it) |
 | Size | S |
@@ -83,14 +83,22 @@ not (anything needing a browser), so the boundary does not erode.
 
 ## Acceptance
 
-- [ ] `node --test` passes with no install step, on a clean checkout
-- [ ] No `package.json` and no `node_modules` anywhere in the repo
-- [ ] A deliberately broken assertion makes the command exit non-zero
-- [ ] `refs.js` handles `1CO`, `3JN`, `JHN.INTRO1` and combined `data-usfm`
-- [ ] `normalize.js` is proven on Tamil input, not only English
-- [ ] Neither shared module imports anything browser-specific
+- [x] `node --test` passes with no install step, on a clean checkout
+- [x] No `package.json` and no `node_modules` anywhere in the repo
+- [x] A deliberately broken assertion makes the command exit non-zero
+- [x] `refs.js` handles `1CO`, `3JN`, `JHN.INTRO1` and combined `data-usfm`
+- [x] `normalize.js` is proven on Tamil input, not only English
+- [x] Neither shared module imports anything browser-specific
 
 ## Notes
 
 Keeping `src/shared/*` free of browser APIs is what makes this harness possible
 at all. Treat an accidental `chrome.` or `document.` in a shared module as a bug.
+
+The clean-checkout item was run on a copy of the tracked and untracked files
+(`git ls-files -co --exclude-standard`), because this work was not yet committed
+and so a real clone would not have contained it.
+
+Seven deliberate mutations were each confirmed to fail the suite: dropping NFC,
+`toLowerCase`, stripping marks in the tokenizer, alphabetical books, no book-code
+tiebreak, ignoring the `+`, and duplicates breaking a run.

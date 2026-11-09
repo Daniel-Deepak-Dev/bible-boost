@@ -36,10 +36,18 @@ different metrics and measure rather than calculate.**
 s.normalize('NFC').toLocaleLowerCase()
 ```
 
+`src/shared/normalize.js` implements these (T-007).
+
 - **Normalize to NFC.** The same Tamil string can arrive composed or decomposed;
-  without normalizing, a visually identical query will not match.
-- **Use `toLocaleLowerCase()`**, not `toLowerCase()`.
-- **Tokenize on Unicode classes**, e.g. `/[\s\p{P}]+/u`.
+  without normalizing, a visually identical query will not match. Exactly four
+  Tamil code points decompose, found by scanning U+0B80–U+0BFF in Node during
+  T-007: U+0BCA (U+0BC6 U+0BBE), U+0BCB (U+0BC7 U+0BBE), U+0BCC (U+0BC6 U+0BD7)
+  and U+0B94 (U+0B92 U+0BD7).
+- **Use `toLocaleLowerCase()`**, not `toLowerCase()`. It follows the machine's
+  locale: under Turkish, `I` becomes dotless `ı` (U+0131). A test asserting an
+  English fold should therefore use a word with no `I`.
+- **Tokenize on Unicode classes**: `/[\s\p{P}\p{S}]+/u`. `\p{S}` is there because
+  `+` and `=` are symbols, not punctuation.
 - **Never use `\b`.** Word boundaries are defined on Latin word characters and do
   not work for Tamil.
 - **No stemming, and no Lunr / FlexSearch / elasticlunr.** Their default
@@ -67,4 +75,6 @@ const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'bas
 ```
 
 Verse ordering is a different problem: sort by **canonical book index**, then
-chapter, then verse — never alphabetically by book code.
+chapter, then verse — never alphabetically by book code. `compareUsfm` in
+`src/shared/refs.js` does this. A book outside the 66 sorts after Revelation, and
+a key it cannot parse sorts last.

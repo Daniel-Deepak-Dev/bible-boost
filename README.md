@@ -52,5 +52,16 @@ Where a translation starts a new section, the line is drawn **above** the headin
 the verses it introduces. Translations divide sections differently, so one column often has a heading where the other has none; the
 column without one is given just enough room to carry its line at the same height. Turn it off with Alt+S or in the popup.
 
+## Development
+
+The tests cover the pure logic: verse references, text normalization, validation and migrations. They need Node 22 or later and
+nothing else, so there is no install step. Run this from the repository root, with no path:
+
+```bash
+node --test
+```
+
+Behaviour on a live bible.com page is checked by hand. See [`test/README.md`](test/README.md) for where that line falls.
+
 ---
 BibleBoost is an independent project and is not affiliated with or endorsed by YouVersion or Life.Church.

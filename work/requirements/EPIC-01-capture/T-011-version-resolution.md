@@ -61,7 +61,7 @@ constant that other code would then trust.
 
 ## Files
 
-- `src/shared/refs.js` — new, holding `VERSIONS`
+- `src/shared/refs.js` — gains `VERSIONS` (the file exists since T-007)
 - `src/content/capture.js` — `resolveVersion`
 - `popup.js`, `popup.html` — consume the shared table
 

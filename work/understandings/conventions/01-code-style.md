@@ -92,6 +92,21 @@ each argument as a file or a glob pattern, not as a directory to search. Bare
 file, `node --test test/router.test.js`, works too. Verified on Node 24.14.1
 during T-002.
 
+### Everything under `test/` is executed
+
+Bare `node --test` runs every `.js` file under a directory named `test`, not only
+the `*.test.js` ones. A helper left there runs as a test file of its own and is
+counted in the total. Verified on Node 24.14.1 during T-007, with a probe file
+that printed when it ran. Keep a helper in the test file that uses it, or outside
+`test/`.
+
+### Decomposed text is written with escapes
+
+A decomposed Tamil fixture goes in the source as `\u` escapes, next to an
+assertion that it differs from the composed form. Typed as a literal, an editor
+that normalizes on save turns it into the composed form with no visible change,
+and the test then compares a string with itself and passes.
+
 ### Node 22 or later
 
 Two things set that floor, and neither can be fixed with a config file, because

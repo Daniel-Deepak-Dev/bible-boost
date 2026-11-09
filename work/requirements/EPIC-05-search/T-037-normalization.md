@@ -32,6 +32,10 @@ independently.
 them runnable under `node --test`, and it is a design constraint on everything in
 `src/shared/`.
 
+T-007 shipped all three, with R2 to R7 and R9 in place and every R10 case except
+the whitespace one. **What is left here is R8**, then checking the Acceptance list
+against the result.
+
 **R2. NFC normalization first.** The same Tamil string can arrive composed or
 decomposed depending on the input method and the source. Without normalizing,
 two visually identical strings compare unequal.
@@ -78,8 +82,8 @@ English:
 
 ## Files
 
-- `src/shared/normalize.js` — new
-- `test/normalize.test.js` — new
+- `src/shared/normalize.js` — exists since T-007; gains R8
+- `test/normalize.test.js` — exists since T-007; gains the R8 cases
 
 ## Reference
 
@@ -105,3 +109,8 @@ English:
 Get real Tamil strings for the tests — from a saved note, from the page, from
 the understanding file. Transliterated placeholders will pass the tests and prove
 nothing.
+
+Open question, measured during T-007: U+200C and U+200D (ZWNJ and ZWJ, `\p{Cf}`)
+are neither split on nor stripped, so a word holding one does not match the same
+word without it. Check whether real Tamil notes contain them before deciding
+whether R8 should remove them.
