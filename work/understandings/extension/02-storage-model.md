@@ -94,6 +94,47 @@ IndexedDB in a Chromium 152 page on 2026-11-09.
   color, createdAt }
 ```
 
+## What `repo.js` guarantees
+
+Confidence: **measured**, by running the real worker code against real IndexedDB
+in a Chrome 152 page on 2026-11-09 (T-005).
+
+- **Timestamps are `Date.now()` numbers.** A `Date` does not survive
+  `sendResponse`, which serializes as JSON, and a number is a valid index key.
+- **A live note's `topicId` is null or a live topic.** Unknown ids become null at
+  create and update. `restoreNotes` nulls a topic deleted in the meantime and names
+  those notes in its reply.
+- **`updatedAt` means someone edited this note.** Only `updateNote` sets it. Trash,
+  restore and bulk tag or topic rewrites leave it alone, because the default list
+  sorts by it: renaming a tag on 40 notes must not throw all 40 to the top, and a
+  restored note should come back where it was.
+- **Topics are soft deleted.** The row stays with `deletedAt` set, so T-032 has
+  something to undo. `topics/list` and new notes ignore it. Notes already in Trash
+  keep the dead `topicId`.
+- **Purge refuses a live note.** It is skipped, which is what makes "only from Trash"
+  true rather than a convention. Tag rewrites do reach trashed notes.
+- **A failed write applies nothing and bumps nothing.** Checked with a throw part
+  way through a three-note trash, and with a real `ConstraintError`.
+- **`verses[].book`, `.chapter` and `.verse` come from `usfm`**, never from the
+  draft, and a combined `JHN.1.1+JHN.1.2` is stored under `JHN.1.1`.
+
+How `notes/list` chooses an index, in `planNoteQuery`: verse, chapter, tag or topic
+narrow it and sort in memory. Otherwise a cursor walks `byUpdated` (or `byDeleted`
+for Trash, or the store itself for created order) and keeps only the page. The
+unfiltered list and Trash get `total` from index counts, so they stop at the page.
+
+Measured with about 2,000 notes, each call including its JSON round trip:
+
+| Query | ms |
+|---|---|
+| Default first page of 50 | 2 |
+| Chapter (73 rows) | 1.5 |
+| Tag (150 rows) | 4 |
+| Topic (1,001 rows) | 13 |
+| Uncategorized, a full walk (1,014 rows) | 40 |
+| Trash first page | 2 |
+| `topics/counts` | 2 |
+
 ## Decisions worth not re-litigating
 
 - **`parentId` is in the topic schema from day one** even though nesting is not
@@ -114,10 +155,15 @@ IndexedDB in a Chromium 152 page on 2026-11-09.
 Sortable by creation time, no dependency:
 
 ```js
-const id = (p) => p + '_' + Date.now().toString(36) + crypto.randomUUID().slice(0, 8);
+const newId = (p, now = Date.now()) => p + '_' + now.toString(36) + crypto.randomUUID().slice(0, 8);
 ```
 
 Generated **only** in the service worker (architecture rule 1).
+
+Pass the record's own `createdAt` as `now`. Two separate clock readings came out up
+to 1 ms apart, and that made key order disagree with `createdAt` for notes created
+back to back. `repo.js` relies on the two agreeing: sorting by created date is a walk
+of the store's own keys.
 
 ## Migrations
 

@@ -33,6 +33,25 @@ export const txDone = (tx) => new Promise((resolve, reject) => {
   tx.onabort = () => reject(tx.error);
 });
 
+// Calls visit with each row a cursor request yields, in order, and resolves when the rows run out or
+// visit returns false. This is the third wrapper, for the one request that fires onsuccess more than
+// once, so repo.js need not write an onsuccess of its own (T-003 R1).
+//
+// The try is not defensive filler. An exception inside onsuccess would abort the transaction and
+// leave this promise pending forever, which is a silent hang for whoever asked (T-002 R4).
+export const walkCursor = (req, visit) => new Promise((resolve, reject) => {
+  req.onerror = () => reject(req.error);
+  req.onsuccess = () => {
+    const cursor = req.result;
+    try {
+      if (!cursor || visit(cursor.value) === false) { resolve(); return; }
+      cursor.continue();
+    } catch (err) {
+      reject(err);
+    }
+  };
+});
+
 // ---------- Connection ----------
 // Shared by every handler in this run of the worker. It is the promise rather than the database so
 // that two messages arriving while it is still opening share one open. It can be rebuilt at any

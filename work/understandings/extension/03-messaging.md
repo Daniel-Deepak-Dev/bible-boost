@@ -61,8 +61,10 @@ exactly one reply. The rules belong to `dispatch`, not to each handler, and
 
 `error` is always a **string**, because `sendResponse` serializes the reply as
 JSON and an `Error` object comes out of that as `{}`. Look for the stack in the
-worker's own console (`chrome://extensions` → the "service worker" link), not in
-the caller's.
+worker's own console (`chrome://extensions` → the "service worker" link). Do not
+count on seeing it in the caller's, although it can turn up there: T-005's acceptance
+output had the worker's `console.error` line among the pasted script's own. So a red
+`handler failed` during a check is not by itself a failure. Read the reply.
 
 Two traps in that table, both held by a test:
 
@@ -129,6 +131,31 @@ io/importPreview  { format, data }           -> { ok, diff }
 io/import         { format, data, strategy } -> { ok, applied }
 ```
 
+### What the notes, topic and tag payloads hold (T-005)
+
+Everything not listed is ignored, so a caller cannot set `id`, timestamps,
+`deletedAt` or `verseKeys`.
+
+| Field | Accepts |
+|---|---|
+| `draft` | `source` (required: `menu`, `panel`, `page` or `import`), plus any of the `patch` fields; needs a verse or a non-blank body |
+| `patch` | `title`, `body`, `topicId`, `tags`, `verses`, `color`, `pinned`; only what is sent changes |
+| `filter` | `trashed` (literal `true`: Trash only), `topicId` (`null` is Uncategorized), `tag`, `verseKey`, `chapter` (`EXO.13`), `from` and `to` (ms, on `updatedAt`) |
+| `sort` | `{ by, dir }`: `updatedAt`, `createdAt`, or `deletedAt` in Trash; `asc` or `desc`. Newest first by default |
+| `page` | `{ offset, limit }`: limit defaults to 100, caps at 500, and `0` returns only `total` |
+
+Replies beyond the catalogue's minimum: `notes/restore` adds `restored` and
+`uncategorized` (ids whose topic has since been deleted), `notes/purge` adds `purged`,
+and `topics/delete` adds `affected`. `notes/get` for a missing id is
+`{ ok: true, note: null }`. `counts` is `{ topics: { id: n }, uncategorized, trash }`.
+
+`undoToken` from `notes/trash` is the array of ids that call moved, so
+`notes/restore { ids: undoToken }` is its undo. It is plain data on purpose: Chrome
+may have restarted the worker before the user clicks Undo.
+
+`tags/rename` onto a different existing tag is an error, so the UI can offer a merge
+(T-033 R3). `affected` counts every note rewritten, including those in Trash.
+
 ## Change propagation — `notesRev`
 
 The worker does **not** enumerate tabs. After any write it bumps a counter in
@@ -137,6 +164,14 @@ The worker does **not** enumerate tabs. After any write it bumps a counter in
 ```js
 { notesRev: 42, notesRevIds: ['n_abc'], notesRevKind: 'update' }
 ```
+
+`notesRevKind` is `create`, `update`, `trash`, `restore`, `purge`, `topics` or
+`tags`. `notesRevIds` are always **note** ids, so it is empty when only a topic or a
+tag row changed. For those two kinds a listener should refetch rather than patch.
+
+**Watch `changes.notesRev`.** The bumps are queued so it rises by exactly one per
+write. Without the queue, two overlapping writes both read 42 and both store 43, and
+the second one changes only `notesRevIds`.
 
 Every surface listens with `chrome.storage.onChanged`. This works in content
 scripts and extension pages alike, needs no `tabs` permission, and lets a

@@ -97,3 +97,13 @@ rather than showing an empty list.
 
 R7 is a small API decision with a large effect. Defaults in destructive
 operations are how the wrong thing happens quietly, two surfaces later.
+
+**Left for this task by T-005.** `repo.js` has `'reassign'` and `'trash'`; `'move'`
+needs a target topic and its payload, which this task defines.
+
+**Two requirements disagree; settle it here.** The "Delete the notes too" acceptance
+item says notes "restore with their original topic". T-034 R2 says a note whose
+topic has been deleted restores to Uncategorized, and `restoreNotes` does that. So
+those notes keep their old `topicId` in Trash, and it survives only if the topic is
+restored first, as this task's undo does. A restore from Trash after the undo window
+lands in Uncategorized.

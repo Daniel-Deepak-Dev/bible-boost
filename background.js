@@ -25,6 +25,11 @@
 import { SCHEMA_VERSION } from './src/shared/schema.js';
 import { dispatch } from './src/background/router.js';
 import { openDb } from './src/background/db.js';
+import {
+  createNote, getNote, updateNote, listNotes, trashNotes, restoreNotes, purgeNotes,
+  listTopics, createTopic, updateTopic, deleteTopic, topicCounts,
+  listTags, renameTag, mergeTags, deleteTag,
+} from './src/background/repo.js';
 
 // ---------- Keyboard shortcuts ----------
 // The command names are declared in manifest.json "commands", and content.js maps the same names
@@ -56,8 +61,31 @@ chrome.runtime.onInstalled.addListener(() => {
 //
 // ping exists so the worker can be smoke-tested before any data handler does:
 //   await chrome.runtime.sendMessage({ type: 'ping' })   // from any extension page's console
+//
+// The data handlers do nothing but unpack the message and shape the reply. Validation, ids and the
+// change signal all belong to repo.js (T-005), so a handler has nothing to get wrong. A throw from
+// repo.js becomes { ok: false, error } in dispatch().
 const HANDLERS = Object.freeze({
   ping: async () => ({ ok: true, schemaVersion: SCHEMA_VERSION }),
+
+  'notes/create': async ({ draft }) => ({ ok: true, note: await createNote(draft) }),
+  'notes/update': async ({ id, patch }) => ({ ok: true, note: await updateNote(id, patch) }),
+  'notes/get': async ({ id }) => ({ ok: true, note: await getNote(id) }),
+  'notes/list': async ({ filter, sort, page }) => ({ ok: true, ...(await listNotes({ filter, sort, page })) }),
+  'notes/trash': async ({ ids }) => ({ ok: true, ...(await trashNotes(ids)) }),
+  'notes/restore': async ({ ids }) => ({ ok: true, ...(await restoreNotes(ids)) }),
+  'notes/purge': async ({ ids }) => ({ ok: true, ...(await purgeNotes(ids)) }),
+
+  'topics/list': async () => ({ ok: true, topics: await listTopics() }),
+  'topics/create': async ({ name, color, parentId }) => ({ ok: true, topic: await createTopic({ name, color, parentId }) }),
+  'topics/update': async ({ id, patch }) => ({ ok: true, topic: await updateTopic(id, patch) }),
+  'topics/delete': async ({ id, strategy }) => ({ ok: true, ...(await deleteTopic(id, strategy)) }),
+  'topics/counts': async () => ({ ok: true, counts: await topicCounts() }),
+
+  'tags/list': async () => ({ ok: true, tags: await listTags() }),
+  'tags/rename': async ({ from, to }) => ({ ok: true, ...(await renameTag(from, to)) }),
+  'tags/merge': async ({ from, into }) => ({ ok: true, ...(await mergeTags(from, into)) }),
+  'tags/delete': async ({ name }) => ({ ok: true, ...(await deleteTag(name)) }),
 });
 
 // Deliberately NOT an async function, unlike every handler. The documented way to keep the reply

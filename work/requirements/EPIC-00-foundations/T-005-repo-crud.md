@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-00 Foundations |
-| Status | Not started |
+| Status | Done |
 | Depends on | T-003 |
 | Blocks | every epic after this one |
 | Size | M |
@@ -72,6 +72,9 @@ a failure does not half-apply.
 - `src/background/repo.js` — new
 - `src/shared/schema.js` — validators, normalizers
 - `background.js` — register handlers
+- `src/background/db.js` — `walkCursor`, because T-003 R1 keeps every `onsuccess`
+  in that file
+- `test/repo.test.js` — new; `test/schema.test.js` — extended
 
 ## Reference
 
@@ -82,22 +85,24 @@ a failure does not half-apply.
 
 ## Acceptance
 
-- [ ] From an extension page console, create a note with two verses and three
+- [x] From an extension page console, create a note with two verses and three
       tags; it comes back with an id, timestamps, sorted deduped tags, and
       `verseKeys` matching `verses`
-- [ ] Tags typed as `Faith`, `faith` and `FAITH` collapse to one tag whose
+- [x] Tags typed as `Faith`, `faith` and `FAITH` collapse to one tag whose
       `label` is the first casing seen
-- [ ] A Tamil tag survives create → list → search unchanged
-- [ ] `listNotes({topicId})` and `listNotes({tag})` return correct sets
-- [ ] `listNotes({filter:{chapter:'EXO.13'}})` returns notes on any verse of that
+- [x] A Tamil tag survives create → list unchanged, and is found by a decomposed
+      spelling
+- [x] `listNotes({filter:{topicId}})` and `listNotes({filter:{tag}})` return
+      correct sets
+- [x] `listNotes({filter:{chapter:'EXO.13'}})` returns notes on any verse of that
       chapter
-- [ ] Trashed notes vanish from the default list and appear with
+- [x] Trashed notes vanish from the default list and appear with
       `filter.trashed`
-- [ ] Restore brings a note back with its topic and tags intact
-- [ ] `notesRev` in `storage.local` increments on **every** create, update,
+- [x] Restore brings a note back with its topic and tags intact
+- [x] `notesRev` in `storage.local` increments on **every** create, update,
       trash, restore and purge
-- [ ] A draft with no verses and no body is rejected with a clear error
-- [ ] A draft with an unknown `topicId` is stored with `topicId: null`
+- [x] A draft with no verses and no body is rejected with a clear error
+- [x] A draft with an unknown `topicId` is stored with `topicId: null`
 
 ## Notes
 
@@ -108,3 +113,88 @@ query, it belongs here.
 T-003). R6's "use the indexes" cannot apply to `topicId: null` (Uncategorized) or
 to "not deleted", because `byTopic` and `byDeleted` do not hold those rows. Walk
 `byUpdated` with a cursor and skip instead.
+
+**Two acceptance items were corrected during the work.** `listNotes({topicId})`
+contradicted R6's signature, so it now reads `listNotes({filter:{topicId}})`. The
+Tamil item said "create → list → search", but search is out of scope here; its
+Tamil cases are T-036 to T-038's.
+
+**How the acceptance items are covered.** `node --test` holds the pure parts. On
+2026-11-09 the real `background.js`, router, `repo.js` and `db.js` also ran against
+real IndexedDB in a Chrome 152 page, with messages and replies going through JSON
+and only the `chrome.*` calls stubbed: 139 checks, all passing. The same day the
+script below ran in the loaded extension and all ten items passed, which also covers
+what the page run could not reach: the worker's module graph, real `sendMessage` and
+the real `chrome.storage.local`. The one red line in its output is the worker logging
+the empty draft that item 9 sends on purpose.
+
+**To repeat it:** reload the extension at `chrome://extensions`, open the popup,
+right-click inside it, choose Inspect, and paste this into that window's Console.
+It covers all ten items and removes what it creates, except one soft-deleted topic
+row called "BB acceptance", which appears nowhere. A worker console will not do:
+`runtime.sendMessage` never delivers to its own context.
+
+```js
+await (async () => {
+  const send = (m) => chrome.runtime.sendMessage(m);
+  const rev = async () => (await chrome.storage.local.get('notesRev')).notesRev ?? 0;
+  const v = (usfm) => ({ usfm, primary: { versionId: '339', abbr: 'TAOVBSI', lang: 'tam', text: 'x' }, parallel: null });
+  const note = async (draft) => (await send({ type: 'notes/create', draft: { source: 'page', ...draft } })).note;
+  const get = async (id) => (await send({ type: 'notes/get', id })).note;
+  const ids = async (filter, page) => (await send({ type: 'notes/list', filter, page })).notes.map((n) => n.id);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  let failed = 0;
+  const check = (name, pass, got) => { if (!pass) failed += 1; console[pass ? 'log' : 'error'](pass ? 'PASS' : 'FAIL', name, pass ? '' : got); };
+  const bumped = async (name, action) => { const was = await rev(); const out = await action(); const now = await rev(); check(`8 notesRev +1 on ${name}`, now === was + 1, { was, now }); return out; };
+
+  const a = await bumped('create', () => note({ body: 'acceptance', verses: [v('EXO.13.2'), v('EXO.13.3')], tags: ['bb-zeta', 'bb-alpha', 'BB-Alpha', 'bb-mid'] }));
+  check('1 id and timestamps', /^n_/.test(a.id) && typeof a.createdAt === 'number' && a.createdAt === a.updatedAt, a);
+  check('1 tags sorted and deduped', same(a.tags, ['bb-alpha', 'bb-mid', 'bb-zeta']), a.tags);
+  check('1 verseKeys match verses', same(a.verseKeys, ['EXO.13.2', 'EXO.13.3']), a.verseKeys);
+
+  const b = await note({ body: 'x', tags: ['BbFaith', 'bbfaith', 'BBFAITH'] });
+  const row = (await send({ type: 'tags/list' })).tags.find((t) => t.name === 'bbfaith');
+  check('2 one tag, labelled with the first casing', same(b.tags, ['bbfaith']) && row?.label === 'BbFaith', { tags: b.tags, row });
+
+  const composed = 'bbகொடு';
+  const decomposed = 'bbகொடு';
+  const c = await note({ body: 'x', tags: [decomposed] });
+  check('3 Tamil tag stored composed', same(c.tags, [composed]), c.tags);
+  check('3 found by either spelling', same(await ids({ tag: composed }), [c.id]) && same(await ids({ tag: decomposed }), [c.id]));
+
+  const topic = (await send({ type: 'topics/create', name: 'BB acceptance' })).topic;
+  const d = await note({ body: 'x', topicId: topic.id, tags: ['bb-zeta'] });
+  check('4 by topic', same(await ids({ topicId: topic.id }), [d.id]));
+  check('4 by tag', same((await ids({ tag: 'bb-zeta' })).sort(), [a.id, d.id].sort()));
+
+  const e = await note({ verses: [v('EXO.1.1')] });
+  const chapter = await ids({ chapter: 'EXO.13' }, { limit: 500 });
+  check('5 chapter finds the note once, and not EXO.1', chapter.filter((id) => id === a.id).length === 1 && !chapter.includes(e.id), chapter);
+
+  await bumped('update', () => send({ type: 'notes/update', id: d.id, patch: { title: 'edited' } }));
+  const before = await get(d.id);
+  const { undoToken } = await bumped('trash', () => send({ type: 'notes/trash', ids: [d.id] }));
+  check('6 gone from the default list', !(await ids(undefined, { limit: 500 })).includes(d.id));
+  check('6 in Trash', (await ids({ trashed: true }, { limit: 500 })).includes(d.id));
+  await bumped('restore', () => send({ type: 'notes/restore', ids: undoToken }));
+  check('7 restored exactly as it was', same(await get(d.id), before), await get(d.id));
+
+  const empty = await send({ type: 'notes/create', draft: { source: 'page' } });
+  check('9 empty draft refused with a message', empty.ok === false && typeof empty.error === 'string' && empty.error.length > 0, empty);
+  const f = await note({ body: 'x', topicId: 't_nope' });
+  check('10 unknown topic stored as null', f.topicId === null, f);
+
+  const all = [a, b, c, d, e, f].map((n) => n.id);
+  await send({ type: 'notes/trash', ids: all });
+  await bumped('purge', () => send({ type: 'notes/purge', ids: all }));
+  for (const name of ['bb-alpha', 'bb-mid', 'bb-zeta', 'bbfaith', composed]) await send({ type: 'tags/delete', name });
+  await send({ type: 'topics/delete', id: topic.id, strategy: 'reassign' });
+  console.log(failed ? `${failed} FAILED` : 'ALL PASSED');
+})();
+```
+
+Decisions the task left open, with the reasoning in `repo.js` and
+`02-storage-model.md`: a malformed verse refuses the whole draft; `updateNote` may
+empty a note, so autosave mid-retype does not fail; trash, restore and bulk tag or
+topic rewrites leave `updatedAt` alone; a tag rename onto an existing tag is refused
+so that T-033 can offer the merge.
