@@ -26,6 +26,10 @@ html[data-bb-align] [data-bb-col] [data-bb-v]::before {
    background is clipped to its box: lift it past the top and it disappears rather than moves. */
 
 /* ---------- Theme tokens ----------
+   Keep in sync with src/shared/theme.css. A content script's stylesheet cannot @import a
+   chrome-extension:// URL reliably, so the dock needs this copy of the ten tokens it draws with;
+   the tokens only the notes UI uses stay in that file alone.
+
    Values measured off bible.com's own UI. The page picks its theme with html.light / html.dark
    independently of the OS, so that class has to win: it scores (0,1,1) against :root at (0,1,0),
    which it beats whatever the source order. :root therefore carries a light default and the

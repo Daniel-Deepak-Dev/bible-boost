@@ -18,6 +18,7 @@ knowing before seven epics are built on top.
 | [B-005](B-005-no-www-host.md) | A bare `bible.com` host is not matched | No |
 | [B-006](B-006-shortcuts-dead-in-chrome.md) | `Alt+P/A/S` do nothing in a real Chrome | No |
 | [B-007](B-007-popup-parallel-disabled.md) | The popup's Parallel switch is disabled on a live chapter | No |
+| [B-008](B-008-dock-tokens-no-fallback.md) | The dock reads its theme tokens with no fallback | No |
 
 ## How these relate to the notes project
 

@@ -48,8 +48,11 @@ to fix the module's interface, not to copy it.
 icons), one at narrower widths (list and editor swap). Panel widths are
 draggable and persist in `chrome.storage.local`.
 
-**R5.** `data-theme` on `documentElement` driven by `prefers-color-scheme`, with
-a manual light/dark/auto override in `storage.local`. **This page cannot see
+**R5.** The theme follows `prefers-color-scheme` through `src/shared/theme.css`,
+with a manual light/dark/auto override in `storage.local` that sets the `light`
+or `dark` class on `documentElement`, and neither for auto. It has to be the
+class: `theme.css` matches only `html.light` / `html.dark`, so a `data-theme`
+attribute would do nothing. **This page cannot see
 bible.com's theme class** — it is a separate tab — so unlike the panel it has no
 relay to fall back on.
 
@@ -72,6 +75,7 @@ Tab order follows visual order.
 ## Files
 
 - `src/ui/notes.html`, `src/ui/notes.js` — new
+- `src/shared/theme.css` — `<link>`ed by `notes.html` for the `--bb-*` tokens
 - `src/ui/ui.css` — shared component styles
 - `src/ui/app/store.js` — extended with hash routing
 - `manifest.json` — `web_accessible_resources` if linked from the content script

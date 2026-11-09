@@ -43,8 +43,10 @@ light; otherwise `prefers-color-scheme`. bible.com may not have set a class yet
 at first paint.
 
 **R3.** Post `{ bb: 'theme', theme: 'dark' | 'light' }` to the iframe on open and
-on every change. The panel sets `data-theme` (or the matching class) on its own
-`documentElement`.
+on every change. The panel sets the matching `light` or `dark` class on its own
+`documentElement`. It has to be the class: `src/shared/theme.css` matches only
+`html.light` / `html.dark`, so a `data-theme` attribute would leave the panel
+following the OS.
 
 **R4.** Send the theme **before or with** the first render, so the panel never
 flashes the wrong palette. Pass it as a URL hash on the iframe `src` as well as
