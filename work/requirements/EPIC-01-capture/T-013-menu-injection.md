@@ -15,8 +15,10 @@ This is the requested entry point: a save option in the same menu as Highlight,
 Copy, Compare and Share, so saving a verse is one tap from where the user already
 is.
 
-It is also the code most likely to break without warning. The menu is
-React-rendered, re-created on every selection, and its class names are hashed.
+It is also the code most likely to break without warning. The menu stays mounted
+off-screen between selections, redraws parts of itself on every selection, and
+its class names can change with any build (T-008 recorded the real structure in
+`06-verse-action-menu.md`).
 T-015 exists so that when this breaks, the feature degrades instead of dying.
 
 ## Scope
@@ -41,8 +43,9 @@ list's container and insert by index relative to its children.
 list**. If the list cannot be found, do nothing and log — never throw, and never
 leave the menu visually broken.
 
-**R4. Idempotent.** The popover is re-created constantly. Before inserting,
-check for an existing node by `[data-bb-own]`. Never insert twice.
+**R4. Idempotent.** The popover stays mounted, so a row inserted once is still
+there on the next selection unless the site redraws that part of it. Before
+inserting, check for an existing node by `[data-bb-own]`. Never insert twice.
 
 **R5. Mark it `data-bb-own`.** Mandatory — this is what lets the T-004 guard stop
 the injected row from re-triggering `align()`. Without it, every selection runs a
@@ -73,9 +76,9 @@ popover closes.
 
 ## Reference
 
-- `work/understandings/bible-com/06-verse-action-menu.md` — **partly unverified.
-  Run its inspection recipe and update it before coding.** Contains the agreed
-  integration strategy.
+- `work/understandings/bible-com/06-verse-action-menu.md` — the real structure,
+  verified during T-008, and the agreed integration strategy. Re-check the action
+  list before coding: T-008 only needed the header.
 - `work/understandings/extension/04-observer-hazards.md` — why R5 is mandatory
 - `work/understandings/conventions/02-css-and-theming.md` — token usage, theme
   layers

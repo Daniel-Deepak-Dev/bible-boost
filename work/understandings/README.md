@@ -29,7 +29,7 @@ Each file states one at the top:
 | [03-columns-and-versions](bible-com/03-columns-and-versions.md) | parallel mode, version identity, language codes |
 | [04-section-headings](bible-com/04-section-headings.md) | alignment or separators |
 | [05-theme-and-page-chrome](bible-com/05-theme-and-page-chrome.md) | any new on-page UI |
-| [06-verse-action-menu](bible-com/06-verse-action-menu.md) | **partly unverified** — the save-to-BibleBoost menu row |
+| [06-verse-action-menu](bible-com/06-verse-action-menu.md) | detecting a selection, the save-to-BibleBoost menu row |
 | [07-i18n-and-scripts](bible-com/07-i18n-and-scripts.md) | search, sorting, export, anything measuring text |
 
 ### This extension

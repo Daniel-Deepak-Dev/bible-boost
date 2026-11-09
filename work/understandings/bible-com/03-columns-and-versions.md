@@ -48,6 +48,17 @@ bible.com **hides the second column on narrow screens**. `columns()` returns nul
 unless exactly two are visible. Any parallel-dependent feature must treat
 "parallel is in the URL" and "two columns are on screen" as different facts.
 
+At a viewport about 1024px wide it goes further, and bible.com **removes
+`?parallel=` from the URL**, leaving one column in the DOM. Seen 2026-11-09 both on
+load and on narrowing an open page from 1600px. The width where this starts was not
+measured.
+
+## The two columns do not behave alike
+
+Only the **primary** column responds to a tap. The parallel column has the same
+markup and the same `cursor: pointer`, but a tap there selects nothing and raises no
+menu, in either language order. See `06-verse-action-menu.md`.
+
 ## Language code, free
 
 The `iso6393eng` token is an **ISO 639-3 language code**. Worth capturing on a

@@ -408,6 +408,10 @@
   new MutationObserver((records) => {
     if (records.every(recordIsOurs)) return;
     schedule(records.length);
+    // T-008 learns bible.com's selection class from these same records, which is how it manages
+    // without a second body-wide observer. It comes after schedule() so that a bug in capture can
+    // never cost the reader their alignment.
+    BB.capture?.noteMutations(records);
   }).observe(document.body, {
     childList: true, subtree: true, attributes: true, attributeFilter: ['class'],
   });

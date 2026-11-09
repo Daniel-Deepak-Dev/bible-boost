@@ -21,7 +21,8 @@ what makes a Tamil note and an English note about the same verse linkable.
 Two traps:
 
 1. **Combined verses.** The attribute can read `JHN.1.1+JHN.1.2`. Always take
-   the part before the plus sign.
+   the part before the plus sign. A live example to test against: CEV Romans 1,
+   `/bible/392/ROM.1.CEV`, has `ROM.1.3+ROM.1.4` and `ROM.1.14+ROM.1.15`.
 2. **A verse can be split across paragraphs.** Several elements share one
    `data-usfm`. `firstSpans()` keeps only the **first** occurrence, in document
    order, in a Map. Insertion order equals document order, which downstream code
@@ -29,6 +30,16 @@ Two traps:
 
 Never key on the bare verse number: two chapters can render on one page and would
 collide.
+
+Two more, both measured on `/bible/339/EXO.13.TAOVBSI` during T-008:
+
+3. **The chapter wrapper has `data-usfm` too.** `div.cat7xG_chapter` carries
+   `EXO.13`, so a bare `[data-usfm]` query finds 44 elements where there are 43
+   verse elements. Use `BB.dom.VERSE_SEL`.
+4. **A fragment can be nothing but whitespace.** In TAOVBSI most verses are
+   followed by a second `_verse` element containing only spaces, which gives 43
+   elements for 22 verses. NKJV has 22 for 22. Anything counting or testing
+   "covered text" has to expect these.
 
 ## Verse label vs footnote marker — read this before extracting text
 
@@ -56,7 +67,9 @@ rect; without one it uses the verse's **first** line box, not its last:
 return (label ? rects[rects.length - 1] : rects[0]).top;
 ```
 
-## Selection state — UNVERIFIED
+## Selection state
 
-The class bible.com adds to a selected verse is **hashed and unknown**. Do not
-hardcode one. See `06-verse-action-menu.md` for the runtime-discovery strategy.
+Selecting a verse adds `cat7xG_verse-selected` to every element of that verse
+(verified 2026-11-09). It is still a hashed build artefact, so do not hardcode it:
+`src/content/capture.js` learns it at runtime. `06-verse-action-menu.md` has the
+detail, including that only the primary column responds to a tap.

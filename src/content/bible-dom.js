@@ -81,14 +81,25 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   }
 
   // ---------- Verses ----------
+  // What counts as a verse element, in one place. The class half is doing real work: the chapter
+  // wrapper carries data-usfm as well ("EXO.13", on a "cat7xG_chapter" div), so a bare [data-usfm]
+  // query on Exodus 13 finds 44 elements where there are 43 verse elements.
+  const VERSE_SEL = '[class*="_verse"][data-usfm]';
+
+  // The canonical key of a verse element. CEV writes Romans 1:3-4 as "ROM.1.3+ROM.1.4", and the rule
+  // everywhere is to keep the part before the plus (02-verse-dom.md).
+  function usfmOf(el) {
+    return el.getAttribute('data-usfm').split('+')[0];
+  }
+
   // usfm ("JHN.1.5") -> first element of that verse (a verse can be split across paragraphs).
   // A Map keeps insertion order, which is document order, which is the top-to-bottom order the
   // single-pass accumulation in align() needs. Keying on the usfm rather than the bare verse
   // number means two chapters rendered on one page can never collide.
   function firstSpans(col) {
     const map = new Map();
-    col.querySelectorAll('[class*="_verse"][data-usfm]').forEach((el) => {
-      const key = el.getAttribute('data-usfm').split('+')[0]; // combined "JHN.1.1+JHN.1.2"
+    col.querySelectorAll(VERSE_SEL).forEach((el) => {
+      const key = usfmOf(el);
       if (!map.has(key)) map.set(key, el);
     });
     return map;
@@ -101,5 +112,5 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     return el.querySelector(':scope > [class*="_label"]');
   }
 
-  BB.dom = { REF_RE, VID_RE, LANG_RE, parseUrl, columnEls, columns, langOf, firstSpans, verseLabel };
+  BB.dom = { REF_RE, VID_RE, LANG_RE, VERSE_SEL, parseUrl, columnEls, columns, langOf, usfmOf, firstSpans, verseLabel };
 })();

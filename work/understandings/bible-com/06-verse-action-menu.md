@@ -1,83 +1,124 @@
 # bible.com — the verse action menu
 
-> **Confidence: PARTLY UNVERIFIED.** Everything under "Observed" comes from a
-> screenshot. Everything under "Unknown" **must be inspected on a live page
-> before writing code against it**. Update this file with what you find — that is
-> the single most valuable thing the first implementation session can leave
-> behind.
+> **Confidence: VERIFIED on 2026-11-09** against live bible.com, logged out, on
+> Exodus 13 (TAOVBSI and NKJV, both orders) and Romans 1 (CEV), during T-008. Not
+> checked: a signed-in session, a non-English interface language, a phone-width
+> layout, and what applying a highlight does to the verse's classes.
 
-## Observed
+## What selecting a verse does
 
-Tapping a verse opens a dark popover near the selection containing, top to
-bottom:
+Tapping a verse **in the primary column** adds a class to every element of that
+verse, fragments included, and raises the menu:
 
 ```
-Currently Selected:
-<localized ref> <VERSION ABBR>  >          [X close]
----------------------------------------------
-Highlight     (-)  [yellow] [green] [blue] [orange] [pink] ...
----------------------------------------------
-Copy
----------------------------------------------
-Compare
----------------------------------------------
-Share
+<span class="cat7xG_verse cat7xG_verse-selected" data-usfm="EXO.13.2">
 ```
 
-- The header shows the localized reference and the version abbreviation, e.g. the
-  Tamil rendering of Exodus 13:2 followed by TAOVBSI.
-- The Highlight row is a colour strip with a "no colour" button first.
-- Rows below it are a vertical list of icon + label.
-- The UI chrome is in the **interface** language, not the Bible version's
-  language. The sidebar language selector is separate from the version.
+- **Only the primary (left) column responds to taps.** This follows position, not
+  language: with TAOVBSI primary the English side is inert, and with NKJV primary
+  the Tamil side is inert. The parallel column's verses still show
+  `cursor: pointer`, which is misleading. A text drag does work there.
+- Tapping another verse **adds** to the selection. Tapping a selected verse removes
+  it. The Close button clears the whole selection.
+- Selection order does not matter to the DOM. Tapping 2 then 1 reads as 1, 2.
+- bible.com may scroll to keep the tapped verse clear of the menu: tapping Exodus
+  13:4 moved the page by 200px. Test scripts must re-measure before each tap.
+- Client-side navigation clears the selection and closes the menu.
+- A drag across several verses selects text and adds no class. A short drag inside
+  **one** verse does both: the verse gets the class and a text range exists too,
+  which is why `capture.js` tries the class before the text.
+- Hover changes no class on a verse.
 
-## Unknown — inspect before coding
+## Every tap rewrites every verse's class
 
-- [ ] The popover's container selector and whether it is portalled to `body`
-- [ ] Whether it is re-created per selection or reused and repositioned
-- [ ] The class bible.com adds to a **selected verse** element
-- [ ] The action list's container, and whether rows are `button`, `a` or `div`
-- [ ] Whether the row labels are text nodes or `aria-label`
-- [ ] Whether a range selection changes the structure
+On each selection change, the class attribute of every verse in **both** columns
+is rewritten, almost always to the value it already had. Measured on Exodus 13 in
+parallel: 65 records for one tap, 63 of them no-ops. `oldValue` equals the new
+value, so anything reading these records must compare before believing them.
 
-### Inspection recipe
+## The menu's structure
 
-1. Open a chapter, select a verse, open DevTools.
-2. In the Elements panel, use "Break on > subtree modifications" on `body` to
-   catch the popover being inserted.
-3. Run this in the console **before** selecting, then select, to learn the
-   selection class by diffing:
+It lives inside the reader, **not portalled to `body`**:
 
-```js
-const before = new Map();
-document.querySelectorAll('[data-usfm]').forEach(e => before.set(e, e.className));
-// ...now click a verse...
-document.querySelectorAll('[data-usfm]').forEach(e => {
-  if (before.get(e) !== e.className) console.log(e.dataset.usfm, before.get(e), '->', e.className);
-});
+```
+main#main
+  ... div.cat7xG_yv-bible-text [data-testid="chapter-content"]
+    div.cat7xG_bible-reader
+      div.cat7xG_reader              (the columns are in here)
+      div.fixed.pointer-events-none  (menu root, positioned at the bottom)
+        div.pointer-events-auto.translate-y-0   (the card)
+          header row
+            p                        "Currently Selected:"
+            a[href]                  the reference, then the version abbreviation
+            button[aria-label="Cancel"]
+          div.flex-col.divide-y-small   (the action list)
+            div                      Highlight, then the colour swatches
+            div                      Copy
+            div                      Compare
+            div                      Share
+          div                        the sign-up prompt (logged out only)
 ```
 
-4. Record the findings in this file, move the checkboxes to Observed, and change
-   the confidence banner.
+Those utility class names are plain Tailwind rather than hashed, but they are
+styling and can change with any build. Treat them as a description, not as
+selectors.
 
-## Integration strategy (decided — see T-015, T-016)
+- **Rows are `div`s** with an icon `div` and a `p` label. The label is a **text
+  node**, in the interface language, with no `aria-label`. Only the close button
+  is a real `button`.
+- **The menu is always mounted.** It exists before the first tap and stays after
+  closing, moved off-screen by a `translate-y-[calc(100%+24px+var(--audio-bar-h))]`
+  class on the card, which becomes `translate-y-0` when open. So "is the menu in
+  the DOM" says nothing about whether a verse is selected.
+- The same element is reused across selections. The five colour swatches inside
+  it are removed and re-added on every selection, so that part is a `childList`
+  mutation each time.
 
-The menu is React-rendered, re-created on selection, and its class names are
-hashed. **A redesign will break any injection.** Therefore:
+## The header link is the best thing on the page
 
-1. **Discover the selection class at runtime** by diffing `class` attributes
-   rather than hardcoding one. The existing observer already watches
-   `attributeFilter: ['class']`, so the signal is free.
+| State | `href` | Visible text |
+|---|---|---|
+| One verse | `/bible/339/EXO.13.2.TAOVBSI` | `யாத்திராகமம் 13:2 TAOVBSI` |
+| Contiguous | `/bible/339/EXO.13.1-2.TAOVBSI` | `யாத்திராகமம் 13:1-2 TAOVBSI` |
+| With a gap | `/bible/339/EXO.13.1-2,4.TAOVBSI` | `யாத்திராகமம் 13:1-2,4 TAOVBSI` |
+| Combined verse | `/bible/392/ROM.1.3-4.CEV` | `Romans 1:3-4 CEV` |
+| Nothing selected | `/bible/339/EXO.13.TAOVBSI` | `யாத்திராகமம் 13: TAOVBSI` |
+
+The `href` is canonical and unlocalized, carries the version id, and loses its
+verses when nothing is selected. Read it rather than the text.
+
+Three traps when finding it:
+
+1. **Search inside `main`, not the document.** The sidebar's Recents list can hold
+   a verse-level link once a page such as `/bible/339/EXO.13.2.TAOVBSI` has been
+   visited. It sits outside `main`. On the matching chapter, a document-wide search
+   would report that verse as selected when nothing is.
+2. **A verse-level URL is a different page.** `/bible/339/EXO.13.2.TAOVBSI` renders
+   a single-verse page with no columns and no verse elements at all, and shows a
+   verse-level link of its own.
+3. **A combined verse reads as a range.** The header says `3-4` where the verse
+   element is `ROM.1.3+ROM.1.4`. Look the verses up in the column of the version
+   the `href` names. On `/bible/392/ROM.1.CEV?parallel=114` the CEV column has keys
+   3 and 5 while NKJV beside it has 3, 4 and 5, so reading every column would
+   report a verse 4 that was never selected.
+
+The inspection recipe that produced all this: snapshot `className` for every
+`[data-usfm]` element, tap a verse, compare, and attach a recording
+`MutationObserver` with `attributeOldValue: true`.
+
+## Integration strategy (see T-013, T-015)
+
+1. **Selection is detected at runtime** by `src/content/capture.js`. The class name
+   above is what the code learns, not what it contains.
 2. **Anchor positionally, not by the word "Copy".** The interface language can be
-   anything; matching English text is a localization bug waiting to happen.
-   Insert relative to the action list's children, and **append at the end if the
-   anchor is not found** — never fail to insert.
-3. **Inject idempotently.** Check for an existing node by `data-bb-own` before
-   adding; the popover will be re-created many times.
+   anything. Insert relative to the action list's children, and **append at the end
+   if the anchor is not found** — never fail to insert.
+3. **Inject idempotently.** The menu is reused, so a row can already be there. The
+   swatch redraw shows that parts of it are rebuilt, so check every time.
 4. **Mark every injected node `data-bb-own`** so the observer guard
    (`extension/04-observer-hazards.md`) can ignore it.
 5. **Always ship the independent fallback** — the extension's own save chip plus
-   a keyboard shortcut (T-016) — so the feature degrades instead of dying.
+   a keyboard shortcut (T-015) — so the feature degrades instead of dying.
 
 ## Do not fight the page
 

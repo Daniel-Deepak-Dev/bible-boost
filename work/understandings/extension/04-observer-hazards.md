@@ -115,6 +115,23 @@ thought. No task planned so far does that.
   with or without the guard, so it proves nothing. Use `textContent` or `append`.
 - Logging is `console.log` on purpose. Chrome hides `console.debug` by default,
   and a hidden log would look like a passing test.
+- With the console on Verbose, a verse tap can also print `[Violation] Forced
+  reflow while executing JavaScript took 30ms` (seen 2026-11-09). Chrome does not
+  name the source. `align()` forces layout on purpose and runs after every tap,
+  because bible.com's class writes pass the guard, while `capture.js` reads no
+  layout at all. It is expected, not a sign of a capture problem.
+
+## Other code reading these records
+
+`src/content/capture.js` learns bible.com's selection class from this same observer,
+through `BB.capture.noteMutations(records)`, so it needs no observer of its own. The
+call comes after the guard and after `schedule()`, so a bug in capture cannot stop
+alignment.
+
+Anything added here has to stay proportional to the records and cheap per record.
+One verse tap is 65 class records on Exodus 13 in parallel, 63 of them writing the
+value that was already there, and every tap also re-adds the menu's colour swatches
+as `childList` records. See `../bible-com/06-verse-action-menu.md`.
 
 ## Related trap
 

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-01 Capture |
-| Status | Not started |
+| Status | Done |
 | Depends on | T-001 |
 | Blocks | T-012, T-013, T-015, T-016 |
 | Size | M |
@@ -45,14 +45,18 @@ The existing observer already watches `attributeFilter: ['class']`, so the signa
 costs nothing new — but route it through the T-004 guard, and do **not** add a
 second body-wide observer.
 
-**R3. Fallback 1 — the menu header.** bible.com's popover shows the selected
-reference. Parse the digits out of it and combine with the chapter from
-`BB.dom.parseUrl()`. Do **not** parse the book name: it is localized (Tamil, in
-the primary user's case) and there is no name table in this codebase.
+**R3. Fallback 1 — the menu header.** bible.com's popover header is a link whose
+`href` holds the selected reference in canonical form, such as
+`/bible/339/EXO.13.1-2,4.TAOVBSI`. Read that, inside `main`, and only for the
+chapter `BB.dom.parseUrl()` reports. Do **not** parse the visible text: its book
+name is localized (Tamil, in the primary user's case), there is no name table in
+this codebase, and a book or version abbreviation can contain digits of its own.
 
-**R4. Fallback 2 — `window.getSelection()`.** Walk the range's common ancestor
-for `[data-usfm]` descendants. This catches text-drag selection, which the class
-strategy may not.
+**R4. Fallback 2 — `window.getSelection()`.** Test each column verse against the
+range with `intersectsNode`, and require the overlap to contain non-whitespace
+text. Do not walk down from the common ancestor: for any drag across two verses
+that is the chapter wrapper, and every verse is below it. This catches text-drag
+selection, which the class strategy does not.
 
 **R5.** Try the strategies in order and report which one answered, in `source`.
 Log the fallback level at `DEBUG` so a future regression is diagnosable from a
@@ -71,6 +75,9 @@ about this. Scope queries to `BB.dom.columnEls()`.
 ## Files
 
 - `src/content/capture.js` — new
+- `src/content/bible-dom.js` — `VERSE_SEL` and `usfmOf`, so the selector keeps one
+  home
+- `content.js` — one call in the existing observer, after the T-004 guard
 - `manifest.json` — add to the `js` array, after `content.js`
 
 ## Reference
@@ -86,21 +93,47 @@ about this. Scope queries to `BB.dom.columnEls()`.
 
 ## Acceptance
 
-- [ ] Tapping one verse reports exactly that verse's usfm
-- [ ] Tapping a second verse to extend reports both, in document order
-- [ ] Deselecting reports `null`
-- [ ] Works identically in the Tamil column and the English column
-- [ ] Works on a single-version page and in parallel mode
-- [ ] Dragging across text reports the covered verses (fallback 2)
-- [ ] A combined `data-usfm` (`X+Y`) reports only the first key
-- [ ] After client-side navigation to another chapter, detection still works
-- [ ] Temporarily renaming the cached selection class forces a re-discovery
+- [x] Tapping one verse reports exactly that verse's usfm
+- [x] Tapping a second verse to extend reports both, in document order
+- [x] Deselecting reports `null`
+- [x] Tapping works whichever language is in the primary column (TAOVBSI primary
+      and NKJV primary). bible.com's parallel column ignores taps, so a tap there
+      reports `null`, and a text drag there reports the covered verses
+- [x] Works on a single-version page and in parallel mode
+- [x] Dragging across text reports the covered verses (fallback 2)
+- [x] A combined `data-usfm` (`X+Y`) reports only the first key
+- [x] After client-side navigation to another chapter, detection still works
+- [x] Temporarily renaming the cached selection class forces a re-discovery
       rather than a permanent failure
-- [ ] `work/understandings/bible-com/06-verse-action-menu.md` has been updated
+- [x] `work/understandings/bible-com/06-verse-action-menu.md` has been updated
       with what was actually found, and its confidence banner changed
+- [x] The extension loaded unpacked passes the standing regression check in
+      CLAUDE.md, and the Verbose console shows
+      `[BibleBoost] capture: learned selection class` on the first tap
 
 ## Notes
 
 **The most valuable output of this task is the updated understanding file**, not
 the code. Write down the real selectors, the real structure, and anything that
 surprised you.
+
+### How the ticked items were verified
+
+On live bible.com on 2026-11-09, logged out, at a 1600px viewport, with real taps
+and drags. The browser used cannot load an unpacked extension, so `bible-dom.js`
+and `capture.js` were injected into the page with comments stripped, and a stand-in
+`MutationObserver` called `noteMutations` the way `content.js` does.
+
+The last acceptance item covers what the injection could not: the manifest's load
+order, the isolated world, `content.js` reaching `BB.capture`, and alignment still
+working. It was done by hand with the unpacked extension in Chrome on 2026-11-09.
+The Verbose console read as it should: `learned selection class` and `answered by
+class` on the first tap, `answered by nothing` on deselecting, and `answered by
+class` on the next tap with no second `learned` line, so the cached class held.
+
+To repeat the rename check, pick the BibleBoost context in the DevTools console
+and run `BB.capture.debug.token = 'x'`.
+
+Not checked: a signed-in session, a non-English interface language, and whether
+applying a highlight adds a class to the verse. If it does, `reconcile()` only
+guards against it while the menu names verses.

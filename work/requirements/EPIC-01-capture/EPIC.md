@@ -5,7 +5,8 @@ versions' text, a topic and tags — reliably enough that a bible.com redesign
 degrades the feature instead of killing it.
 
 This epic contains the project's most fragile code. bible.com's verse menu is
-React-rendered with hashed class names and is re-created on every selection. The
+rendered by the site's own framework, stays mounted off-screen between selections,
+and redraws parts of itself on every selection. The
 strategy throughout is **layered**: discover things at runtime instead of
 hardcoding them, and always ship a second path that does not depend on the first.
 
@@ -28,11 +29,10 @@ parallel with it.
 
 ## Before you start: inspect the menu
 
-`work/understandings/bible-com/06-verse-action-menu.md` is marked **partly
-unverified**. It contains a console recipe for learning bible.com's selection
-class and menu structure. **Run it first and update that file** — it is the
-single most valuable artefact this epic can leave behind, and every task below
-depends on what it says.
+`work/understandings/bible-com/06-verse-action-menu.md` records bible.com's
+selection class and menu structure, verified live during T-008. **Read it first,
+and update it if the page has moved on** — every task below depends on what it
+says.
 
 ## Definition of done
 

@@ -63,7 +63,7 @@ without a page load.
 - `work/understandings/bible-com/07-i18n-and-scripts.md` — localized names live
   only in the page; never parse one to derive a book
 - `work/understandings/bible-com/06-verse-action-menu.md` — the header line
-  format, **unverified**
+  format, verified during T-008
 - `work/understandings/bible-com/02-verse-dom.md` — the direct-child `_label` is
   the verse number
 
