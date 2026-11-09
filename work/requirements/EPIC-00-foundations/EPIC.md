@@ -25,13 +25,17 @@ order. T-003 needs T-002. T-005 needs T-003.
 
 ## Definition of done
 
-- [ ] A note can be created, read, updated and soft-deleted through the worker,
-      from a scratch page, with nothing else built
-- [ ] `sh work/status.sh` shows all seven Done
-- [ ] Parallel alignment and separators behave exactly as before — verified by
-      hand on a live chapter
-- [ ] `node --test` passes
-- [ ] No new dependency, no `package.json` in the extension root
+- [x] A note can be created, read, updated and soft-deleted through the worker,
+      from a scratch page, with nothing else built — run by hand in the loaded
+      extension on 2026-11-09, from the popup's console. That is an extension
+      page, so no separate scratch page was needed. The script and the result
+      are in T-005's Notes.
+- [x] `sh work/status.sh` shows all seven Done
+- [x] Parallel alignment and separators behave exactly as before — verified by
+      hand on a live chapter. Recorded in T-001's Acceptance (2026-11-08) and
+      T-004's Notes (2026-11-09, on the last commit to touch page-side code).
+- [x] `node --test` passes
+- [x] No new dependency, no `package.json` in the extension root
 
 ## Risks
 
