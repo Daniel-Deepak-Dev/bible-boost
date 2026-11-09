@@ -49,10 +49,17 @@ bible.com **hides the second column on narrow screens**. `columns()` returns nul
 unless exactly two are visible. Any parallel-dependent feature must treat
 "parallel is in the URL" and "two columns are on screen" as different facts.
 
-At a viewport about 1024px wide it goes further, and bible.com **removes
-`?parallel=` from the URL**, leaving one column in the DOM. Seen 2026-11-09 both on
-load and on narrowing an open page from 1600px. The width where this starts was not
-measured.
+At some narrower width it goes further, and bible.com **removes `?parallel=` from
+the URL**, leaving one column in the DOM. Where that starts is not settled:
+
+| Run | Parameter removed at | Two columns still at |
+|---|---|---|
+| 2026-11-09 | about 1024px, on load and on narrowing an open page from 1600px | 1600px |
+| 2026-11-10, the desktop app's browser pane, emulated widths on an open page | 600px | every step from 1600px to 640px, and on load at 1024px |
+
+What differed between the two runs was not established, so do not write code against
+a width. In the second run no step left a column in the DOM with empty rects: the
+column went all at once, together with the parameter.
 
 ## The two columns do not behave alike
 
@@ -175,3 +182,32 @@ reading any version id. Always handle an unknown id gracefully.
 `const [A, B] = cols.map(firstSpans)` is **DOM order**, not primary/parallel
 order. If you need to know which is which, compare each column's vid against
 `parseUrl().id`. Do not assume A is primary.
+
+On every page measured the primary does come first, **a swapped URL included**:
+`/bible/114/EXO.13.NKJV?parallel=339` renders `vid114` before `vid339`, measured
+2026-11-10 along with 339 then 114, 114 then 392, and 114 then 111. So a swapped-URL
+check passes code that takes the first column, and cannot catch that mistake. Compare
+the vid anyway: position is not something bible.com owes us.
+
+## Pairing two columns
+
+`BB.capture.versePair(usfm)` in `src/content/capture.js` returns `{ primary, parallel }`.
+
+- **The primary comes from `columnEls()`**, since `columns()` is null on a
+  single-version page, and that page still has a primary.
+- **The parallel comes from `columns()`**, so a second column that is not on screen
+  gives `parallel: null`, whatever the URL says.
+- **If the URL's id names no column, both sides are null.** With no known primary,
+  the other column cannot be called parallel to anything. This was forced to test it
+  and never seen live: sampling every 25 ms across three client-side navigations, the
+  URL and the columns always changed between the same two samples.
+
+Whether a column has a verse and what the verse says are separate questions, and
+`verseText` returning `''` answers neither on its own:
+
+| Case | Live example | The side is |
+|---|---|---|
+| The column lacks the verse | CEV `ROM.1.4`, because it writes `ROM.1.3+ROM.1.4` | `null` |
+| The column has it, with no words | NIV `MAT.17.21`: a `[21]` label and a footnote | an object with `text: ''` |
+
+Ask `firstSpans(col).has(usfm)` for the first question.

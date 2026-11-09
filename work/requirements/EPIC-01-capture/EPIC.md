@@ -16,7 +16,7 @@ hardcoding them, and always ship a second path that does not depend on the first
 |---|---|---|
 | [T-008](T-008-selection-detection.md) | Verse selection detection, with layered fallbacks | T-001 |
 | [T-009](T-009-extract-verse-text.md) | Clean verse-text extraction | T-001 |
-| [T-010](T-010-parallel-lookup.md) | Parallel column text lookup | T-001, T-009 |
+| [T-010](T-010-parallel-lookup.md) | Parallel column text lookup | T-001, T-009, T-011 |
 | [T-011](T-011-version-resolution.md) | Version abbreviation and language resolution | T-001 |
 | [T-012](T-012-display-ref.md) | Localized reference capture | T-008 |
 | [T-013](T-013-menu-injection.md) | Inject the save row into bible.com's verse menu | T-004, T-008 |

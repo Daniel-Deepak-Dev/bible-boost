@@ -19,7 +19,7 @@
 var BB = (typeof BB !== 'undefined') ? BB : {};
 
 (() => {
-  const { VERSE_SEL, VID_RE, parseUrl, columnEls, langOf, firstSpans, usfmOf } = BB.dom;
+  const { VERSE_SEL, VID_RE, parseUrl, columnEls, columns, langOf, firstSpans, usfmOf } = BB.dom;
 
   // ---------- Reading verses ----------
   // Every verse element in the reader columns, fragments included, in document order. All three
@@ -359,6 +359,50 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     }
   }
 
+  // ---------- Verse pairs ----------
+  // One version's side of a verse, or null when this column does not have the verse at all.
+  //
+  // Whether it is there is asked of firstSpans and not worked out from the text, because verseText
+  // returns '' for a verse the column lacks. Testing that string would make "this version has no such
+  // verse" and "this version has the verse and it reads blank" the same answer, and keeping those
+  // apart is the whole of R4. Both happen on live pages. CEV writes Romans 1:3-4 as one element, keyed
+  // ROM.1.3 by usfmOf, so it has no ROM.1.4 while NKJV does, and that side is null. NIV prints Matthew
+  // 17:21 as a bare "[21]" and a footnote, so the verse is there with no words in it, and that side is
+  // a real one whose text is ''.
+  //
+  // source is left behind on purpose. It exists to be read in the console (T-011 R5) and is no part of
+  // what a saved verse stores (02-storage-model.md).
+  function pairSide(usfm, col) {
+    if (!col || !firstSpans(col).has(usfm)) return null;
+    const { versionId, abbr, lang } = resolveVersion(col);
+    return { versionId, abbr, lang, text: verseText(usfm, col) };
+  }
+
+  // usfm -> { primary, parallel }, each a side as above or null. Either can be null, primary included:
+  // the text strategy in getSelection can report a verse from the parallel column that the primary
+  // version does not have.
+  //
+  // The two columns come from two different lists because they answer different questions. The
+  // primary is looked for in columnEls(), hidden columns included, since columns() is null on a
+  // single-version page and that page still has a primary. columns() decides only whether there is a
+  // parallel: "parallel is in the URL" and "two columns are on screen" are different facts, and
+  // bible.com hides the second column on narrow screens (R3).
+  //
+  // Only the vid comparison says which column is primary (R2), never the position in the document.
+  // The primary did come first on every page measured, a swapped URL included, so taking the first
+  // column would pass every check we can run today. Nothing promises it will stay that way.
+  //
+  // If the URL's id names no column, neither side is filled in, and the includes() test is what does
+  // that. With no primary there is nothing to call the other column parallel to, and a guess would
+  // put the wrong version's label on somebody's note.
+  function versePair(usfm) {
+    const id = parseUrl()?.id;
+    const primaryCol = columnEls().find((c) => c.getAttribute('class').match(VID_RE)?.[1] === id);
+    const cols = columns();
+    const parallelCol = cols?.includes(primaryCol) ? cols.find((c) => c !== primaryCol) : null;
+    return { primary: pairSide(usfm, primaryCol), parallel: pairSide(usfm, parallelCol) };
+  }
+
   // ---------- Notifying ----------
   const listeners = new Set();
   let lastKey = '';
@@ -401,6 +445,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     noteMutations,
     verseText,
     resolveVersion,
+    versePair,
     // For the console, from the extension's own context: the acceptance check that overwrites the
     // cached class to prove it gets rediscovered needs some way to reach it.
     debug: {

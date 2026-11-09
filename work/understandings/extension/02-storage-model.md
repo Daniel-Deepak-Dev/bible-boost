@@ -117,6 +117,11 @@ in a Chrome 152 page on 2026-11-09 (T-005).
   way through a three-note trash, and with a real `ConstraintError`.
 - **`verses[].book`, `.chapter` and `.verse` come from `usfm`**, never from the
   draft, and a combined `JHN.1.1+JHN.1.2` is stored under `JHN.1.1`.
+- **`primary` is required and `parallel` is optional.** `cleanSide` refuses a null
+  primary with "has no primary text", which refuses the whole draft. `versePair` can
+  return one, for a verse selected in the parallel column that the primary version
+  lacks, so T-014 has to decide what that verse does. Blank text is different: `''`
+  passes, and it is what NIV's Matthew 17:21 gives.
 
 How `notes/list` chooses an index, in `planNoteQuery`: verse, chapter, tag or topic
 narrow it and sort in memory. Otherwise a cursor walks `byUpdated` (or `byDeleted`

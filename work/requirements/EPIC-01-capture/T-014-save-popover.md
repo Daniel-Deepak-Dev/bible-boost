@@ -104,3 +104,8 @@ requirement, not an omission.
 
 R4 is small and matters more than it looks. The real usage pattern is saving
 several verses into one study in one sitting.
+
+`BB.capture.versePair` can return `primary: null`, for a verse selected in the
+parallel column that the primary version does not have. `cleanSide` in
+`src/shared/schema.js` refuses that with "has no primary text", and one bad verse
+refuses the whole draft. Decide here what such a verse does. Found during T-010.
