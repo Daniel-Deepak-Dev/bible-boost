@@ -51,6 +51,14 @@ el.querySelector(':scope > [class*="_label"]')   // the verse NUMBER
 - A **footnote marker** is also a `_label` element but nested **deeper**.
 - A verse element with **no direct label** is a *continuation fragment* — the
   tail of a verse that spilled into the next paragraph.
+- The chapter wrapper has a direct `_label` of its own, holding the chapter number
+  (`13`), set to `display:none`. It is not a verse number.
+
+**A verse label is not always a bare number.** CEV's combined verse is labelled `3-4`
+and `14-15`. NIV labels Matthew 17:21 `[21]`, a verse it keeps only in a footnote,
+while its menu header writes `Matthew 17:21`. On the 9 pages measured for T-012,
+across TAOVBSI, NKJV, NIV, CEV and DELUT, the first element of every verse had a
+direct label.
 
 ## What a note is — removing the labels is not enough
 

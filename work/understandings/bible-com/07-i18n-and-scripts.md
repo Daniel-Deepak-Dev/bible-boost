@@ -15,6 +15,41 @@ action menu header.
 **Rule:** store `usfm` as the key, and capture the localized string separately as
 `displayRef` for display only. Never parse a localized name to derive a book.
 
+### The name follows the version, not the interface
+
+Measured on 2026-11-10, logged out. The interface language changes `<html lang>` and
+the page's own labels, and nothing about the book name:
+
+| Page | `<html lang>` | Headings | Menu header |
+|---|---|---|---|
+| `/de/bible/114/EXO.13.NKJV?parallel=339` | `de` | `Exodus 13`, `யாத்திராகமம் 13` | `Exodus 13:2 NKJV` |
+| `/ta/bible/339/EXO.13.TAOVBSI?parallel=114` | `ta` | `யாத்திராகமம் 13`, `Exodus 13` | `யாத்திராகமம் 13:2 TAOVBSI` |
+
+So a German version reads `2. Mose 13` under an English interface. The colon does not
+change either: that version's header is `2. Mose 13:2 DELUT`.
+
+### Where the name is
+
+```
+div.cat7xG_reader          ← one per column
+  h1                       ← "யாத்திராகமம் 13", or "Exodus 13" in the other column
+  … div.version.vid339     ← the column itself
+```
+
+There is one `h1` per column and it is **beside the column, not inside it**. The first
+ancestor of a column that holds an `h1` is that column's own reader wrapper, with one
+`h1` and no other column in it. Both shapes of column were checked, NIV's included.
+`col.closest('[lang]')` reaches a wrapper holding the same `h1` today, but with that
+attribute gone it would reach `<html lang>` and find the other column's heading.
+
+Heading, a colon and the verse's label give the same string as the menu header, on
+every page where both could be read: `2. Mose 13:2`, `Jude 1:3`, `சங்கீதம் 23:1`,
+`Matthew 17:21`, `Romans 1:3-4`. `BB.capture.displayRef` relies on that.
+
+`/bible/13/EXO.13.AVD` (Arabic) and version 48 (Chinese) returned an `h1` but no `vid`
+element in their server HTML, so there was no column to read a reference from. Whether
+they render one later in the browser was not looked into.
+
 ## Script metrics differ, and it broke alignment
 
 A Tamil line box is **taller** than a Latin one at the same font size. Two

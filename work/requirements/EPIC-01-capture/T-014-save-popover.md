@@ -109,3 +109,8 @@ several verses into one study in one sitting.
 parallel column that the primary version does not have. `cleanSide` in
 `src/shared/schema.js` refuses that with "has no primary text", and one bad verse
 refuses the whole draft. Decide here what such a verse does. Found during T-010.
+
+`BB.capture.displayRef(usfm, col)` answers per column, but `VerseRef.displayRef` is
+one field. Ask the primary column, or the parallel column when the primary side is
+null. It can return `null`, which `cleanNoteDraft` stores as `''`, and R1's `usfm`
+fallback is what shows then. Found during T-012.

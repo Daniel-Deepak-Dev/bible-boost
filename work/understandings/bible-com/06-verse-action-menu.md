@@ -1,9 +1,10 @@
 # bible.com — the verse action menu
 
 > **Confidence: VERIFIED on 2026-11-09** against live bible.com, logged out, on
-> Exodus 13 (TAOVBSI and NKJV, both orders) and Romans 1 (CEV), during T-008. Not
-> checked: a signed-in session, a non-English interface language, a phone-width
-> layout, and what applying a highlight does to the verse's classes.
+> Exodus 13 (TAOVBSI and NKJV, both orders) and Romans 1 (CEV), during T-008. The
+> header link was also checked under `/de/` and `/ta/` interfaces on 2026-11-10,
+> during T-012. Not checked: a signed-in session, a phone-width layout, and what
+> applying a highlight does to the verse's classes.
 
 ## What selecting a verse does
 
@@ -49,7 +50,7 @@ main#main
         div.pointer-events-auto.translate-y-0   (the card)
           header row
             p                        "Currently Selected:"
-            a[href]                  the reference, then the version abbreviation
+            a[href] > p, svg         the p holds the reference, then the version abbreviation
             button[aria-label="Cancel"]
           div.flex-col.divide-y-small   (the action list)
             div                      Highlight, then the colour swatches
@@ -86,6 +87,13 @@ selectors.
 
 The `href` is canonical and unlocalized, carries the version id, and loses its
 verses when nothing is selected. Read it rather than the text.
+
+The one thing the text is for is a caption (T-012). The book name in it is the
+version's, not the interface's: under `/de/`, NKJV still reads `Exodus 13:2 NKJV`.
+It names the **primary** version only and speaks for the whole selection, so it is the
+reference of one verse only when the `href` names exactly that verse. `13:2-3` is the
+reference of neither verse. The abbreviation on the end matched `parseUrl(a.href).abbr`
+on every page measured, so strip that rather than guess from the text's shape.
 
 Three traps when finding it:
 

@@ -1,7 +1,8 @@
 /*
  * BibleBoost — which verses are selected right now, and what they say
  * Answers those two questions for the features that save a verse, and says when the selection changes.
- * Also names the version a column is showing, which those features store beside the verse.
+ * Also names the version a column is showing and how that version writes a reference, which those
+ * features store beside the verse.
  * What bible.com actually does on a selection is written down in
  * work/understandings/bible-com/06-verse-action-menu.md; this file is the code that relies on it.
  *
@@ -19,7 +20,7 @@
 var BB = (typeof BB !== 'undefined') ? BB : {};
 
 (() => {
-  const { VERSE_SEL, VID_RE, parseUrl, columnEls, columns, langOf, firstSpans, usfmOf } = BB.dom;
+  const { VERSE_SEL, VID_RE, parseUrl, columnEls, columns, langOf, firstSpans, usfmOf, verseLabel } = BB.dom;
 
   // ---------- Reading verses ----------
   // Every verse element in the reader columns, fragments included, in document order. All three
@@ -124,6 +125,8 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // matches.
   const MENU_HREF_RE = /\/bible\/(\d+)\/([A-Z0-9]{3}\.\d+)\.(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)\.[^/?#]+/;
 
+  // The links that can be the menu's header, each as { a, vid, ref, verses }.
+  //
   // The menu stays mounted off-screen the whole time, selected or not, so its presence means nothing.
   // Its href is the signal: with nothing selected it reads /bible/339/EXO.13.TAOVBSI, which has no
   // verses and fails the pattern. That also makes a visibility check unnecessary.
@@ -131,22 +134,29 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // Searching <main> rather than the document matters. The sidebar's Recents list can hold a verse
   // link (it does once a /bible/339/EXO.13.2.TAOVBSI page has been visited), and on the matching
   // chapter that link would report a selection with nothing selected. The sidebar is outside <main>.
-  //
+  function menuLinks() {
+    const ref = parseUrl()?.ref;
+    const main = document.querySelector('main');
+    if (!ref || !main) return [];
+    const cols = columnEls();
+    const links = [];
+    for (const a of main.querySelectorAll('a[href*="/bible/"]')) {
+      const m = a.getAttribute('href').match(MENU_HREF_RE);
+      if (m && m[2] === ref && !cols.some((c) => c.contains(a))) links.push({ a, vid: m[1], ref, verses: m[3] });
+    }
+    return links;
+  }
+
   // Verses are looked up in the column of the version the link names, instead of being expanded from
   // the range. That way the order is document order, a range cannot run away, and a combined verse
   // comes out right: the header says 3-4 for CEV's "ROM.1.3+ROM.1.4", the column's only key is
   // ROM.1.3, and a parallel NKJV column that really does have a verse 4 is not consulted.
   function readMenu() {
-    const ref = parseUrl()?.ref;
-    const main = document.querySelector('main');
-    if (!ref || !main) return null;
     const cols = columnEls();
-    for (const a of main.querySelectorAll('a[href*="/bible/"]')) {
-      const m = a.getAttribute('href').match(MENU_HREF_RE);
-      if (!m || m[2] !== ref || cols.some((c) => c.contains(a))) continue;
-      const col = cols.find((c) => c.getAttribute('class').match(VID_RE)?.[1] === m[1]);
+    for (const { vid, ref, verses } of menuLinks()) {
+      const col = cols.find((c) => c.getAttribute('class').match(VID_RE)?.[1] === vid);
       if (!col) continue;
-      const ranges = m[3].split(',').map((part) => part.split('-').map(Number));
+      const ranges = verses.split(',').map((part) => part.split('-').map(Number));
       const picked = (n) => ranges.some(([from, to = from]) => n >= from && n <= to);
       const prefix = `${ref}.`;
       const usfms = [...firstSpans(col).keys()]
@@ -359,6 +369,95 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     }
   }
 
+  // ---------- Display reference ----------
+  // usfm is the key and this is the caption (T-012). It is read off the page and only ever shown:
+  // nothing may parse it, match on it or derive a book from it, and nothing here keeps it between
+  // calls, because the same key reads differently in another version (R2, R6).
+  //
+  // The two sources below agree wherever both can be read. Measured on 2026-11-10: "2. Mose 13:2",
+  // "Jude 1:3", "சங்கீதம் 23:1" and "Romans 1:3-4" came out the same from the menu as from heading plus
+  // label, so a caption does not depend on which one happened to answer. The colon is bible.com's
+  // own, in the German version too.
+
+  // The header of bible.com's own verse menu, once the version on the end of it is taken off. It reads
+  // "யாத்திராகமம் 13:2 TAOVBSI", and only some selections make that the reference of this verse in this
+  // column:
+  //   only the primary column responds to a tap, so the header never speaks for the parallel one
+  //   several verses read "13:2-3", which is the reference of neither
+  //   CEV's combined verse reads "1:3-4" where the key is ROM.1.3
+  // Anything turned away here is answered by refFromHeading instead.
+  //
+  // usfm + this column's version id -> the reference, or null when the header cannot answer.
+  //
+  // The abbreviation comes from the href and not from the shape of the text. parseUrl has already
+  // decoded it (CUNPSS-神 is percent-encoded there), and "the last word" or "the part after the digits"
+  // both fail on an abbreviation that has digits of its own. If the text does not end with it, the
+  // header has changed in some way this cannot see, and the answer is null: the heading is a good
+  // caption, and a caption with a version stuck on the end would be stored for good.
+  function refFromMenu(usfm, vid) {
+    const link = menuLinks().find((l) => l.vid === vid && `${l.ref}.${l.verses}` === usfm);
+    const abbr = link && parseUrl(link.a.href)?.abbr;
+    const text = link?.a.textContent.trim();
+    return abbr && text.endsWith(abbr) ? text.slice(0, -abbr.length).trim() : null;
+  }
+
+  // The chapter heading belonging to this column. There is one <h1> per column, in that version's
+  // language ("யாத்திராகமம் 13" beside "Exodus 13"), and it sits beside the column rather than in it, so
+  // it is found by climbing: the first ancestor holding an <h1> is the column's own reader wrapper.
+  //
+  // Not col.closest('[lang]'), which reaches the same wrapper today. If that attribute ever went away
+  // the climb would stop at <html lang="en">, and the query would hand back the other column's heading.
+  //
+  // If the ancestor holds a second <h1> or another column, the layout has changed and the heading can
+  // no longer be called this column's. A Tamil verse captioned in English is worse than no caption.
+  function headingOf(col) {
+    const cols = columnEls();
+    for (let n = col.parentElement; n && n !== document.body; n = n.parentElement) {
+      const headings = n.querySelectorAll('h1');
+      if (!headings.length) continue;
+      return headings.length === 1 && !cols.some((c) => c !== col && n.contains(c)) ? headings[0] : null;
+    }
+    return null;
+  }
+
+  // The heading plus the verse's own number, for everything the menu cannot speak to: the parallel
+  // column, several verses at once, a save with no menu open.
+  //
+  // The chapter test is there because the <h1> names the page's chapter and nothing else. Without it,
+  // a verse from any other chapter would be given this chapter's number, in a note, for good.
+  //
+  // The label is used as printed rather than rebuilt from the key, because CEV's combined verse is
+  // "3-4", which is right and which ROM.1.3 cannot say. The brackets are the one correction: NIV prints
+  // Matthew 17:21 as "[21]", a verse it keeps only in a footnote, and the menu writes it as plain 17:21.
+  function refFromHeading(usfm, col) {
+    const ref = parseUrl()?.ref;
+    if (!ref || !usfm.startsWith(`${ref}.`)) return null;
+    const first = firstSpans(col).get(usfm);
+    const label = first && verseLabel(first)?.textContent.replace(/[[\]]/g, '').trim();
+    const heading = label && headingOf(col)?.textContent.trim();
+    return heading ? `${heading}:${label}` : null;
+  }
+
+  // usfm + one of columnEls() -> the reference as that column's version writes it, or null when the
+  // page cannot say. Per column because the two are usually in different languages (R3), and never a
+  // throw, because this runs in the middle of saving somebody's note. null is an ordinary answer:
+  // schema.js stores it as '', and whatever shows the note falls back to the usfm (R4).
+  //
+  // || and not ??, so that a header which comes back empty still reaches the heading.
+  //
+  // NFC last, for the same reason as verseText: the same Tamil word can arrive composed or decomposed,
+  // and this string gets stored and searched.
+  function displayRef(usfm, col) {
+    try {
+      const vid = col.getAttribute('class').match(VID_RE)[1];
+      const found = refFromMenu(usfm, vid) || refFromHeading(usfm, col);
+      return found ? found.replace(/\s+/g, ' ').trim().normalize('NFC') : null;
+    } catch (err) {
+      console.debug('[BibleBoost] capture: displayRef failed', err);
+      return null;
+    }
+  }
+
   // ---------- Verse pairs ----------
   // One version's side of a verse, or null when this column does not have the verse at all.
   //
@@ -445,6 +544,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     noteMutations,
     verseText,
     resolveVersion,
+    displayRef,
     versePair,
     // For the console, from the extension's own context: the acceptance check that overwrites the
     // cached class to prove it gets rediscovered needs some way to reach it.

@@ -34,6 +34,24 @@ How to pick up and finish a task in `work/requirements/`.
    file under `work/understandings/` — or create a new one. This is not optional
    bookkeeping; it is the main defence against repeated bugs.
 
+## Checking page code from a console
+
+Each of these cost a round of confusion during T-012.
+
+- **`BB` exists only in the extension's isolated world.** In DevTools, choose
+  **BibleBoost** in the Console's context dropdown. Chrome puts it back on `top`
+  whenever the page reloads, and the symptom is `BB is not defined`.
+- **Tapping a selected verse deselects it.** A check that taps has to start with
+  nothing selected, or it ends with no selection and looks like a bug.
+  `BB.capture.getSelection()` also returns `null` if it throws, and only the Verbose
+  log level shows `capture: getSelection failed`.
+- **A browser that cannot load the extension can have the code pasted in.** bible.com's
+  CSP refuses `eval` but allows inline scripts, so a `<script>` element whose
+  `textContent` is the code runs. Holding the source in `sessionStorage` reuses it
+  across full page loads. Remove it afterwards.
+- **A browser pane with no width changes the page.** At an `innerWidth` of 0,
+  bible.com dropped `?parallel=` and rendered one column, so set a viewport first.
+
 ## Status values
 
 `Not started` · `In progress` · `Blocked` · `Done`
