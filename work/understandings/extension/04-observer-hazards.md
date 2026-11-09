@@ -8,7 +8,10 @@ detail in the whole notes project.
 `content.js` registers this:
 
 ```js
-new MutationObserver(schedule).observe(document.body, {
+new MutationObserver((records) => {
+  if (records.every(recordIsOurs)) return;
+  schedule(records.length);
+}).observe(document.body, {
   childList: true, subtree: true, attributes: true, attributeFilter: ['class'],
 });
 ```
@@ -37,23 +40,23 @@ Any node BibleBoost adds **inside `document.body`** is a `childList` mutation:
 | Panel squeezing the page (width change) | Via ResizeObserver, which is **wanted** |
 
 Without a guard, typing a note with the save chip visible can re-run `align()`
-several times a second.
+several times a second. All of these still fire the observer. The guard below
+decides which of them reach `schedule()`.
 
-## Why today's code is safe and the new code is not
+## Why the original code was safe and element-adding code is not
 
-The existing code is safe by accident of what it writes:
-
-> Our own changes are `data-*` and inline `style` attributes, which are not
-> observed, so there is no feedback loop.
+Before T-004 the code was safe by accident of what it wrote: only `data-*` and
+inline `style` attributes, neither of which is observed, so there was no feedback
+loop.
 
 The notes feature breaks that invariant because it adds and removes **elements**,
 not just attributes.
 
 ## The guard (task T-004)
 
-1. Mark every element BibleBoost inserts into the page with `data-bb-own`.
-2. In the observer callback, ignore a batch whose records are all inside an owned
-   node:
+1. Mark every element BibleBoost inserts into the page with `data-bb-own`. One
+   marker on the root covers its whole subtree, because `closest()` walks up.
+2. In the observer callback, ignore a batch whose records are all ours:
 
 ```js
 function isOurs(node) {
@@ -61,21 +64,57 @@ function isOurs(node) {
   return !!el?.closest('[data-bb-own]');
 }
 
-new MutationObserver((records) => {
-  if (records.every((r) =>
-    isOurs(r.target) &&
-    [...r.addedNodes, ...r.removedNodes].every(isOurs)
-  )) return;
-  schedule();
-}).observe(document.body, { ... });
+function recordIsOurs(r) {
+  if (isOurs(r.target)) return true;
+  const changed = [...r.addedNodes, ...r.removedNodes];
+  return changed.length > 0 && changed.every(isOurs);
+}
 ```
 
-Check `addedNodes` and `removedNodes` too: a record whose *target* is ours but
-which adds a bible.com node still matters, and vice versa.
+3. **Verify it.** Set `DEBUG_SCHEDULE = true` in `content.js`, reload the
+   extension, use the new UI, and confirm the console stays quiet. This is the
+   acceptance test for T-004 and it should be re-run whenever new page-side UI is
+   added. Set it back to `false` afterwards.
 
-3. **Verify it.** Temporarily log in `schedule()`, open the panel, type in the
-   editor, and confirm nothing fires. This is the acceptance test for T-004 and
-   it should be re-run whenever new page-side UI is added.
+## What the records actually look like
+
+Verified against a real `MutationObserver` during T-004, 21 cases, and the task's
+acceptance checks then passed by hand on live bible.com on 2026-11-09. The first
+version of this guard got these wrong, so do not simplify them away:
+
+- **A removed node is already detached when the callback runs.** Its parent
+  pointers are gone, so `closest()` cannot reach the marked parent it came from,
+  and a removed text node has `parentElement === null`. Only `r.target` still says
+  where it lived. Requiring removed nodes to pass `isOurs` made
+  `div.textContent = 'x'` and `dock.replaceChildren()` read as not ours.
+- **A marked root under a bible.com parent has a target that is not ours.**
+  `closest()` starts at the element itself, so the root still finds its own
+  marker, even detached. Requiring an owned target would make every appearance of
+  a chip on `body` or a row in the verse menu cost a pass.
+- **`[].every()` is `true`.** A class change has empty `addedNodes` and
+  `removedNodes`, so a check on the nodes alone needs `changed.length > 0`, or
+  every class bible.com touches counts as ours.
+- **A bible.com node added under one of our elements cannot be detected.**
+  `closest()` finds our ancestor either way. React only inserts into nodes it
+  created, so this is accepted rather than guarded.
+
+A marked root that shifts the text is still caught: the `ResizeObserver` on the
+columns calls `schedule()` independently of this guard. That only sees a change
+in the column's height, so UI placed inside the verse columns would need more
+thought. No task planned so far does that.
+
+## Reading the `DEBUG_SCHEDULE` log
+
+- `not a mutation` means `ResizeObserver`, a window event, a font load, or the URL
+  poll. `schedule` is handed directly to those, so its argument is only a record
+  count when it is a number.
+- Toggling Align logs `not a mutation`, and only on a chapter with non-zero gaps.
+  `save()` calls `refresh()` directly and the dock's rebuild is ours, so the
+  column resizing is the only thing left to log.
+- `characterData` is not observed. In a guard test, `node.data = 'x'` logs nothing
+  with or without the guard, so it proves nothing. Use `textContent` or `append`.
+- Logging is `console.log` on purpose. Chrome hides `console.debug` by default,
+  and a hidden log would look like a passing test.
 
 ## Related trap
 

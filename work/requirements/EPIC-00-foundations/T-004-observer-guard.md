@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-00 Foundations |
-| Status | Not started |
+| Status | Done |
 | Depends on | — |
 | Blocks | T-013, T-015, T-017 (everything that adds page DOM) |
 | Size | S |
@@ -40,7 +40,8 @@ bible.com page carries `data-bb-own`.** Apply it to the existing `#bb-dock` as
 part of this task, so the convention has a user from day one.
 
 **R2.** Filter the observer callback. Ignore a batch only when **every** record
-is entirely ours — target *and* added/removed nodes:
+is entirely ours. A record is ours when its target is ours, or when it changed
+nodes and every one of them carries the marker:
 
 ```js
 function isOurs(node) {
@@ -48,12 +49,15 @@ function isOurs(node) {
   return !!el?.closest('[data-bb-own]');
 }
 
+function recordIsOurs(r) {
+  if (isOurs(r.target)) return true;
+  const changed = [...r.addedNodes, ...r.removedNodes];
+  return changed.length > 0 && changed.every(isOurs);
+}
+
 new MutationObserver((records) => {
-  const ours = records.every((r) =>
-    isOurs(r.target) &&
-    [...r.addedNodes, ...r.removedNodes].every(isOurs));
-  if (ours) return;
-  schedule();
+  if (records.every(recordIsOurs)) return;
+  schedule(records.length);
 }).observe(document.body, { /* unchanged */ });
 ```
 
@@ -61,8 +65,19 @@ new MutationObserver((records) => {
 observer must keep seeing chapter navigation, version changes and bible.com's
 own re-renders anywhere in the body.
 
-**R4.** Checking only `r.target` is not sufficient. A record whose target is ours
-but which adds a bible.com node still matters; so does the reverse.
+**R4.** Neither the target alone nor the nodes alone are sufficient:
+
+- A removed node is already detached when the callback runs, so `closest()`
+  cannot reach the marked parent it came from. Only the target proves it was ours.
+- A marked root added to or removed from a bible.com parent has a target that is
+  not ours. Only the marker on the node proves it is ours. T-013 and T-015 depend
+  on this.
+- A class change has no changed nodes and `[].every()` is `true`, so the length
+  check is what stops bible.com's class changes counting as ours.
+
+A bible.com node added under one of our elements cannot be told apart, because
+`closest()` finds our ancestor either way. The guard does not try: React only
+inserts into nodes it created.
 
 **R5.** Add a debug switch — a module-level `const DEBUG_SCHEDULE = false` that,
 when true, logs each `schedule()` call with the triggering record count. Leave it
@@ -85,17 +100,32 @@ exists (the `align()` cost) rather than what it does.
 
 ## Acceptance
 
-- [ ] With `DEBUG_SCHEDULE = true`, loading a parallel chapter logs a burst of
+- [x] With `DEBUG_SCHEDULE = true`, loading a parallel chapter logs a burst of
       calls during page settle, then goes quiet
-- [ ] Toggling the dock's Align switch logs calls (it should — real work)
-- [ ] Adding a throwaway `<div data-bb-own>` to `document.body` from the console,
+- [x] Toggling the dock's Align switch logs calls (it should — real work)
+- [x] Adding a throwaway `<div data-bb-own>` to `document.body` from the console,
       then mutating its contents repeatedly, logs **nothing**
-- [ ] Removing `data-bb-own` from that div and repeating logs calls again,
+- [x] Removing `data-bb-own` from that div and repeating logs calls again,
       proving the guard is what suppressed them
-- [ ] bible.com's own chapter navigation still triggers re-alignment
-- [ ] `#bb-dock` carries `data-bb-own`
+- [x] bible.com's own chapter navigation still triggers re-alignment
+- [x] `#bb-dock` carries `data-bb-own`
 
 ## Notes
 
 The guard is only as good as the marking. When reviewing any later task that
 adds page DOM, check for `data-bb-own` first.
+
+R2 and R4 were rewritten during implementation. The original rule required an
+owned target and tested removed nodes with `closest()`, which failed the third
+acceptance item and contradicted T-013 R5 and T-015's acceptance.
+
+All six acceptance items and the standing regression check were run by hand on
+`/bible/339/EXO.13.TAOVBSI?parallel=114` with the extension loaded, and passed on
+2026-11-09. Before that, `recordIsOurs` passed 21 cases against a real
+`MutationObserver` on a neutral page. The original rule wrongly reported 8 of the
+owned cases as not ours.
+
+When running the checks: replace the div's contents with `textContent` or
+`append`. `node.data = ...` is a `characterData` change, which is not observed,
+so it logs nothing with or without the guard. Toggling Align should log
+`not a mutation`, because those calls come from the column `ResizeObserver`.

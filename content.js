@@ -269,6 +269,9 @@
     if (!dock) {
       dock = document.createElement('div');
       dock.id = 'bb-dock';
+      // On the root only: the observer guard walks up with closest(), so everything renderDock()
+      // later puts inside inherits this, and the switches it rebuilds need no marker of their own.
+      dock.setAttribute('data-bb-own', '');
       dock.addEventListener('click', (e) => {
         const sw = e.target.closest('[data-sw]')?.dataset.sw;
         if (sw === 'parallel') setParallel(!parseUrl()?.parallel);
@@ -303,8 +306,22 @@
   }
 
   // ---------- Keep in sync with navigation, re-renders, font/size changes ----------
+  // Set to true to log every schedule() call, including the ones the throttle below then swallows.
+  // It stays in the committed code, off, because it is the acceptance test for T-004 and for every
+  // later task that adds page DOM: whether a piece of UI re-runs align() can only be answered by
+  // watching this log while using it. console.log and not console.debug on purpose. Chrome's
+  // default console level hides debug output, and the passing result here is silence, so a hidden
+  // log would look exactly like a working guard.
+  const DEBUG_SCHEDULE = false;
+
   let timer = null;
-  const schedule = () => {
+  // Only the MutationObserver callback passes a number. schedule is also handed directly to
+  // ResizeObserver, which passes an entries array, and to addEventListener, which passes an Event,
+  // so reading .length here would report resize entries as if they were mutation records.
+  const schedule = (recordCount) => {
+    if (DEBUG_SCHEDULE) {
+      console.log('[BibleBoost] schedule:', typeof recordCount === 'number' ? `${recordCount} record(s)` : 'not a mutation');
+    }
     if (timer) return;
     timer = setTimeout(() => { timer = null; requestAnimationFrame(() => { remember(); refresh(); }); }, 80);
   };
@@ -348,9 +365,50 @@
     store?.set(patch, () => void chrome.runtime.lastError);
   }
 
+  // Every observer fire ends in align(), which queries every verse in both columns and forces a
+  // synchronous layout per verse, deliberately, because each gap shifts what follows it. That was
+  // safe by accident for as long as this extension only wrote data-* and inline style, neither of
+  // which the observer watches. Anything that adds or removes ELEMENTS breaks that invariant, and
+  // the symptom would be a sluggish reader while a note is being typed, which looks like a panel
+  // problem and not an observer problem. So everything BibleBoost inserts carries data-bb-own, and
+  // a batch made up only of our own changes is dropped before it costs a pass.
+  //
+  // Text nodes have no closest(), hence the step up to parentElement.
+  function isOurs(node) {
+    const el = node.nodeType === 1 ? node : node.parentElement;
+    return !!el?.closest('[data-bb-own]');
+  }
+
+  // A record is ours when its target is ours, or when it changed nodes and every one of them is.
+  //
+  // The target is checked first because it is the only evidence left about a removed node. By the
+  // time this callback runs, a removed node is already detached, so closest() cannot reach the
+  // marked parent it came from: div.textContent = 'x' removes a text node whose parentElement is
+  // now null, and dock.replaceChildren() removes switches with no marker of their own. Testing
+  // those nodes instead of the target reads as "not ours" and costs a pass for nothing.
+  //
+  // The second half covers a marked root added to or removed from a bible.com parent, such as a
+  // chip on body or a row in the verse menu. closest() starts at the element itself, so it finds
+  // the marker even once the root is detached. If one of those ever does shift the text, the
+  // ResizeObserver on the columns still catches it.
+  //
+  // The length check keeps alignment alive: a class change has no changed nodes, [].every() is
+  // true, and without it every class bible.com touches would count as ours.
+  function recordIsOurs(r) {
+    if (isOurs(r.target)) return true;
+    const changed = [...r.addedNodes, ...r.removedNodes];
+    return changed.length > 0 && changed.every(isOurs);
+  }
+
   // childList: chapter navigation / version change. class: bible.com settings & verse selection.
-  // (Our own changes are data-* and style attributes, which are not observed -> no feedback loop.)
-  new MutationObserver(schedule).observe(document.body, {
+  // Deliberately still the whole body rather than just the columns: chapter navigation, version
+  // changes and bible.com's own re-renders can happen anywhere in it. One record that is not ours
+  // keeps the whole batch, and every() stops at it, so bible.com's own storms of re-classing
+  // usually cost a single check.
+  new MutationObserver((records) => {
+    if (records.every(recordIsOurs)) return;
+    schedule(records.length);
+  }).observe(document.body, {
     childList: true, subtree: true, attributes: true, attributeFilter: ['class'],
   });
   window.addEventListener('resize', schedule);
