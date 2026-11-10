@@ -27,7 +27,7 @@
   // Bound once, here, so the code below keeps calling them by their own names and nothing in
   // align() had to change. If that file failed to load this line throws, and the extension stops
   // loudly at load instead of half-working until the first call.
-  const { parseUrl, columnEls, columns, firstSpans, verseLabel } = BB.dom;
+  const { parseUrl, swappedUrl, columnEls, columns, firstSpans, verseLabel, VID_RE } = BB.dom;
 
   // ---------- Alignment ----------
   function topOf(el) {
@@ -228,6 +228,34 @@
     }
   }
 
+  // The abbreviation of the version about to move into the path, so the address bar reads the way
+  // bible.com's own links do. It is only ever a nicety, because a path without one is served as it
+  // is (01-urls-and-routing.md, trap 4), so every way of not knowing it answers null and the swap
+  // still goes ahead. That covers a version with no column on the page, which is what ?parallel=48
+  // gave when it was looked at, and a capture.js that failed to load. This file runs before that
+  // one, which is why BB.capture is read here, at the moment of the click, and through ?.
+  //
+  // A source of 'id' means resolveVersion found nothing and handed the number back as the
+  // abbreviation, which is not one.
+  function parallelAbbr() {
+    const vid = parseUrl()?.parallel;
+    const col = columnEls().find((c) => c.getAttribute('class').match(VID_RE)?.[1] === vid);
+    const version = col && BB.capture?.resolveVersion(col);
+    return version && version.source !== 'id' ? version.abbr : null;
+  }
+
+  // bible.com puts the path's version on the left, so the whole of a swap is a new URL, and the
+  // memory of it is remember() storing that URL's pair when the swapped page loads. There is
+  // deliberately no setting for this (T-057 R11): a stored order could only disagree with the URL.
+  //
+  // It is a full load, like setParallel(true) above, because window.next.router lives in the page's
+  // own world and this is the isolated one. A double-click cannot swap and then swap back, since
+  // location.href does not change until the navigation commits and both clicks compute one target.
+  function swapSides() {
+    const target = swappedUrl(location.href, parallelAbbr());
+    if (target) location.assign(target);
+  }
+
   // ---------- On-page switch ----------
   // The dock sits over the text the whole time it is on screen, so it stays collapsed to the
   // shortcut letter until it is hovered or focused, and only then spells the label out. Both
@@ -262,6 +290,41 @@
     return btn;
   }
 
+  // Two opposing arrows, the mark translation apps use for trading two languages, which is exactly
+  // what this does. The geometry is Tabler Icons' arrows-exchange (MIT), copied exactly, because
+  // that is the drawing the user picked from a mock on 2026-11-10. A hand-drawn lookalike with full
+  // arrowheads went in first and was rejected as not being it, so do not tidy these paths.
+  //
+  // An inline SVG and not the character, whose weight and size would follow whichever fallback font
+  // each machine picks. createElementNS because createElement('svg') makes an HTML element that
+  // happens to be called svg, and that draws nothing. Paint is in content.css.
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const SWAP_ARROWS = ['M7 10h14l-4 -4', 'M17 14h-14l4 4'];
+
+  function swapIcon() {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    for (const d of SWAP_ARROWS) {
+      const path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('d', d);
+      svg.append(path);
+    }
+    return svg;
+  }
+
+  // A plain button and not one more switch. role="switch" announces on or off, and neither reading
+  // order is "on". It carries data-sw only so that the dock's one click listener can reach it.
+  function swapEl() {
+    const btn = document.createElement('button');
+    btn.className = 'bb-swap';
+    btn.dataset.sw = 'swap';
+    btn.setAttribute('aria-label', 'Swap sides');
+    btn.title = 'Swap the left and right versions';
+    btn.append(swapIcon());
+    return btn;
+  }
+
   function renderDock() {
     const loc = parseUrl();
     let dock = document.getElementById('bb-dock');
@@ -276,13 +339,18 @@
         const sw = e.target.closest('[data-sw]')?.dataset.sw;
         if (sw === 'parallel') setParallel(!parseUrl()?.parallel);
         if (sw === 'align') save({ align: !settings.align });
+        if (sw === 'swap') swapSides();
       });
     }
     if (!dock.isConnected) document.body.appendChild(dock);
     // Every value rendered below must appear here, or the cache serves a stale switch.
     // Separators are deliberately not on the dock — they live in the popup and on Alt+S — so
     // settings.separators is not part of this key.
-    const state = `${!!loc.parallel}|${settings.align}`;
+    //
+    // canSwap is not the same fact as loc.parallel: a book intro or a ?parallel= repeating the id
+    // has the parameter and nothing to trade. swappedUrl is the one place that decides that.
+    const canSwap = swappedUrl(location.href) !== null;
+    const state = `${!!loc.parallel}|${settings.align}|${canSwap}`;
     if (dock.dataset.state === state) return;
     dock.dataset.state = state;
     dock.replaceChildren(
@@ -290,6 +358,7 @@
       ...(loc.parallel
         ? [switchEl('align', 'A', 'Align verses', settings.align, 'Line up verses side by side (Alt+A)')]
         : []),
+      ...(canSwap ? [swapEl()] : []),
     );
   }
 

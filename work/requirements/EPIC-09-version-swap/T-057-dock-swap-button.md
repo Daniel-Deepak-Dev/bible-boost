@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-09 Swap sides |
-| Status | Not started |
+| Status | Done |
 | Depends on | T-004, T-056 |
 | Blocks | T-058 |
 | Size | S |
@@ -56,18 +56,19 @@ hover, with no `bb-short` / `bb-full` label.
 **R5.** It comes after the A switch, and exists only when `BB.dom.swappedUrl()` is
 not `null`. The condition is read from there and not restated.
 
-**R6.** The icon is ⇄, two opposing arrows, chosen by the user on 2026-11-10 because
-it is the mark translation apps use for swapping two languages. It is an inline SVG
-and not the Unicode character, whose weight and size would follow whichever fallback
-font each machine picks.
+**R6.** The icon is two opposing arrows with one barb on each head: Tabler Icons'
+`arrows-exchange` (MIT), the drawing the user picked from a rendered mock on
+2026-11-10. It is the mark translation apps use for swapping two languages. It is an
+inline SVG and not a Unicode character, whose weight and size would follow whichever
+fallback font each machine picks. Copy the paths exactly and do not redraw them.
 
 | Attribute | Value |
 |---|---|
-| `viewBox` | `0 0 16 16` |
-| Rendered size | 16 x 16 px |
-| Path 1, arrow to the right | `M2 5.5h11M10 2.5l3 3-3 3` |
-| Path 2, arrow to the left | `M14 10.5H3M6 7.5l-3 3 3 3` |
-| Paint | `fill: none`, `stroke: currentColor`, width 1.5, round caps and joins |
+| `viewBox` | `0 0 24 24` |
+| Rendered size | 18 x 18 px, the size in the mock |
+| Path 1, arrow to the right | `M7 10h14l-4 -4` |
+| Path 2, arrow to the left | `M17 14h-14l4 4` |
+| Paint | `fill: none`, `stroke: currentColor`, width 2 on the 24-unit grid, round caps and joins |
 | `aria-hidden` | `true` |
 
 `currentColor` makes it follow the dock's theme with no new token.
@@ -114,36 +115,36 @@ page loads. This requirement exists so that nobody adds a second copy.
 
 On `/bible/339/EXO.13.TAOVBSI?parallel=114`, with the unpacked extension reloaded:
 
-- [ ] ⇄ appears after the A switch, and has no label at rest or on hover
-- [ ] The icon is clearly visible on both `html.light` and `html.dark`
-- [ ] One click gives NKJV on the left and TAOVBSI on the right, and a second click
+- [x] ⇄ appears after the A switch, and has no label at rest or on hover
+- [x] The icon is clearly visible on both `html.light` and `html.dark`
+- [x] One click gives NKJV on the left and TAOVBSI on the right, and a second click
       restores the original
-- [ ] A double-click ends in one swap, not a swap and a swap back
-- [ ] The address bar reads `/bible/114/EXO.13.NKJV?parallel=339`
-- [ ] Tab reaches the button, Enter and Space activate it, and the focus ring shows
-- [ ] A screen reader or the accessibility tree reports a button named "Swap sides"
+- [x] A double-click ends in one swap, not a swap and a swap back
+- [x] The address bar reads `/bible/114/EXO.13.NKJV?parallel=339`
+- [x] Tab reaches the button, Enter and Space activate it, and the focus ring shows
+- [x] A screen reader or the accessibility tree reports a button named "Swap sides"
 
 **Where the button must not appear:**
 
-- [ ] A single-version page shows no ⇄
-- [ ] A book intro, such as `/bible/339/JHN.INTRO1.TAOVBSI?parallel=114`, shows no ⇄
-- [ ] A URL whose `?parallel=` repeats its own id shows no ⇄
+- [x] A single-version page shows no ⇄
+- [x] A book intro, such as `/bible/339/JHN.INTRO1.TAOVBSI?parallel=114`, shows no ⇄
+- [x] A URL whose `?parallel=` repeats its own id shows no ⇄
 
 **Memory, after swapping to NKJV | TAOVBSI:**
 
-- [ ] Next Chapter keeps NKJV on the left
-- [ ] Parallel off and on with the dock returns NKJV | TAOVBSI
-- [ ] The popup shows NKJV on the left and TAOVBSI on the right, and Open goes there
-- [ ] The order survives closing and reopening Chrome
-- [ ] Opening `/bible/339/EXO.13.TAOVBSI?parallel=114` directly shows TAOVBSI on the
+- [x] Next Chapter keeps NKJV on the left
+- [x] Parallel off and on with the dock returns NKJV | TAOVBSI
+- [x] The popup shows NKJV on the left and TAOVBSI on the right, and Open goes there
+- [x] The order survives closing and reopening Chrome
+- [x] Opening `/bible/339/EXO.13.TAOVBSI?parallel=114` directly shows TAOVBSI on the
       left and does not redirect, and the popup then shows that order
 
 **No regression:**
 
-- [ ] On the swapped page verses align, separators draw, `Alt+P` / `Alt+A` / `Alt+S`
+- [x] On the swapped page verses align, separators draw, `Alt+P` / `Alt+A` / `Alt+S`
       work, and changing the reader's "Aa" size re-aligns
-- [ ] With `DEBUG_SCHEDULE = true`, hovering and focusing the button logs nothing
-- [ ] A verse tapped on the swapped page saves NKJV as `primary`
+- [x] With `DEBUG_SCHEDULE = true`, hovering and focusing the button logs nothing
+- [x] A verse tapped on the swapped page saves NKJV as `primary`
 
 ## Notes
 
@@ -154,3 +155,20 @@ The button follows the URL, as the A switch does, and not the visible columns. O
 narrow viewport bible.com may hide the second column or drop `?parallel=` altogether
 (`03-columns-and-versions.md`, Visibility). If the parameter is gone the button goes
 with it. Do not write code against a width.
+
+## Where it stands (2026-11-10)
+
+**Confirmed in a real Chrome by the user**, who reported the checks on this list
+passing on live bible.com.
+
+The icon that first shipped was not the one the user had picked. They chose it from a
+rendered mock, which used Tabler's `arrows-exchange`, and R6 was then written with
+hand-drawn paths that had full arrowheads. R6 now names the real geometry, and the user
+confirmed on bible.com that the corrected drawing matches. The light and dark box rests
+on their earlier pass with the first drawing: its colour and its 1.5px line weight did
+not change.
+
+Three cases were only exercised on a throwaway local page running the real files
+(`03-task-workflow.md`), because they cannot be produced on purpose on the live site.
+In each one the abbreviation is left out and the swap still goes ahead: no column
+carries that id, `BB.capture` is missing, or `source` is `'id'`.

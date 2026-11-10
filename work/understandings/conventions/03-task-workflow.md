@@ -59,6 +59,14 @@ Each of these cost a round of confusion during T-012.
   choice, a logged-out bible.com follows it and sets `html.light` itself. Swapping the
   class by hand changes the text but leaves the menu's card dark.
 - **`verseEl.click()` selects a verse**, which makes a long tap sequence scriptable.
+- **A local stand-in page runs the real files.** A throwaway Node server in the
+  scratchpad can serve the content scripts and `content.css`, with HTML shaped like the
+  reader at any `/bible/...` path and a stubbed `chrome` ahead of the scripts. `parseUrl`
+  does not look at the host, and `DEBUG_SCHEDULE` can be switched on as the file is
+  served. It proves the extension's own logic and nothing about bible.com, so it ticks
+  no box that names a live page. Found during T-057.
+- **A hidden browser pane can refuse real input.** A key press timed out once with the
+  pane hidden and worked when retried. Found during T-057.
 - **The built-in browser's `javascript_tool` is not held to the CSP.** T-014 set
   `window.BB = {}` and pasted each file's IIFE straight in, without its `var BB` line
   and with no `<script>` element.

@@ -27,6 +27,9 @@ out of `content.js` in T-001). It returns
 1. **A book-intro URL has no chapter.** `JHN.INTRO1` fails `REF_RE`
    (`/^([A-Z0-9]{3})\.(\d+)/`) and yields a null ref. Those pages render **no
    parallel column at all**. Any feature that assumes a chapter must handle null.
+   `remember()` still stores the pair from such a URL when it has `?parallel=`,
+   because it compares only the ids (seen 2026-11-10, running the real `content.js`
+   on T-057's local test page).
 
 2. **A parallel id repeating the primary id renders ONE column.** bible.com
    collapses the view. `parallelIdFor()` exists purely to never hand it the id it

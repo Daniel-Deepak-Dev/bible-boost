@@ -133,10 +133,10 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 }
 
 /* ---------- On-page switch ----------
-   The dock sits over the text for as long as it is on screen, so at rest it shrinks to the two
-   shortcut letters (P / A) and dims slightly. Hovering or tabbing into it spells the labels out.
-   The toggle tracks never collapse, so the on/off state stays readable at a glance without
-   having to reach for it. */
+   The dock sits over the text for as long as it is on screen, so at rest it shrinks to the
+   shortcut letters (P / A) and the swap icon, and dims slightly. Hovering or tabbing into it
+   spells the letters out; the icon has nothing to spell out. The toggle tracks never collapse,
+   so the on/off state stays readable at a glance without having to reach for it. */
 #bb-dock {
   position: fixed;
   right: 20px;
@@ -208,6 +208,36 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 
 #bb-dock .bb-sw:hover { background: var(--bb-hover); }
 #bb-dock .bb-sw:focus-visible { outline: 2px solid var(--bb-focus); outline-offset: 1px; }
+
+/* The swap button is an action and not a state, so it has no track and no label, and it keeps its
+   size while the switches beside it grow on hover. An 18px icon with 5px above and below is the
+   same 28px the switches come to, so the pill does not change height on the pages that show it.
+
+   color is inherited from the dock and currentColor carries it to the arrows, so the icon follows
+   html.light / html.dark with no token of its own to keep in sync. The stroke width is on the
+   icon's 24-unit grid, which makes it 1.5px at this size. */
+#bb-dock .bb-swap {
+  display: flex;
+  align-items: center;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+#bb-dock .bb-swap svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#bb-dock .bb-swap:hover { background: var(--bb-hover, rgba(128, 128, 128, 0.15)); }
+#bb-dock .bb-swap:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); outline-offset: 1px; }
 
 /* bible.com's switch is a 64x32 track holding a 32x24 knob - a stadium, not a circle, inset
    4px at both ends. This is that geometry at half scale, so the dock reads as the same
