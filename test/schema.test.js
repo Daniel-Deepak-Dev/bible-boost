@@ -79,7 +79,7 @@ test('defaults carry no id, timestamps or source', () => {
 // Real Tamil: the vowel sign "ொ" as one code point (U+0BCA) and as its two parts (U+0BC6 U+0BBE).
 // They render identically and compare unequal until NFC, which is the whole bug.
 const TAMIL_COMPOSED = 'கொடு'; // கொடு
-const TAMIL_DECOMPOSED = 'கொடு';
+const TAMIL_DECOMPOSED = '\u0B95\u0BC6\u0BBE\u0B9F\u0BC1';
 
 test('Tamil composed and decomposed forms are one tag', () => {
   assert.notEqual(TAMIL_COMPOSED, TAMIL_DECOMPOSED);
@@ -147,6 +147,15 @@ test('retag swaps, merges duplicates, and adds nothing to a note without the sou
 
 test('retag with no target just removes', () => {
   assert.deepEqual(retag(['faith', 'hope'], ['faith']), ['hope']);
+});
+
+// Every target above sorts after the tags that survive, trust after hope and z after c, so pushing
+// it on the end came out sorted with or without the sort, and removing .sort(compareText) from
+// retag left all 231 tests passing (B-018). Here the target has to move: a rename of hope to grace
+// puts grace ahead of mercy, and a merge into the earliest name does the same from the other end.
+test('retag leaves the tags sorted when the target sorts before a survivor', () => {
+  assert.deepEqual(retag(['hope', 'mercy'], ['hope'], 'grace'), ['grace', 'mercy']);
+  assert.deepEqual(retag(['b', 'c', 'd'], ['c', 'd'], 'a'), ['a', 'b']);
 });
 
 // ---------- Ids ----------

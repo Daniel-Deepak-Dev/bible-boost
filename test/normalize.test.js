@@ -17,7 +17,7 @@ import { normalizeText, fold, tokenize } from '../src/shared/normalize.js';
 // decomposed form into the composed one without changing how it looks, and every test below would
 // then be comparing a string with itself and passing. The first test exists to catch exactly that.
 const MOSES_COMPOSED = 'மோசே';
-const MOSES_DECOMPOSED = 'மோசே';
+const MOSES_DECOMPOSED = '\u0BAE\u0BC7\u0BBE\u0B9A\u0BC7';
 
 test('the Tamil fixtures really are two different spellings', () => {
   assert.notEqual(MOSES_DECOMPOSED, MOSES_COMPOSED);
@@ -32,14 +32,21 @@ test('normalizeText composes a decomposed Tamil word and leaves a composed one a
 
 // The whole of Tamil's canonical decompositions, so a future "optimisation" that special-cases the
 // common vowel signs is caught on the two rare ones.
+//
+// The notEqual is the same guard as the first test, for these four. Until B-016 every decomposed
+// fixture in this file was a literal, whatever the comment at the top said, and this test had no
+// guard of its own, so one normalizing save would have left it comparing each sign with itself.
 test('normalizeText composes all four Tamil decompositions', () => {
   const pairs = [
-    ['ொ', 'ொ'],
-    ['ோ', 'ோ'],
-    ['ௌ', 'ௌ'],
-    ['ஔ', 'ஔ'],
+    ['\u0BC6\u0BBE', 'ொ'],
+    ['\u0BC7\u0BBE', 'ோ'],
+    ['\u0BC6\u0BD7', 'ௌ'],
+    ['\u0B92\u0BD7', 'ஔ'],
   ];
-  for (const [decomposed, composed] of pairs) assert.equal(normalizeText(decomposed), composed);
+  for (const [decomposed, composed] of pairs) {
+    assert.notEqual(decomposed, composed);
+    assert.equal(normalizeText(decomposed), composed);
+  }
 });
 
 test('normalizeText leaves case alone', () => {

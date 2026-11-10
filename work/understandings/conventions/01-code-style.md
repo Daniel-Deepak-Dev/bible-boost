@@ -108,6 +108,20 @@ assertion that it differs from the composed form. Typed as a literal, an editor
 that normalizes on save turns it into the composed form with no visible change,
 and the test then compares a string with itself and passes.
 
+**Check it, because the two cannot be told apart by eye.** Until B-016 every decomposed
+fixture in `test/` was a literal, under a comment saying they were escapes, and nothing
+noticed for the life of the repository. A line holds a decomposed character exactly
+when it differs from its own NFC form:
+
+```js
+line !== line.normalize('NFC')
+```
+
+Run that over `test/` after adding a fixture. To turn an existing literal into escapes,
+have a script read the characters out of the file and write the escapes from them.
+Retyping the literal in order to replace it depends on the retyped text arriving
+decomposed, which is the thing in doubt.
+
 ### Node 22 or later
 
 Two things set that floor, and neither can be fixed with a config file, because
