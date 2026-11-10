@@ -59,6 +59,18 @@ Each of these cost a round of confusion during T-012.
   choice, a logged-out bible.com follows it and sets `html.light` itself. Swapping the
   class by hand changes the text but leaves the menu's card dark.
 - **`verseEl.click()` selects a verse**, which makes a long tap sequence scriptable.
+- **The built-in browser's `javascript_tool` is not held to the CSP.** T-014 set
+  `window.BB = {}` and pasted each file's IIFE straight in, without its `var BB` line
+  and with no `<script>` element.
+- **The worker can be stood in for.** `Object.defineProperty(window, 'chrome', ...)`
+  with a `runtime.sendMessage` that answers like the router lets page code run a whole
+  save. It proves nothing about what the real worker stores.
+- **A screenshot can show only part of an emulated viewport.** At 1024x800 and 760x600
+  the image held the top-left of the page. Read positions with
+  `getBoundingClientRect` rather than from the picture, and move an element into view
+  to look at it.
+- **The save toast is gone in five seconds**, which is less than one round trip of
+  separate tool calls. Press Undo in the same call as the save.
 
 ## Status values
 

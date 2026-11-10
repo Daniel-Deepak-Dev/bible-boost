@@ -89,3 +89,9 @@ positioned near the bottom edge, as `content.css` already does for the dock.
 
 The sixth acceptance item is the point of the task. Actually run it — a fallback
 that has never been tested without the primary is not a fallback.
+
+`BB.savePopover.open(chipEl)` opens the popover, and it takes no argument for `Alt+N`,
+with nothing to anchor to or give focus back to (T-014). It reads the verses once, as
+it opens, so a text selection collapsing afterwards cannot change what is saved. Not
+measured: whether moving focus into the popover does collapse one. If it does, Cancel
+cannot bring it back unless this task keeps the `Range`.

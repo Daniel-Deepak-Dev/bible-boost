@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-01 Capture |
-| Status | Not started |
+| Status | Done |
 | Depends on | T-005, T-010, T-011, T-012, T-013 |
 | Blocks | — |
 | Size | M |
@@ -71,8 +71,13 @@ requirement, not an omission.
 
 ## Files
 
-- `src/content/menu.js` or a new `src/content/save-popover.js`
-- `src/shared/theme.css`
+- `src/content/save-popover.js` — new. Not `menu.js`, because T-015 R6 needs this to
+  work with `menu.js` removed
+- `src/content/menu.js` — `onActivate` opens it
+- `manifest.json` — add it before `menu.js`
+- `content.css` — the popover, the toast, and the nine tokens that only `theme.css`
+  had. A content script cannot load `theme.css`
+- `test/save-popover.test.js` — new
 
 ## Reference
 
@@ -86,19 +91,19 @@ requirement, not an omission.
 
 ## Acceptance
 
-- [ ] Saving a verse with a new topic, two tags and a body produces one note with
+- [x] Saving a verse with a new topic, two tags and a body produces one note with
       all of it
-- [ ] The note holds both versions' abbr, language and text
-- [ ] The note holds the canonical `usfm` and the localized `displayRef`
-- [ ] "+ New topic" creates and selects the topic without closing the popover
-- [ ] Tag autocomplete offers existing tags; `Faith` and `faith` resolve to one
+- [x] The note holds both versions' abbr, language and text
+- [x] The note holds the canonical `usfm` and the localized `displayRef`
+- [x] "+ New topic" creates and selects the topic without closing the popover
+- [x] Tag autocomplete offers existing tags; `Faith` and `faith` resolve to one
       tag
-- [ ] A Tamil tag can be typed, saved and read back unchanged
-- [ ] The last used topic is preselected on the next save in the same session
-- [ ] A worker error leaves the popover open with the typed text intact
-- [ ] Escape closes; Ctrl/Cmd+Enter saves; focus is trapped and restored
-- [ ] Cancelling leaves the verse still selected on the page
-- [ ] `notesRev` increments and the note appears in `notes/list`
+- [x] A Tamil tag can be typed, saved and read back unchanged
+- [x] The last used topic is preselected on the next save in the same session
+- [x] A worker error leaves the popover open with the typed text intact
+- [x] Escape closes; Ctrl/Cmd+Enter saves; focus is trapped and restored
+- [x] Cancelling leaves the verse still selected on the page
+- [x] `notesRev` increments and the note appears in `notes/list`
 
 ## Notes
 
@@ -112,9 +117,54 @@ without any `stopPropagation`, measured during T-013, which is what R8 needs.
 `BB.capture.versePair` can return `primary: null`, for a verse selected in the
 parallel column that the primary version does not have. `cleanSide` in
 `src/shared/schema.js` refuses that with "has no primary text", and one bad verse
-refuses the whole draft. Decide here what such a verse does. Found during T-010.
+refuses the whole draft. Found during T-010. Decided here: the verse's one side moves
+into `primary` and `parallel` is null, so the words are kept and the label stays
+true. A verse with neither side still goes to the worker and is refused.
 
 `BB.capture.displayRef(usfm, col)` answers per column, but `VerseRef.displayRef` is
 one field. Ask the primary column, or the parallel column when the primary side is
 null. It can return `null`, which `cleanNoteDraft` stores as `''`, and R1's `usfm`
 fallback is what shows then. Found during T-012.
+
+Three things the requirements left open, decided here. **Save & open panel** is
+disabled until `BB.panel.open` exists, because the panel is EPIC-02. **Undo** moves
+the note to Trash, since hard deletes happen only from there. **The session** of R4
+is the tab, through `sessionStorage`.
+
+The popover was run on live bible.com on 2026-11-10, logged out, at 1024px, 760px
+and 375px and in both themes, by pasting the code into the page
+(`conventions/03-task-workflow.md`) with `chrome.runtime` replaced by a stand-in that
+answered as the router does. A box is ticked only if everything it describes happens
+on the page and the stand-in supplied nothing but the worker's reply. Whatever
+depends on what the real worker stores was checked afterwards, by hand, with the
+extension installed.
+
+`test/save-popover.test.js` passes the assembled draft through the real
+`cleanNoteDraft`, which covers the shape, not the storage. `Cmd+Enter` shares a
+branch with `Ctrl+Enter` and was not pressed. The last topic was preselected on
+reopening, and surviving a full reload was not tried, because the pasted code does
+not. The light theme was checked by swapping the class on `<html>`, which is enough
+for the popover's colours and says nothing about bible.com's own.
+
+A real-Chrome save of Exodus 13:3 on 2026-11-10 stored the right `usfm` and
+`displayRef`, which is why that box is ticked. It also found two problems:
+
+- **Fixed:** the NKJV text kept its cross-references (`Ex. 12:42; Deut. 16:3`). The
+  reader's Footnotes switch was off, which renames a note's `_note` class to `_hide`,
+  and `verseText` only removed `_note`. It had nothing to do with being signed in. The
+  fix is in `capture.js`, here rather than in a `B-NNN` because this task's acceptance
+  cannot pass without it. Its effect on `verseLabel` is outside this task and is B-011.
+- **Fixed:** the Undo was not seen. The confirmation sat at the top of the viewport,
+  on bible.com's search bar, dark on dark. It now appears where the popover just was.
+
+The rest was confirmed by hand in real Chrome on 2026-11-10, with the extension
+installed, signed in and with Footnotes off. A new topic, two tags and a body saved
+as one note. A Tamil tag typed through an input method read back unchanged, with
+Enter only confirming the composition. NKJV Exodus 13:6, which has a cross-reference,
+saved with clean text. Undo was found and pressed, and `notesRev` rose by two across
+one save and one Undo, so the write happened, but the note was not looked up in Trash
+afterwards.
+
+The standing regression check on a parallel chapter passed by hand the same day:
+alignment, separators and the `Aa` size change. `Alt+P/A/S` were left out, as in
+T-013, because they were already dead in real Chrome and B-006 tracks that.

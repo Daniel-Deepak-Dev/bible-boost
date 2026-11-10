@@ -44,22 +44,26 @@ set to light, the `@media` block has already overwritten `:root`, so anything
 
 ### Where the tokens live
 
-`src/shared/theme.css` is the full set. `content.css` carries a hand-synced copy
-of the ten the dock draws with, because a content script's stylesheet cannot
-`@import` a `chrome-extension://` URL reliably:
+`src/shared/theme.css` is the full set. A content script's stylesheet cannot
+`@import` a `chrome-extension://` URL reliably, so `content.css` carries a hand-synced
+copy of every token on-page UI draws with, and a value changed in one file has to be
+changed in the other. Those are the dock's ten:
 
 ```css
 --bb-sep-color  --bb-surface  --bb-border  --bb-text  --bb-hover
 --bb-track-off  --bb-track-on --bb-thumb   --bb-shadow --bb-focus
 ```
 
-The rest exist only in `theme.css`. On-page UI that needs one has to add it to the
-`content.css` block too:
+and, since the save popover (T-014), after the blank line in each block:
 
 ```css
 --bb-surface-2  --bb-surface-3  --bb-text-2  --bb-text-3
 --bb-accent     --bb-danger     --bb-radius  --bb-gap-sm  --bb-gap-md
 ```
+
+Centre a fixed element with `left: 0; right: 0; width: fit-content; margin: 0 auto`,
+not `left: 50%` and a transform. A box at `left: 50%` can only be as wide as the half
+of the viewport to its right: the save toast wrapped at 375px, at 188px wide.
 
 `--bb-thumb`, `--bb-focus`, `--bb-radius` and `--bb-gap-sm/md` are declared only
 in `:root` and deliberately inherited, since they do not vary by theme.

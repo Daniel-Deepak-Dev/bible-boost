@@ -97,6 +97,19 @@ await chrome.runtime.sendMessage({ type: 'ping' })   // { ok: true, schemaVersio
    panel sent would lose that race at random. Pages coordinate through
    `chrome.storage.onChanged` (`notesRev`, below) instead.
 
+### Calling the worker from a content script
+
+`ask()` in `src/content/save-popover.js` was the first (T-014). Whatever goes wrong
+has to come back as `{ ok: false, error }`, because the note being written is still on
+the screen and has to stay there. Beyond the router's own `ok: false`, two failures
+exist that the router cannot report, both **from Chrome's documentation and not
+provoked here**:
+
+- **No reply.** `sendMessage` resolves to `undefined` if the worker dies part way.
+- **An orphaned script.** After the extension is reloaded, a content script already
+  in a tab throws `Extension context invalidated` from `sendMessage`, and a page
+  reload is the only cure. Tell the user to copy what they typed first.
+
 ## New message catalogue
 
 Namespaced `area/verb`. Every worker handler returns a promise and the listener

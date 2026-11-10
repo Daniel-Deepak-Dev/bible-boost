@@ -1,9 +1,8 @@
 /* ---------- Theme tokens ----------
    Keep in sync with content.css. A content script's stylesheet cannot @import a
-   chrome-extension:// URL reliably, so the dock carries its own copy of the ten tokens it draws
-   with, and a value changed here has to be changed there too. The tokens after the blank line in
-   each block are used only by the notes UI and have no copy, because nothing on the page reads
-   them yet.
+   chrome-extension:// URL reliably, so on-page UI carries its own copy of every token it draws
+   with, and a value changed here has to be changed there too. That is the dock's ten, and since
+   T-014 the nine after the blank line in each block as well, for the save popover.
 
    The panel and the notes page <link> this file. The popup does not: it keeps its own unprefixed
    set, because its switch is deliberately not the dock's red (--switch-on is #121212 / #636161),

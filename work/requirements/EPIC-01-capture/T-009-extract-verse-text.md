@@ -122,3 +122,10 @@ same Tamil text for Exodus 13:2 as the injected copy did.
 
 To repeat it, pick the BibleBoost context in the DevTools console and run
 `BB.capture.verseText('EXO.13.2', BB.dom.columnEls()[0])`.
+
+### Corrected during T-014
+
+Every check above ran with bible.com's reader Settings at their defaults. With
+Footnotes switched off a note is `_hide` instead of `_note`, so note text was saved
+into verses, found on a real save of NKJV Exodus 13:3. `verseText` now removes
+`_hide` as well. `02-verse-dom.md` has the measurements.

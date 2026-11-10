@@ -21,6 +21,7 @@ knowing before seven epics are built on top.
 | [B-008](B-008-dock-tokens-no-fallback.md) | The dock reads its theme tokens with no fallback | No |
 | [B-009](B-009-schema-duplicates-shared-rules.md) | `schema.js` keeps its own copy of the verse and text rules | No |
 | [B-010](B-010-language-without-iso-token.md) | A version with no `iso6393` token saves with no language | No |
+| [B-011](B-011-hidden-verse-number.md) | A verse whose number is switched off reads as a continuation fragment | No |
 
 ## How these relate to the notes project
 

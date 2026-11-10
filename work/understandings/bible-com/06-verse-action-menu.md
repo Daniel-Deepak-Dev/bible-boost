@@ -126,6 +126,26 @@ inside the primary version's reader wrapper (`lang="ta"` for TAOVBSI) and comput
 so `html[dir]` does not say how a row is laid out. Read it from a neighbouring row.
 Only an RTL interface with an LTR version was measured.
 
+## A modal `<dialog>` over the page
+
+Measured during T-014 on Exodus 13, logged out, with the save popover open through
+`showModal()`, and real clicks and key presses.
+
+- **The selection and the menu are left alone.** The verse keeps its class and the
+  header keeps naming it, through opening, Escape, Cancel and saving.
+- **A real click on a verse through the backdrop changes nothing.** The page is inert
+  and the selection stayed as it was.
+- **`preventDefault` on Escape's `keydown` stops the browser's own close.** No `cancel`
+  event followed it.
+- **The dialog's `close` event is late.** It arrived 320 ms after `close()`, with the
+  Browser pane in the background. Anything that has to be finished before the next
+  open must not wait for it.
+- **bible.com can navigate underneath it.** Narrowing the window to 375px dropped
+  `?parallel=114` by client-side navigation while the dialog was open, and replaced the
+  menu. The dialog stayed, with the typed text in it, and its trigger was disconnected.
+- **Two buttons can read "Cancel".** The menu's close button has that `aria-label`, so
+  a search by name finds it as well as the popover's own.
+
 ## The header link is the best thing on the page
 
 | State | `href` | Visible text |

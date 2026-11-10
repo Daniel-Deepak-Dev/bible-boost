@@ -1,7 +1,7 @@
 /*
  * BibleBoost — the save row in bible.com's verse menu
  * Puts one "Save to BibleBoost" row between Highlight and Copy, and keeps it there. What the row does
- * when pressed belongs to T-014. This file only makes sure the row exists.
+ * when pressed belongs to save-popover.js. This file only makes sure the row exists.
  * What bible.com's menu is made of is written down in
  * work/understandings/bible-com/06-verse-action-menu.md, which is the first place to look when this
  * stops working. Everything here that depends on that shape is in isActionRow and findList.
@@ -84,13 +84,13 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     return svg;
   }
 
-  // T-014 replaces this with the save popover. Until then it logs, which is also how the keyboard
-  // acceptance check observes that Enter and Space work.
+  // Through ?. so that a popover script that failed to load costs this row its action and nothing
+  // else. currentTarget is this row, which is what the popover anchors to and gives focus back to.
   //
   // No stopPropagation: nothing from the list upward has a React handler, and a real click on a test
   // button in this list left the selection and the menu exactly as they were.
-  function onActivate() {
-    console.debug('[BibleBoost] menu: save row activated', BB.capture.getSelection());
+  function onActivate(e) {
+    BB.savePopover?.open(e.currentTarget);
   }
 
   // A real button, for what that gives away for free: Tab reaches it, and Enter and Space both click

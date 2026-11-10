@@ -107,3 +107,6 @@ and squeezing is disabled — there is no room to squeeze into.
 R2 matters more than it sounds. An iframe created on every bible.com page load
 costs a document, a stylesheet and a script on pages where the user never opens
 the panel.
+
+T-014's **Save & open panel** button is disabled until `BB.panel.open` is a function.
+Define that here and the button starts working, with no change to the popover.

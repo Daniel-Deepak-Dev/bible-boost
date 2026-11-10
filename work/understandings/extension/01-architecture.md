@@ -8,8 +8,8 @@ suggestion.
 ```
 ┌─ bible.com tab ────────────────────────────┐     ┌─ service worker (module) ──┐
 │  content scripts (classic, isolated world) │     │  the ONLY IndexedDB client │
-│   bible-dom.js  content.js                 │◄───►│   db · repo · search · io  │
-│   capture.js  menu.js  quickbar.js         │ msg │                            │
+│   bible-dom.js  content.js  capture.js     │◄───►│   db · repo · search · io  │
+│   save-popover.js  menu.js  quickbar.js    │ msg │                            │
 │   panel-host.js ──┐                        │     └────────────▲───────────────┘
 └───────────────────┼────────────────────────┘                  │ msg
                     │ postMessage                               │
@@ -54,6 +54,7 @@ suggestion.
 | Reading bible.com's DOM | `src/content/bible-dom.js` (`BB.dom`) |
 | Detecting a selection, extracting verse text, naming a column's version | `src/content/capture.js` |
 | Injecting into bible.com's menu | `src/content/menu.js` |
+| The save popover: turning a selection into a raw draft, picking a topic and tags, the saved confirmation | `src/content/save-popover.js` |
 | Fallback save affordance + shortcut | `src/content/quickbar.js` |
 | Hosting / sizing / theming the panel iframe | `src/content/panel-host.js` |
 | Existing alignment and separators | `content.js` (unchanged in spirit) |

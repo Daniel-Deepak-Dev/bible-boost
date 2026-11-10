@@ -89,10 +89,32 @@ The marker is only half of a note. Measured on live bible.com on 2026-11-09:
 - **Tamil hides this.** Exodus 13, Romans 1 and Psalms 3 and 23 in TAOVBSI have
   no notes at all, while NKJV has them on 20 of the 22 verses of Exodus 13.
 
-To extract clean verse text: clone the node, remove every `_label` (the number)
-**and** every `_note` (the footnote, whole), then read `textContent`.
-`BB.capture.verseText` does this, and says so in a comment, because the two are
-different things that happen to share a class fragment.
+To extract clean verse text: clone the node, remove every `_label` (the number),
+every `_note` (the footnote, whole) **and** every `_hide` (either of those, switched
+off), then read `textContent`. `BB.capture.verseText` does this, and says so in a
+comment, because they are different things that happen to share a class fragment.
+
+### The reader's own switches rename these classes
+
+bible.com's Settings panel in the reader has two switches that change the verse
+markup. Measured on 2026-11-10, logged out, on Exodus 13 (TAOVBSI and NKJV) and
+Romans 1 (CEV and NIV):
+
+| Switch turned off | What changes in the verse |
+|---|---|
+| **Footnotes** | A note's wrapper loses `_note`: `_note _x` becomes `_hide _x`, and a bare `_note` becomes a bare `_hide`. The `_label` and `_body` inside it stay |
+| **Numbers and Titles** | The verse number's `_label` becomes a bare `_hide`, `display: none`, with the number still in it |
+
+- **This is the setting and not the account.** A signed-in Chrome with Footnotes off
+  showed `_hide _x`, and turning Footnotes off logged out produced the same.
+- **Nothing that matches `_note` or `_label` alone can be trusted to find these.**
+  With Footnotes off, a rule of `_label` and `_note` removed the `#` and kept the note
+  body, on 20 of the 22 verses of NKJV Exodus 13. Numbers and Titles off leaves `3And
+  Moses…` if `_hide` is not removed.
+- **A `_hide` is a number or a note.** Those were the only two kinds found inside a
+  verse. Tell them apart by whether it holds a `_body`.
+- **`verseLabel` finds nothing with Numbers and Titles off**, which is B-011.
+- T-009's checks all ran with both switches on, which is the default.
 
 ## Poetry and what else is inside a verse
 

@@ -97,3 +97,8 @@ avoidable complexity for no benefit.
 R6 is small and is the difference between a real safety net and a decorative
 one. Five seconds is less time than it sounds when the user is reading the
 message to decide.
+
+R1 cannot hold for the save popover. `src/ui/app/toast.js` will be an ES module and
+a content script is a classic script, so `src/content/save-popover.js` carries its
+own small toast (T-014). It is the same idea in about twenty lines, and it has no
+stacking.

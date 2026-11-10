@@ -216,10 +216,11 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   }
 
   // ---------- Verse text ----------
-  // What has to come out before a verse can be read. These are two different things that happen to
-  // share a class fragment, which is exactly why both are named here:
+  // What has to come out before a verse can be read. The first two are different things that happen
+  // to share a class fragment, which is exactly why both are named here:
   //   _label  the verse's own number, a direct child of the verse element
   //   _note   a whole footnote or cross-reference, wherever in the verse it sits
+  //   _hide   either of those, once the reader has switched it off
   //
   // Removing every _label is NOT enough, even though a note's marker is a _label too. A note is that
   // marker (a "#") beside a _body holding the note itself, and the _body has to go with it. bible.com
@@ -227,7 +228,15 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // labels alone, Exodus 13:2 in NKJV starts "Ex. 13:12, 13, 15; 22:29; ...", and 73 of the 134 verses
   // measured in six English chapters came out polluted like that. The TAOVBSI chapters measured beside
   // them carry no notes at all, so a check in Tamil alone would pass.
-  const NON_TEXT_SEL = '[class*="_label"], [class*="_note"]';
+  //
+  // _hide is what bible.com writes in place of the other two when a switch in its reader Settings turns
+  // them off. With Footnotes off a note's wrapper is "_hide _x" or a bare "_hide" and no longer "_note",
+  // and with Numbers and Titles off the verse number is a "_hide" with no "_label" at all. Neither
+  // shows on the page and textContent reads both, so before this a reader with Footnotes off saved
+  // NKJV's Exodus 13:3 as "...the people: Ex. 12:42; Deut. 16:3“Remember this day". With all three
+  // here, the text came out identical under every combination of the two switches, for 106 verses
+  // across TAOVBSI, NKJV, CEV and NIV (2026-11-10).
+  const NON_TEXT_SEL = '[class*="_label"], [class*="_note"], [class*="_hide"]';
 
   // A clone, always: this is bible.com's own verse DOM, and tap-to-highlight, Copy, Compare and Share
   // all depend on it staying as it is. A detached copy produces no mutation records either.

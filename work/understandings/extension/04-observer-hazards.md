@@ -98,6 +98,12 @@ version of this guard got these wrong, so do not simplify them away:
   `closest()` finds our ancestor either way. React only inserts into nodes it
   created, so this is accepted rather than guarded.
 
+The save popover (T-014) was measured the same way, on live bible.com, with
+`schedule()` counting its calls. Opening it, typing, the suggestion lists, adding
+chips and closing it again came to 26 batches of records, every one ours, and
+`schedule()` stayed at the 2 calls it had before the popover first opened. `open` on a
+`<dialog>` is not observed, because only `class` is.
+
 A marked root that shifts the text is still caught: the `ResizeObserver` on the
 columns calls `schedule()` independently of this guard. That only sees a change
 in the column's height, so UI placed inside the verse columns would need more

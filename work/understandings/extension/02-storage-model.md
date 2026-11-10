@@ -10,6 +10,14 @@ Confidence: **design decision**, approved. Schema is normative.
 | `chrome.storage.local` | panel open/pinned/width, last filter, `notesRev`, `lastExportAt`, `persistence` | per-device UI state and the change signal |
 | `chrome.storage.sync` | **existing settings only** | already working — do not migrate |
 
+One value sits outside those three: `bb-last-topic`, in the page's own
+`sessionStorage`, holding the id of the topic the save popover last used (T-014 R4).
+It is per tab and survives a full navigation, which a variable in the content script
+would not. `chrome.storage.session` is closed to content scripts until the worker
+calls `setAccessLevel` (from Chrome's documentation), and it would give two tabs one
+last topic between them. The page can read and write this key, so it holds only an
+id, and the popover honours it only if `topics/list` still has that id.
+
 ### Do not move the existing settings
 
 `align`, `separators`, `primaryId`, `parallelId`, `lastRef`, `showSwitch` stay in
@@ -120,8 +128,10 @@ in a Chrome 152 page on 2026-11-09 (T-005).
 - **`primary` is required and `parallel` is optional.** `cleanSide` refuses a null
   primary with "has no primary text", which refuses the whole draft. `versePair` can
   return one, for a verse selected in the parallel column that the primary version
-  lacks, so T-014 has to decide what that verse does. Blank text is different: `''`
-  passes, and it is what NIV's Matthew 17:21 gives.
+  lacks, and `verseRefOf` in `save-popover.js` moves that verse's one side into
+  `primary` (T-014). So `primary` means the version a note leads with, usually but
+  not always the page's primary version: read its `abbr` rather than assuming. Blank
+  text is different: `''` passes, and it is what NIV's Matthew 17:21 gives.
 
 How `notes/list` chooses an index, in `planNoteQuery`: verse, chapter, tag or topic
 narrow it and sort in memory. Otherwise a cursor walks `byUpdated` (or `byDeleted`

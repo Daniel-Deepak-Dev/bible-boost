@@ -27,8 +27,8 @@ html[data-bb-align] [data-bb-col] [data-bb-v]::before {
 
 /* ---------- Theme tokens ----------
    Keep in sync with src/shared/theme.css. A content script's stylesheet cannot @import a
-   chrome-extension:// URL reliably, so the dock needs this copy of the ten tokens it draws with;
-   the tokens only the notes UI uses stay in that file alone.
+   chrome-extension:// URL reliably, so on-page UI needs its own copy of every token it draws with:
+   the dock's ten, then, after the blank line in each block, the nine the save popover draws with.
 
    Values measured off bible.com's own UI. The page picks its theme with html.light / html.dark
    independently of the OS, so that class has to win: it scores (0,1,1) against :root at (0,1,0),
@@ -56,6 +56,16 @@ html[data-bb-align] [data-bb-col] [data-bb-v]::before {
   --bb-thumb:      #FFFFFF;
   --bb-shadow:     0 4px 16px rgba(8, 7, 7, 0.14);
   --bb-focus:      #3D79C2;
+
+  --bb-surface-2:  #F6F4F4;
+  --bb-surface-3:  #EDEBEB;
+  --bb-text-2:     #636161;
+  --bb-text-3:     #828080;
+  --bb-accent:     #3D79C2;
+  --bb-danger:     #DE2E3C;
+  --bb-radius:     4px;
+  --bb-gap-sm:     4px;
+  --bb-gap-md:     8px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,6 +78,13 @@ html[data-bb-align] [data-bb-col] [data-bb-v]::before {
     --bb-track-off: #474545;
     --bb-track-on:  #FF3D4D;
     --bb-shadow:    0 4px 16px rgba(0, 0, 0, 0.45);
+
+    --bb-surface-2: #353333;
+    --bb-surface-3: #474545;
+    --bb-text-2:    #BFBDBD;
+    --bb-text-3:    #828080;
+    --bb-accent:    #3D79C2;
+    --bb-danger:    #FF3D4D;
   }
 }
 
@@ -80,6 +97,13 @@ html.light {
   --bb-track-off: #DDDBDB;
   --bb-track-on:  #FF3D4D;
   --bb-shadow:    0 4px 16px rgba(8, 7, 7, 0.14);
+
+  --bb-surface-2: #F6F4F4;
+  --bb-surface-3: #EDEBEB;
+  --bb-text-2:    #636161;
+  --bb-text-3:    #828080;
+  --bb-accent:    #3D79C2;
+  --bb-danger:    #DE2E3C;
 }
 
 html.dark {
@@ -91,6 +115,13 @@ html.dark {
   --bb-track-off: #474545;
   --bb-track-on:  #FF3D4D;
   --bb-shadow:    0 4px 16px rgba(0, 0, 0, 0.45);
+
+  --bb-surface-2: #353333;
+  --bb-surface-3: #474545;
+  --bb-text-2:    #BFBDBD;
+  --bb-text-3:    #828080;
+  --bb-accent:    #3D79C2;
+  --bb-danger:    #FF3D4D;
 }
 
 html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
@@ -274,6 +305,272 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 #bb-save-row:focus-visible {
   outline: 2px solid var(--bb-focus, #3D79C2);
   outline-offset: -2px;
+}
+
+/* ---------- Save popover ----------
+   A <dialog> in the top layer, so there is no z-index here to get right against bible.com or the
+   dock. Scoped by id like the dock, which is also what beats bible.com's reset of borders, fonts and
+   backgrounds on form controls.
+
+   margin, inset and max-width undo the browser's own centring of a modal dialog. save-popover.js
+   writes top and left inline, and inline style is not observed (T-004).
+
+   The surface is the dock's own, translucent with a blur, and the backdrop is transparent, because
+   the selected verse is what this is about and it should stay in sight.
+
+   line-height is normal throughout. A Tamil line box is taller than a Latin one at the same size, so
+   a fixed height or a line-height of 1 would clip the vowel signs in a Tamil tag or topic. */
+#bb-save-pop {
+  box-sizing: border-box;
+  width: min(340px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100vh - 32px);
+  margin: 0;
+  inset: auto;
+  padding: 12px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: 8px;
+  background: var(--bb-surface, #FFFFFF);
+  color: var(--bb-text, #121212);
+  box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
+  backdrop-filter: blur(8px);
+  font: 400 14px/normal aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
+}
+
+#bb-save-pop::backdrop { background: transparent; }
+
+/* The rules below set display, which would otherwise beat the hidden attribute. */
+#bb-save-pop [hidden] { display: none; }
+
+/* Two lines at most, for a long run of verses. T-016 replaces the list itself with a range. */
+#bb-save-pop .bb-ref {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  font-weight: 700;
+}
+
+#bb-save-pop label {
+  display: block;
+  margin: var(--bb-gap-md, 8px) 0 var(--bb-gap-sm, 4px);
+  color: var(--bb-text-2, #636161);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Dark --bb-surface-2 is the same #353333 as dark --bb-border, so the border disappears on these and
+   the fill is what shows where the field is. */
+#bb-save-topic,
+#bb-save-body,
+#bb-save-pop .bb-tagbox {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: var(--bb-radius, 4px);
+  background: var(--bb-surface-2, #F6F4F4);
+  color: var(--bb-text, #121212);
+  font: inherit;
+}
+
+/* Part of the compact surface: T-022 is where a long note gets room. */
+#bb-save-body {
+  display: block;
+  resize: none;
+}
+
+#bb-save-pop input::placeholder,
+#bb-save-pop textarea::placeholder {
+  color: var(--bb-text-2, #636161);
+  opacity: 1;
+}
+
+#bb-save-topic:focus-visible,
+#bb-save-body:focus-visible,
+#bb-save-pop .bb-tagbox:focus-within {
+  outline: 2px solid var(--bb-focus, #3D79C2);
+  outline-offset: 1px;
+}
+
+/* The field the tag input sits in. display: contents on the chip holder lets the chips and the input
+   wrap together as one row of items. */
+#bb-save-pop .bb-tagbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-gap-sm, 4px);
+}
+
+#bb-save-pop .bb-chips { display: contents; }
+
+#bb-save-tags {
+  flex: 1 1 80px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--bb-text, #121212);
+  font: inherit;
+}
+
+#bb-save-pop .bb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 1px 2px 1px 8px;
+  border-radius: 999px;
+  background: var(--bb-surface-3, #EDEBEB);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+#bb-save-pop .bb-chip button {
+  flex: none;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bb-text-2, #636161);
+  font: inherit;
+  cursor: pointer;
+}
+
+#bb-save-pop .bb-chip button:hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+#bb-save-pop .bb-chip button:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); }
+
+/* A solid fill rather than the translucent surface, because this opens on top of the fields below
+   it and their text would show through. */
+#bb-save-pop .bb-combo { position: relative; }
+
+#bb-save-pop .bb-list {
+  position: absolute;
+  z-index: 1;
+  top: 100%;
+  right: 0;
+  left: 0;
+  max-height: 176px;
+  margin: 2px 0 0;
+  padding: var(--bb-gap-sm, 4px);
+  overflow-y: auto;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: var(--bb-radius, 4px);
+  background: var(--bb-surface-2, #F6F4F4);
+  box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
+  list-style: none;
+}
+
+#bb-save-pop .bb-list li {
+  padding: 6px 8px;
+  border-radius: var(--bb-radius, 4px);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+#bb-save-pop .bb-list li[aria-selected="true"],
+#bb-save-pop .bb-list li:not([aria-disabled="true"]):hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+
+#bb-save-pop .bb-list li[aria-disabled="true"] {
+  color: var(--bb-text-2, #636161);
+  cursor: default;
+}
+
+/* --bb-danger is 4.60:1 on white and 5.38:1 on #121212, so it holds for text on either surface. */
+#bb-save-pop .bb-error {
+  margin: var(--bb-gap-md, 8px) 0 0;
+  color: var(--bb-danger, #DE2E3C);
+  font-size: 13px;
+}
+
+#bb-save-pop .bb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--bb-gap-md, 8px);
+  margin-top: 12px;
+}
+
+#bb-save-pop .bb-btn {
+  padding: 7px 12px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: var(--bb-radius, 4px);
+  background: transparent;
+  color: var(--bb-text, #121212);
+  font: 600 13px/normal aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+}
+
+#bb-save-pop .bb-btn:hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+
+/* The offset is because --bb-accent is the same blue as --bb-focus, so a ring touching this fill
+   would merge with it. White on it measures 4.46:1. */
+#bb-save-pop .bb-btn:focus-visible {
+  outline: 2px solid var(--bb-focus, #3D79C2);
+  outline-offset: 2px;
+}
+
+#bb-save-pop .bb-btn[data-bb-primary] {
+  border-color: var(--bb-accent, #3D79C2);
+  background: var(--bb-accent, #3D79C2);
+  color: #FFFFFF;
+}
+
+#bb-save-pop .bb-btn:disabled,
+#bb-save-pop .bb-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Save confirmation ----------
+   save-popover.js puts this where the popover has just been, because that is where the user is
+   looking. At the top of the viewport it landed on bible.com's search bar, dark on dark, and was
+   missed by somebody watching for it.
+
+   One above the dock, since it is the newest thing to say anything and is gone in five seconds.
+   The fill is the solid --bb-surface-2 and not the dock's translucent surface, so that it stands off
+   the dark page and off bible.com's menu card beneath it. The Undo is drawn as a button, in
+   --bb-text, because --bb-accent falls under the contrast small text needs on a dark surface.
+
+   340px is the popover's own width, and the popover is clamped so that much fits to the right of
+   where it was. */
+#bb-toast {
+  position: fixed;
+  z-index: 2147483001;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: 8px;
+  background: var(--bb-surface-2, #F6F4F4);
+  color: var(--bb-text, #121212);
+  box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
+  font: 600 14px/normal aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
+}
+
+#bb-toast span { overflow-wrap: anywhere; }
+
+#bb-toast button {
+  flex: none;
+  padding: 5px 12px;
+  border: 1px solid var(--bb-text-2, #636161);
+  border-radius: var(--bb-radius, 4px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+#bb-toast button:hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+
+#bb-toast button:focus-visible {
+  outline: 2px solid var(--bb-focus, #3D79C2);
+  outline-offset: 2px;
 }
 
 /* Last in the file on purpose: these selectors tie with the ones above, so source order is what
