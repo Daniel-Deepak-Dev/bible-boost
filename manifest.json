@@ -57,7 +57,8 @@
         "src/content/bible-dom.js",
         "src/shared/versions.js",
         "content.js",
-        "src/content/capture.js"
+        "src/content/capture.js",
+        "src/content/menu.js"
       ],
       "css": [
         "content.css"

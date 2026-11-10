@@ -222,6 +222,60 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   }
 }
 
+/* ---------- Save row in bible.com's verse menu ----------
+   This has to pass for one of the rows beside it, so every number here was measured off them on
+   2026-11-10: 52.67px tall at 1024px and at 375px (a 24px icon, 14px of padding above and below,
+   and the 0.67px divider), 8px from icon to label, weight 700, line-height 1.25.
+
+   There is deliberately no border declaration here, not even a reset. The divider is bible.com's,
+   from :where(.divide-y-small > :not(:last-child)), which reaches any direct child of the list. But
+   :where() has no specificity, so a "border: 0" on this row would beat it and the line under the
+   row would vanish with no error.
+
+   There is no hover background either, because the rows have none. Hovering Copy changes the cursor
+   and nothing else, so --bb-hover here would be the one thing marking this row as bolted on.
+
+   The colour is the token and not inherited. Inside the card the inherited colour measures #E0E0E0
+   on dark while the labels are #FFFFFF, which showed as a visibly dimmer row. --bb-text is exactly
+   what the labels are in both themes, #FFFFFF and #121212.
+
+   The flex direction is not here because menu.js copies it from a neighbour at insertion. See
+   buildRow for why html[dir] cannot be trusted for it. */
+#bb-save-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  color: var(--bb-text, currentColor);
+  font: 700 13px/1.25 aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+}
+
+/* bible.com's "md" breakpoint is min-width: 640px, not the 768px the name usually means. */
+@media (min-width: 640px) {
+  #bb-save-row { font-size: 16px; }
+}
+
+#bb-save-row svg {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Inset, because the row is as wide as the list and an outline drawn outside it would land on the
+   divider above and below. */
+#bb-save-row:focus-visible {
+  outline: 2px solid var(--bb-focus, #3D79C2);
+  outline-offset: -2px;
+}
+
 /* Last in the file on purpose: these selectors tie with the ones above, so source order is what
    makes them win. */
 @media (prefers-reduced-motion: reduce) {

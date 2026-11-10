@@ -542,6 +542,9 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     getSelection,
     onChange,
     noteMutations,
+    // menu.js finds the action list by starting from this header link, and a second copy of how to
+    // recognise that link is the one that would not get fixed when bible.com changes it.
+    menuLinks,
     verseText,
     resolveVersion,
     displayRef,

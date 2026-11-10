@@ -105,6 +105,10 @@ requirement, not an omission.
 R4 is small and matters more than it looks. The real usage pattern is saving
 several verses into one study in one sitting.
 
+`onActivate` in `src/content/menu.js` is a stub that only logs, and this task
+replaces it. A click on the save row leaves bible.com's selection and menu alone
+without any `stopPropagation`, measured during T-013, which is what R8 needs.
+
 `BB.capture.versePair` can return `primary: null`, for a verse selected in the
 parallel column that the primary version does not have. `cleanSide` in
 `src/shared/schema.js` refuses that with "has no primary text", and one bad verse

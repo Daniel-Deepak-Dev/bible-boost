@@ -51,6 +51,14 @@ Each of these cost a round of confusion during T-012.
   across full page loads. Remove it afterwards.
 - **A browser pane with no width changes the page.** At an `innerWidth` of 0,
   bible.com dropped `?parallel=` and rendered one column, so set a viewport first.
+- **The CSP limits how pasted code can arrive.** `connect-src` and `script-src` do
+  not list localhost, so the code cannot be fetched or loaded from a local server and
+  has to be pasted. `style-src` refuses a `<style>` element, but a `CSSStyleSheet`
+  with `replaceSync` added to `document.adoptedStyleSheets` applies. Found during T-013.
+- **Test the light theme by emulating `prefers-color-scheme`.** With no stored
+  choice, a logged-out bible.com follows it and sets `html.light` itself. Swapping the
+  class by hand changes the text but leaves the menu's card dark.
+- **`verseEl.click()` selects a verse**, which makes a long tap sequence scriptable.
 
 ## Status values
 

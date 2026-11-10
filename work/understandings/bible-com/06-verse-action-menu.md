@@ -1,10 +1,12 @@
 # bible.com — the verse action menu
 
-> **Confidence: VERIFIED on 2026-11-09** against live bible.com, logged out, on
-> Exodus 13 (TAOVBSI and NKJV, both orders) and Romans 1 (CEV), during T-008. The
-> header link was also checked under `/de/` and `/ta/` interfaces on 2026-11-10,
-> during T-012. Not checked: a signed-in session, a phone-width layout, and what
-> applying a highlight does to the verse's classes.
+> **Confidence: VERIFIED on 2026-11-10** against live bible.com, logged out. The
+> selection behaviour and header were measured during T-008 on Exodus 13 (TAOVBSI
+> and NKJV, both orders) and Romans 1 (CEV), and the header link again under `/de/`
+> and `/ta/` interfaces during T-012. The action list was measured during T-013 on
+> Exodus 13 at 1024px and 375px wide, and under an `/ar/` interface. Not checked: a
+> signed-in session, whose rows may differ, and what applying a highlight does to
+> the verse's classes or to the list.
 
 ## What selecting a verse does
 
@@ -71,9 +73,57 @@ selectors.
   closing, moved off-screen by a `translate-y-[calc(100%+24px+var(--audio-bar-h))]`
   class on the card, which becomes `translate-y-0` when open. So "is the menu in
   the DOM" says nothing about whether a verse is selected.
+- **While closed, the menu root is `inert` and `aria-hidden="true"`.** Both clear
+  when it opens. So a real `button` inside cannot take focus while the card is
+  off-screen, and an off-screen menu needs no tabindex handling.
 - The same element is reused across selections. The five colour swatches inside
   it are removed and re-added on every selection, so that part is a `childList`
-  mutation each time.
+  mutation each time. Nothing else changes: a recording observer saw no record for
+  the list's own children across selecting, adding a verse, closing and reopening.
+- **Client-side chapter navigation replaces the whole menu**, root included.
+  Measured with the next-chapter arrow from Exodus 13 to 14: the old root and list
+  were disconnected, and a node added to the list was gone. Reuse holds within one
+  chapter only.
+
+## The action list, measured
+
+Measured during T-013 on Exodus 13, with a test button placed in the list.
+
+**How to find it.** Start at the header link and climb, stopping before any ancestor
+that contains a reader column. Take the first sibling with at least three children
+that each hold both an `svg` and a `p`. At 1024px, at 375px and under `/ar/`, that was
+the right element, and at 1024px it was the only element in `main` with such children.
+This is `findList` in `src/content/menu.js`, the one place to repair if it breaks.
+
+| Part | Measured |
+|---|---|
+| Row | a `div`, flex, `justify-content: space-between`, 14px padding, 52.67px tall at both widths. Highlight is 60.7px because of its 32px swatches |
+| What is clickable | The left group only, icon plus label: that `div` has the `onClick`. The row, the list, the card and every ancestor carry no React event handler |
+| Icon | 24px `svg`, `aria-hidden`, drawn in `currentColor`, 8px before the label |
+| Label | `p`, weight 700, line-height 1.25, 13px below 640px and 16px from 640px. Their `md` breakpoint is `min-width: 640px`, not 768px |
+| Colour | `#FFFFFF` on dark, `#121212` on light. The card's inherited colour is a dimmer `#E0E0E0` on dark, so a row that inherits looks wrong |
+| Hover | The cursor changes and nothing else. No background |
+| Divider | `:where(.divide-y-small > :not(:last-child))`, a 0.67px bottom border |
+
+**The divider is a trap.** `:where()` has no specificity, so any direct child of the
+list picks up the divider for free, and any `border` declaration on that child,
+even a reset, removes it.
+
+**A node added to the list is left alone.** It survives selecting, adding a verse,
+closing and reopening. A real click on it neither clears the selection nor closes
+the menu, with no `stopPropagation`. On a `button`, Enter and Space each produced one
+click with no scroll and no change to the selection.
+
+**Tab order.** From the close button, the first Tab lands on the swatch strip, because
+it is a scroll container and Chrome makes those keyboard-focusable. The row after
+Highlight is the second Tab. Space while on the strip scrolls the page, so a test that
+presses one Tab and then Space appears to show a broken row.
+
+**Right-to-left.** Under `/ar/` the `<html>` is `dir="rtl" lang="ar"`, but the menu sits
+inside the primary version's reader wrapper (`lang="ta"` for TAOVBSI) and computes
+`direction: ltr`. bible.com flips each row with `flex-direction: row-reverse` instead,
+so `html[dir]` does not say how a row is laid out. Read it from a neighbouring row.
+Only an RTL interface with an LTR version was measured.
 
 ## The header link is the best thing on the page
 

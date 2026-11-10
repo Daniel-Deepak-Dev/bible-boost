@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-01 Capture |
-| Status | Not started |
+| Status | In progress |
 | Depends on | T-004, T-008 |
 | Blocks | T-014 |
 | Size | M |
@@ -65,13 +65,17 @@ the project's founding rule.
 **R9.** Keyboard accessible: a real `button`, reachable by Tab, activated by
 Enter and Space, with a sensible accessible name.
 
-**R10.** Clean up on removal — no leaked listeners, no orphan nodes when the
-popover closes.
+**R10.** Leave nothing behind. Closing the menu needs no work: it goes off-screen
+and `inert` without unmounting, and the row stays in it (R4). Client-side chapter
+navigation replaces the whole menu and the row goes with it, so the only listener
+lives on the row itself and no reference to the row is kept.
 
 ## Files
 
 - `src/content/menu.js` — new
-- `src/shared/theme.css` — any new tokens
+- `src/content/capture.js` — export `menuLinks`, so the header link has one definition
+- `content.css` — the row's styling. No new tokens were needed, so
+  `src/shared/theme.css` is untouched
 - `manifest.json` — add to the `js` array
 
 ## Reference
@@ -86,22 +90,39 @@ popover closes.
 
 ## Acceptance
 
-- [ ] Selecting a verse shows the row between Highlight and Copy
-- [ ] It looks native in both bible.com themes
+- [x] Selecting a verse shows the row between Highlight and Copy
+- [x] It looks native in both bible.com themes
 - [ ] Highlight, Copy, Compare and Share all still work
-- [ ] Selecting ten verses in a row inserts exactly one copy each time — never
+- [x] Selecting ten verses in a row inserts exactly one copy each time — never
       two, never zero
-- [ ] Closing and reopening the menu re-inserts correctly
-- [ ] After client-side chapter navigation, injection still works
-- [ ] With `DEBUG_SCHEDULE = true`, opening and closing the menu repeatedly does
-      **not** spam `schedule()`
-- [ ] Tab reaches the row; Enter and Space activate it
-- [ ] Simulating a failed anchor lookup appends the row at the end instead of
+- [x] Closing and reopening the menu re-inserts correctly
+- [x] After client-side chapter navigation, injection still works
+- [x] With `DEBUG_SCHEDULE = true`, opening and closing the menu repeatedly logs
+      no more `schedule()` calls than the same taps with `menu.js` removed from
+      the manifest. Every tap logs some, because bible.com's own class writes
+      pass the guard
+- [x] Tab reaches the row; Enter and Space activate it
+- [x] Simulating a failed anchor lookup appends the row at the end instead of
       failing
-- [ ] `work/understandings/bible-com/06-verse-action-menu.md` updated with the
+- [x] `work/understandings/bible-com/06-verse-action-menu.md` updated with the
       real selectors and its confidence banner changed
 
 ## Notes
 
 Expect this to need revisiting. Keep the selector knowledge in the understanding
 file, not scattered in comments, so the next repair is a one-file change.
+
+The ticked items were run on live bible.com on 2026-11-10, logged out, by pasting
+the code into the page (`conventions/03-task-workflow.md`): `bible-dom.js`, the
+selection parts of `capture.js`, `menu.js`, and the guard and observer from
+`content.js` with `schedule()` recording its calls. They have **not** been run as
+an installed extension, and the alignment code was not loaded. Five open-and-close
+cycles came to 20 `schedule()` calls and 875 records with `menu.js` and without it,
+in two runs of each. Also checked at 375px wide and under an `/ar/` interface.
+
+Still to check by hand in real Chrome before `Status` moves to `Done`:
+
+- A signed-in menu. Nobody has seen its rows, so index 1 is unconfirmed there.
+- The unticked item above. Applying a highlight was deliberately not tried.
+- The standing regression check on a parallel chapter.
+- Whether the row arriving about 80 ms after the first tap in a chapter is noticeable.
