@@ -121,7 +121,9 @@ acceptance item and contradicted T-013 R5 and T-015's acceptance.
 
 All six acceptance items and the standing regression check were run by hand on
 `/bible/339/EXO.13.TAOVBSI?parallel=114` with the extension loaded, and passed on
-2026-11-09. Before that, `recordIsOurs` passed 21 cases against a real
+2026-11-09. **Except the shortcuts:** in the user's Chrome `Alt+P/A/S` did nothing on
+2026-11-08 and again on 2026-11-10, so that part of the check does not hold there. See
+[B-006](../EPIC-08-maintenance/B-006-shortcuts-dead-in-chrome.md). Before that, `recordIsOurs` passed 21 cases against a real
 `MutationObserver` on a neutral page. The original rule wrongly reported 8 of the
 owned cases as not ours.
 

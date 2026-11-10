@@ -153,6 +153,13 @@ something particular to P, A and S. One untested idea is that a key Chrome has b
 reaches the page, so the fallback cannot fire for it, and the command is then lost on its way
 to the tab. Whether `Alt+P/A/S` are still dead was not rechecked on that date.
 
+**Rechecked later on 2026-11-10: still dead.** After the code review that filed B-012 to
+B-018, the user reported that `Alt+P`, `Alt+A` and `Alt+S` still do nothing in their real
+Chrome, and chose to leave this for later. That contradicts the notes of T-004
+(2026-11-09) and T-017 (2026-11-10), which each say the standing regression check passed
+in real Chrome. Each of those now points back here. Whatever those checks covered, it was
+not these three keys in the user's Chrome, so treat this file as the record for them.
+
 **Known limitation: the dock tooltips name the default keys** ("Toggle parallel
 mode (Alt+P)"). Content scripts cannot call `chrome.commands.getAll()`, so a
 rebound key is not reflected there. Fixing that needs a message round trip to
