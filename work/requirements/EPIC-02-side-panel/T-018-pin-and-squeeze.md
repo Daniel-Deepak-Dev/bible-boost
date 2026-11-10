@@ -98,6 +98,13 @@ reading should stay where it was.
 
 ## Notes
 
+**What T-017 left for R5 (review, 2026-11-10).** `panel-host.js` stores `panelPinned`
+and has a `pin` handler, and that is all. Nothing in `panel.js` sends `pin`, and the
+host's `state` message carries `open` only, so a restored `panelPinned` never reaches
+the panel. This task has to add the sender and put `pinned` in `state`. The `pin`
+handler writes storage on the panel's say-so, which is safe only because the host now
+checks `event.source` as well as the origin (B-012).
+
 R3 is the one to actually test rather than reason about. The ResizeObserver
 watches the **column elements** — if squeezing changes an ancestor's width in a
 way that does not resize those specific elements, it will not fire.

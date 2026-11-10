@@ -74,11 +74,18 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     pin(msg) { if (typeof msg.pinned === 'boolean') persist({ panelPinned: msg.pinned }); },
   };
 
-  // A real barrier in this direction, unlike the panel's check of the messages going the other way.
-  // Only the extension's own pages have this origin, so nothing bible.com runs can pass it. See
-  // work/understandings/extension/03-messaging.md for why the two sides are not symmetric.
+  // A real barrier in this direction, unlike the panel's check of the messages going the other way,
+  // but only with both halves. The origin alone is not one. panel.html is web-accessible to
+  // bible.com, which is what lets this file frame it, and it lets the page frame a second copy just
+  // the same. That copy runs the real panel.js, so its 'ready' and its × arrive here carrying the
+  // extension's origin (B-012). The source is what says the message came from the frame built above.
+  //
+  // contentWindow is read at each message and never kept. render() puts a removed box back, which
+  // reloads the frame, and the window is a different one after that.
+  //
+  // See work/understandings/extension/03-messaging.md for why the two sides are not symmetric.
   function onMessage(e) {
-    if (e.origin !== PANEL_ORIGIN) return;
+    if (e.origin !== PANEL_ORIGIN || e.source !== frame.contentWindow) return;
     const type = e.data?.bb;
     if (typeof type === 'string' && Object.hasOwn(HANDLERS, type)) HANDLERS[type](e.data);
   }

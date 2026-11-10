@@ -63,8 +63,18 @@ and the dock stays reachable.
 **R8.** Only render on reader pages — where `BB.dom.parseUrl()` is non-null. No
 tab on the home page or the Verse of the Day page.
 
-**R9.** Set up the `postMessage` channel both ways, **checking `event.origin` on
-both sides** and ignoring anything else. bible.com can post into the frame too.
+**R9.** Set up the `postMessage` channel both ways, **checking `event.origin` and
+`event.source` on both sides** and ignoring anything else. The two sides accept
+different things:
+
+- The **host** accepts the extension's origin, from the `contentWindow` of the frame
+  it created. The origin alone is not enough, because bible.com can frame its own copy
+  of `panel.html` (B-012).
+- The **panel** accepts `https://www.bible.com`, from `window.parent`. That is the
+  content script's origin, since it runs in bible.com's tab, and it is bible.com's own
+  too. So the panel cannot tell the two apart, and nothing arriving this way may cause
+  a write.
+
 Prefix every message `bb:` so stray traffic is trivially ignored.
 
 **R10.** At phone width the panel is full-width over the reader rather than 30%,
@@ -139,7 +149,9 @@ panel on a second localhost port. The ticks above come from that:
 
 **Real Chrome, 2026-11-10.** By hand in the user's Chrome, on live bible.com: the panel
 opens with no `frame-src` error, stays open across a reload and a chapter change,
-**Save & open panel** works, and the standing regression passes.
+**Save & open panel** works, and the standing regression passes, **except** `Alt+P/A/S`.
+The user reported those still dead in the same Chrome later that day, so they are
+[B-006](../EPIC-08-maintenance/B-006-shortcuts-dead-in-chrome.md)'s and not ticked here.
 
 The same day, Chrome 157 with the working copy loaded as an unpacked extension, on a
 temporary headless profile (see `03-task-workflow.md`), read from inside the panel's own
@@ -157,3 +169,15 @@ where `document` is bible.com's. That console was not seen, so this is an infere
 
 T-020's R6 said to ignore anything that is not the extension origin, which on the panel's
 side would have dropped every message, so it and its acceptance item were corrected here.
+
+**Review, 2026-11-10.** R9 above had the same mistake as T-020's R6 and was not corrected
+with it, so it was rewritten after the review. Three things the review found are not in
+this task's acceptance list:
+
+- The host tested `event.origin` and never `event.source`. Fixed as
+  [B-012](../EPIC-08-maintenance/B-012-panel-host-trusts-any-extension-frame.md).
+- R4's pinned half is storage only. `pin` is handled, but nothing in `panel.js` sends it,
+  and `announce` never tells the panel the restored `panelPinned`. T-018 has to do both.
+- `send()` drops a message posted before the panel's `ready`, with no queue. That is safe
+  for `state`, which `ready` sends again, and it would lose a `selection` draft posted
+  straight after `open()`. Whichever task first sends one needs a queue.

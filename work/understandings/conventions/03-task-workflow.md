@@ -90,6 +90,16 @@ Each of these cost a round of confusion during T-012.
   to the copy being served, so the page can ask the frame what it knows. A `data:` frame and a
   `srcdoc` frame make two different kinds of stranger. It proves nothing about
   `chrome-extension:` origins or the isolated world. Found during T-017.
+- **Serve the old code beside the new, and run the same check on both.** A stand-in that
+  only shows the fix passing shows nothing if the check could never fail. For B-012 the
+  server swapped the one changed line back as it served the file, behind `?old=1`, and
+  the old column failed where the new one passed. A private flag such as `frameReady`
+  can be read by appending one line inside the file's closure as it is served.
+- **A frame the page cannot reach can press its own button.** The page cannot click
+  inside a cross-origin frame, but the copy of `panel.js` being served can be given a
+  line that clicks `#bb-close` when asked, or by itself when its URL says so. That goes
+  through the real handler. Holding back the frame's HTML for a few seconds on the
+  server is what makes room to act while it is still loading. Found during B-012.
 - **Through the proxy, a chapter link is a full page load.** The `_rsc` request answers 200
   with a real payload and the whole document is reloaded anyway, so the proxy cannot show what
   client-side navigation does. Why was not worked out. Found during T-015.

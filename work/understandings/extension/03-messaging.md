@@ -204,8 +204,16 @@ sides** and ignore anything else. The two checks are not the same check:
 
 | Receiver | Accepts | What that keeps out |
 |---|---|---|
-| host (`panel-host.js`) | the extension's origin | everything bible.com runs, because only extension pages have that origin |
+| host (`panel-host.js`) | the extension's origin, and `event.source === frame.contentWindow` | everything bible.com runs, and a second copy of the panel that the page framed itself |
 | panel (`panel.js`) | `https://www.bible.com`, and `event.source === window.parent` | other sites, and frames embedded in the page |
+
+**The origin alone is not a barrier on the host's side.** `panel.html` is
+web-accessible to `https://www.bible.com/*`, which is what lets the host frame it, and
+it lets the page frame its own copy just the same. That copy runs the real `panel.js`,
+so it posts `ready` as it loads and `close` when its × is clicked, both with the
+extension's origin. Until B-012 the host tested the origin only, and its comment said
+nothing bible.com runs could pass. Any page listed in a resource's `matches` can frame
+that resource, so "has our origin" never means "is the frame we made".
 
 **The panel cannot tell bible.com's scripts from the content script.** `panel-host.js`
 runs inside bible.com's tab, so its messages carry bible.com's origin, and so do the
