@@ -46,7 +46,7 @@ bible.com publishes its own custom properties for its bottom bars:
 | Property | Measured values |
 |---|---|
 | `--tabbar-h` | 72px at phone widths, 95px at 800px, 0px by 1010px |
-| `--audio-bar-h` | height of the audio player when open |
+| `--audio-bar-h` | 80px while the audio player is open, 0px otherwise (from bible.com's stylesheet) |
 
 Anything fixed to the bottom-right must respect both, as `content.css` does:
 
@@ -55,6 +55,23 @@ bottom: calc(24px + var(--tabbar-h, 0px) + var(--audio-bar-h, 0px));
 ```
 
 At phone width the dock additionally clamps to `max(96px, ...)`.
+
+Their stylesheet writes `--tabbar-h` as `calc(72px + env(safe-area-inset-bottom,0px))`,
+and the same with 95px, so on a phone with a home indicator it is more than the table
+says. Read it, never hardcode it.
+
+**There is no published height for the top chrome.** On 2026-11-10 every stylesheet of
+`/bible/339/EXO.13.TAOVBSI?parallel=114` was scanned for a custom property naming a
+height, header, tab bar or nav, and these two bars were the only ones. Clearing the
+header would mean measuring it, so the panel simply starts at `top: 0` (T-017).
+
+## Content-Security-Policy
+
+Read from a reader page's response header on 2026-11-10. `frame-src` lists `'self'`,
+the bible.com and YouVersion hosts, TrustArc, YouTube, a video host and SoundCloud, and
+no `chrome-extension:`. `style-src` is hashes with no `'unsafe-inline'`, while
+`style-src-attr` allows inline style attributes. For what `frame-src` means for the
+panel's iframe, see `../extension/05-mv3-constraints.md`.
 
 ## Fonts
 

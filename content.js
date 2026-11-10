@@ -500,6 +500,10 @@
     renderDock();
     align();
     restoreSwapPosition();
+    // Last, so that a bug in the panel can never cost the reader their alignment. This is the panel's
+    // one way of hearing about client-side navigation, because 01-urls-and-routing.md says to hook
+    // schedule() and not to add another polling loop. Through ?. because this file runs before that one.
+    BB.panel?.refresh();
   }
 
   // ---------- Keep in sync with navigation, re-renders, font/size changes ----------

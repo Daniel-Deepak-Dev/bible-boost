@@ -176,13 +176,24 @@ An iframe loaded from a content script needs its page listed:
 
 ```jsonc
 "web_accessible_resources": [
-  { "resources": ["src/ui/panel.html", "src/ui/*"],
+  { "resources": ["src/ui/panel.html"],
     "matches": ["https://www.bible.com/*"] }
 ]
 ```
 
 Scope `matches` to bible.com — do not use `<all_urls>`, which lets any site probe
 for the extension.
+
+Only the page is listed. Its `panel.js` and `theme.css` are requested by an extension
+page and not by bible.com, so they need no entry. **Verified** in Chrome 157 on
+2026-11-10 (T-017): with only `panel.html` listed, the script ran and the stylesheet's
+rules applied.
+
+**bible.com's CSP has a `frame-src` with no `chrome-extension:` in it** (see
+`../bible-com/05-theme-and-page-chrome.md`), and the iframe loads anyway, with nothing
+refused in the console. **Verified** the same way, on live bible.com with the extension
+loaded. Do not reach for header rewriting if a frame seems blocked: this is not the
+reason.
 
 ## Storage quotas
 

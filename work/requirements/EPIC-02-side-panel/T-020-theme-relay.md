@@ -55,8 +55,10 @@ by message, so the very first paint is already correct.
 **R5.** The panel's stylesheet also honours `prefers-color-scheme` as a fallback,
 so it is readable even if the relay fails entirely.
 
-**R6.** Check `event.origin` on both sides. Ignore anything that is not the
-extension origin, and anything without the `bb:` prefix.
+**R6.** Check `event.origin` on both sides, as T-017 set it up: the host accepts only
+the extension origin, and the panel only `https://www.bible.com` from `window.parent`,
+because a content script posts with the page's origin (`03-messaging.md`). Ignore
+anything without the `bb:` prefix.
 
 **R7.** Also relay to any **native side panel** instance when T-050 lands. Build
 the relay as a function with a list of targets, not a single `postMessage` call
@@ -85,7 +87,7 @@ hardcoded to the iframe.
 - [ ] Opening the panel on an already-dark page shows **no flash** of light
 - [ ] With the relay deliberately disabled, the panel still renders readably from
       `prefers-color-scheme`
-- [ ] A `postMessage` from a non-extension origin is ignored
+- [ ] A `postMessage` from an origin that side does not expect is ignored
 - [ ] With `DEBUG_SCHEDULE = true`, a theme change does **not** trigger
       `schedule()`
 

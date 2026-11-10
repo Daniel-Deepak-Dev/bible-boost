@@ -104,6 +104,11 @@ chips and closing it again came to 26 batches of records, every one ours, and
 `schedule()` stayed at the 2 calls it had before the popover first opened. `open` on a
 `<dialog>` is not observed, because only `class` is.
 
+The panel host (T-017) was measured through a local proxy of the real page. Ten opens
+and closes made no `schedule()` calls, while two class changes on `body` straight
+afterwards made two, so the count was live. It toggles `hidden` and `aria-expanded`,
+and neither is observed.
+
 A marked root that shifts the text is still caught: the `ResizeObserver` on the
 columns calls `schedule()` independently of this guard. That only sees a change
 in the column's height, so UI placed inside the verse columns would need more

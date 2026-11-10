@@ -200,10 +200,33 @@ trace.
 ## postMessage between content script and panel iframe
 
 The iframe's origin is `chrome-extension://<id>`. **Check `event.origin` on both
-sides** and ignore anything else — bible.com can post into the frame too.
+sides** and ignore anything else. The two checks are not the same check:
+
+| Receiver | Accepts | What that keeps out |
+|---|---|---|
+| host (`panel-host.js`) | the extension's origin | everything bible.com runs, because only extension pages have that origin |
+| panel (`panel.js`) | `https://www.bible.com`, and `event.source === window.parent` | other sites, and frames embedded in the page |
+
+**The panel cannot tell bible.com's scripts from the content script.** `panel-host.js`
+runs inside bible.com's tab, so its messages carry bible.com's origin, and so do the
+page's own. Two consequences:
+
+- **Nothing arriving in the panel by `postMessage` may cause a write.** Treat it as
+  what the page says, fit for display only.
+- **Everything the panel posts up is readable by bible.com**, because a message to the
+  top window reaches every listener on it. No note text goes on this channel.
+
+Confidence: **verified** on 2026-11-10 in Chrome 157 with the real extension on live
+bible.com (T-017). Messages from `panel-host.js` arrived with `origin:
+'https://www.bible.com'` and `event.source === window.parent`. A script in the page's
+main world was accepted just the same, and a message the panel posted to itself was
+refused. A `data:` frame and a same-origin `srcdoc` frame were refused through a local
+proxy of the real page, where the panel was on a second port.
 
 | Direction | Message | Purpose |
 |---|---|---|
+| panel → host | `{bb:'ready'}` | the panel's listener exists, so the host can start sending |
+| host → panel | `{bb:'state', open}` | sent on `ready` and on every open or close |
 | host → panel | `{bb:'theme', theme:'dark'}` | relay `html.dark` (the page observer cannot see it) |
 | host → panel | `{bb:'context', ref:'EXO.13', versions:[...]}` | what chapter is on screen |
 | host → panel | `{bb:'selection', draft}` | user hit save with a verse selected |

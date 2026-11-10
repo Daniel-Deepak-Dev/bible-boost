@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-02 Side panel |
-| Status | Not started |
+| Status | Done |
 | Depends on | T-004, T-006 |
 | Blocks | T-018, T-019, T-020, T-021, T-024 |
 | Size | M |
@@ -75,7 +75,10 @@ and squeezing is disabled — there is no room to squeeze into.
 - `src/content/panel-host.js` — new
 - `src/ui/panel.html`, `src/ui/panel.js` — minimal shell for now
 - `manifest.json` — `web_accessible_resources`, the `js` array
-- `src/shared/theme.css`
+- `content.css` — the tab and the panel box, which is where on-page styles live
+- `content.js` — one line in `refresh()`, so that R8 follows client-side navigation
+  through `schedule()` rather than through a polling loop of its own
+- `src/shared/theme.css` — linked from `panel.html`, not edited
 
 ## Reference
 
@@ -89,18 +92,18 @@ and squeezing is disabled — there is no room to squeeze into.
 
 ## Acceptance
 
-- [ ] The tab appears on a reader page and not on the home page
-- [ ] It never overlaps the tab bar or the audio player, at 375px, 800px and
+- [x] The tab appears on a reader page and not on the home page
+- [x] It never overlaps the tab bar or the audio player, at 375px, 800px and
       1200px
-- [ ] The iframe does not exist in the DOM until the panel is first opened
-- [ ] Reopening reuses the existing iframe rather than reloading it
-- [ ] Open state survives a reload and client-side chapter navigation
-- [ ] `postMessage` round-trips between host and panel, and a message from an
+- [x] The iframe does not exist in the DOM until the panel is first opened
+- [x] Reopening reuses the existing iframe rather than reloading it
+- [x] Open state survives a reload and client-side chapter navigation
+- [x] `postMessage` round-trips between host and panel, and a message from an
       unexpected origin is ignored
-- [ ] With `DEBUG_SCHEDULE = true`, opening and closing ten times does not spam
+- [x] With `DEBUG_SCHEDULE = true`, opening and closing ten times does not spam
       `schedule()`
-- [ ] The existing dock is still visible and clickable
-- [ ] At phone width the panel is full-width
+- [x] The existing dock is still visible and clickable
+- [x] At phone width the panel is full-width
 
 ## Notes
 
@@ -110,3 +113,47 @@ the panel.
 
 T-014's **Save & open panel** button is disabled until `BB.panel.open` is a function.
 Define that here and the button starts working, with no change to the popover.
+
+R2 and R4 meet when a panel was left open: being open is what creates the iframe, so
+that page load does create it. A restored open counts as the first open. A panel that
+has never been opened still costs one button.
+
+The tab stays visible over the open panel, even at phone width. Being open survives a
+reload, so a frame that failed to load must not leave a full-width blank panel with no
+way out. R3 lists only `panel.html`, narrower than the `src/ui/*` the understanding
+file first suggested. The panel starts at `top: 0`, because bible.com publishes no
+height for its header. The dock floats over the panel's bottom-right corner, so T-021
+should leave room there.
+
+**Verification, 2026-11-10.** Through a local proxy of the real page (see
+`03-task-workflow.md`), running the working copy's files with `chrome` stubbed and the
+panel on a second localhost port. The ticks above come from that:
+
+- Geometry was read against bible.com's real bottom bar: top at 605px at 800x700 and
+  628px at 375x700, with the panel ending 24px above each. The audio player was
+  simulated by setting `--audio-bar-h` to 80px, and the panel moved up by 80px.
+- Ten toggles made one load of the panel, kept the same `contentWindow`, and made no
+  `schedule()` calls.
+- Also exercised: the T-014 button opening the panel, alignment with the panel open
+  (worst offset 0.44px on Exodus 13), and `Alt+A` and `Alt+S` through the keydown route.
+
+**Real Chrome, 2026-11-10.** By hand in the user's Chrome, on live bible.com: the panel
+opens with no `frame-src` error, stays open across a reload and a chapter change,
+**Save & open panel** works, and the standing regression passes.
+
+The same day, Chrome 157 with the working copy loaded as an unpacked extension, on a
+temporary headless profile (see `03-task-workflow.md`), read from inside the panel's own
+frame:
+
+- The iframe loads despite `frame-src`, and `panel.js` and `theme.css` load unlisted.
+- Host to panel: `data-bb-open` follows each open and close, and the messages arrive with
+  `origin: 'https://www.bible.com'` and `source === window.parent`.
+- Panel to host: the × closes the panel. A message from the page's own window does not.
+- Real `chrome.storage.local` held `panelOpen`, and a reload brought the panel back.
+
+During the manual check, `dataset.bbOpen` read `undefined`. The panel's own frame read
+`"true"` in the headless run, so the likely cause is the Console being on another context,
+where `document` is bible.com's. That console was not seen, so this is an inference.
+
+T-020's R6 said to ignore anything that is not the extension origin, which on the panel's
+side would have dropped every message, so it and its acceptance item were corrected here.

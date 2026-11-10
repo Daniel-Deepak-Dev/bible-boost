@@ -85,6 +85,24 @@ Each of these cost a round of confusion during T-012.
   with "An unknown error" on a script that `fetch` and a module `Worker` both loaded. A `Worker`
   shows a module loads with no `window` or DOM, and nothing about a real worker's events. Found
   during T-016.
+- **A cross-origin frame can be tested through the proxy.** Serve it from a second localhost
+  port, point the stubbed `chrome.runtime.getURL` there, and append a small `message` handler
+  to the copy being served, so the page can ask the frame what it knows. A `data:` frame and a
+  `srcdoc` frame make two different kinds of stranger. It proves nothing about
+  `chrome-extension:` origins or the isolated world. Found during T-017.
+- **The panel's frame is its own Console context.** On `top`, or in the content script's
+  **BibleBoost** entry, `document` is bible.com's, so asking it about the panel gives
+  `undefined`, which looks like a broken channel. Right-click inside the panel and choose
+  Inspect: that selects the frame, and `<html data-bb-open="true">` is right there. Seen
+  during T-017.
+- **Real Chrome can load the extension on a throwaway profile.** A Node script in the
+  scratchpad starts it with `--headless=new --remote-debugging-pipe
+  --enable-unsafe-extension-debugging --user-data-dir=<temp>`, speaks the debugging protocol
+  over file descriptors 3 and 4, and calls `Extensions.loadUnpacked`. `Target.setAutoAttach`
+  with `flatten` then gives a session inside the panel's out-of-process frame, where
+  `chrome.storage` works too. Unlike the proxy this proves real origins, the real isolated
+  world, the real CSP and real storage. Worked on Chrome 157. Branded Chrome is said to have
+  dropped `--load-extension` (from its release notes, not tried here). Found during T-017.
 - **Test with the reader's settings changed, not only the defaults.** T-058's creep did not
   exist on a default profile and appeared at once with Footnotes off.
 - **A hidden browser pane can refuse real input.** A key press timed out once with the

@@ -48,6 +48,16 @@
       "description": "Show or hide verse separators"
     }
   },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/ui/panel.html"
+      ],
+      "matches": [
+        "https://www.bible.com/*"
+      ]
+    }
+  ],
   "content_scripts": [
     {
       "matches": [
@@ -59,7 +69,8 @@
         "content.js",
         "src/content/capture.js",
         "src/content/save-popover.js",
-        "src/content/menu.js"
+        "src/content/menu.js",
+        "src/content/panel-host.js"
       ],
       "css": [
         "content.css"

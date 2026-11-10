@@ -7,7 +7,7 @@ Confidence: **design decision**, approved. Schema is normative.
 | Where | What | Why |
 |---|---|---|
 | IndexedDB `bibleboost` | notes, topics, tags, meta | indexed queries, partial reads, scales |
-| `chrome.storage.local` | panel open/pinned/width, last filter, `notesRev`, `lastExportAt`, `persistence` | per-device UI state and the change signal |
+| `chrome.storage.local` | panel open and pinned (`panelOpen`, `panelPinned`), panel width, last filter, `notesRev`, `lastExportAt`, `persistence` | per-device UI state and the change signal |
 | `chrome.storage.sync` | **existing settings only** | already working — do not migrate |
 
 One value sits outside those three: `bb-last-topic`, in the page's own
