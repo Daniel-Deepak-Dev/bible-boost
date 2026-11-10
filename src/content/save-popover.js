@@ -164,7 +164,8 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // ---------- The suggestion list ----------
   // Shared by the topic picker and the tag input, which differ only in what they list and what picking
   // does. A row is { label } plus whatever its owner wants back, or { label, hint: true } for one that
-  // can be seen and not chosen.
+  // can be seen and not chosen. An owner may also mark one row { current: true }, meaning it is the
+  // choice already made, and that is as much as this list ever knows about what it is listing.
   //
   // Focus stays in the input the whole time, with aria-activedescendant naming the row, so the two
   // keyboard models cannot disagree. The rows are redrawn inside our own subtree, which the T-004 guard
@@ -173,6 +174,15 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // autoActive puts the highlight on the first row as the list opens. The topic picker wants that:
   // typing "fai" and pressing Enter should take Faith. The tag input must not have it, because there
   // Enter means "this is the tag", and a highlight would turn the "fai" the user meant into "faith".
+  //
+  // startRow is which row that highlight starts on: rows in, an index out, or -1 for none.
+  function startRow(rows) {
+    // TODO(human): B-013. This is the old rule, the first row that is not a hint. For the topic list
+    // that is always Uncategorized, so Enter on a freshly focused field throws away the topic that was
+    // preselected. topicRows now marks the current choice's row { current: true } while unfiltered.
+    return rows.findIndex((r) => !r.hint);
+  }
+
   function suggestionList(input, list, getRows, pick, { autoActive = false } = {}) {
     let rows = [];
     let active = -1;
@@ -205,7 +215,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     function open() {
       rows = getRows(input.value);
       if (!rows.length) return close();
-      active = autoActive ? rows.findIndex((r) => !r.hint) : -1;
+      active = autoActive ? startRow(rows) : -1;
       draw();
     }
 
@@ -280,21 +290,32 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // While the input still reads as the current choice, nobody has filtered anything yet, so every topic
   // is listed. The last row is always there, so the way to make a topic can be seen before anyone
   // needs it, and it only does something once there is a name to use.
+  //
+  // current marks the row of the choice already made, for startRow, and only while nothing is being
+  // filtered: once somebody is typing, the row they want is the one they are typing towards. By id
+  // and not by object, because loadLists can swap in a fresh list after the choice was made.
   function topicRows(value) {
     const name = value.trim();
     const filter = name && name !== pop.topic.name ? fold(name) : '';
     const rows = [UNCATEGORIZED, ...pop.topics]
       .filter((t) => fold(t.name).includes(filter))
-      .map((topic) => ({ label: topic.name, topic }));
+      .map((topic) => ({ label: topic.name, topic, current: !filter && topic.id === pop.topic.id }));
     const canCreate = filter && !rows.some((r) => fold(r.label) === filter);
     rows.push(canCreate ? { label: `+ New topic "${name}"`, create: name } : { label: NEW_TOPIC_HINT, hint: true });
     return rows;
   }
 
   // On failure the name stays in the input and the error beside it (R5).
+  //
+  // topicPicked is for loadLists, which may answer after this. It is set here and not in chooseTopic
+  // because loadLists calls that too, for a choice nobody made. A failed create sets nothing, since
+  // the topic is then still whatever it was.
   async function pickTopic(row) {
     pop.topicList.close();
-    if (!row.create) return chooseTopic(row.topic);
+    if (!row.create) {
+      pop.topicPicked = true;
+      return chooseTopic(row.topic);
+    }
     if (pop.busy) return;
     clearError();
     setBusy(true);
@@ -302,6 +323,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     setBusy(false);
     if (!reply.ok) return showError(reply.error);
     pop.topics.push(reply.topic);
+    pop.topicPicked = true;
     chooseTopic(reply.topic);
   }
 
@@ -387,15 +409,25 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // the verse text is safe in the popover, and Save will report the same trouble if it is still there.
   //
   // The topic is not preselected over somebody who has already started typing in that field.
+  //
+  // Nor over somebody who has already picked one, and the list does not replace what the popover
+  // already holds (B-017). The answer is usually here before anyone can act, but a worker that has to
+  // be started first is slower than a person. A topic made inline in that gap was pushed onto
+  // here.topics by pickTopic, and a list the worker read before that topic existed does not have it,
+  // so assigning the list dropped it. Then the remembered topic went in over the new one, because
+  // focus had moved on to the note by then, and the note was saved to a topic nobody chose.
   async function loadLists(here) {
     const [topics, tags] = await Promise.all([ask({ type: 'topics/list' }), ask({ type: 'tags/list' })]);
     if (pop !== here) return;
-    if (topics.ok) here.topics = topics.topics;
+    if (topics.ok) {
+      const listed = new Set(topics.topics.map((t) => t.id));
+      here.topics = [...topics.topics, ...here.topics.filter((t) => !listed.has(t.id))];
+    }
     if (tags.ok) here.knownTags = tags.tags;
     const failed = [topics, tags].find((r) => !r.ok);
     if (failed) showError(failed.error);
     const last = here.topics.find((t) => t.id === recallTopic());
-    if (last && document.activeElement !== here.topicInput) chooseTopic(last);
+    if (last && !here.topicPicked && document.activeElement !== here.topicInput) chooseTopic(last);
   }
 
   // ---------- Saving ----------
@@ -632,7 +664,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
 
     const here = {
       dialog, trigger, verses, body, error, saveBtn, topicInput, tagInput, chips,
-      topic: UNCATEGORIZED, topics: [], knownTags: [], tags: [], busy: false, manyConfirmed: false,
+      topic: UNCATEGORIZED, topicPicked: false, topics: [], knownTags: [], tags: [], busy: false, manyConfirmed: false,
     };
     here.topicList = suggestionList(topicInput, topicRowsEl, topicRows, pickTopic, { autoActive: true });
     here.tagList = suggestionList(tagInput, tagRowsEl, tagRows, pickTag);
