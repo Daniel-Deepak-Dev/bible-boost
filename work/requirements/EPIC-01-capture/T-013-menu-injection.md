@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-01 Capture |
-| Status | In progress |
+| Status | Done |
 | Depends on | T-004, T-008 |
 | Blocks | T-014 |
 | Size | M |
@@ -92,7 +92,7 @@ lives on the row itself and no reference to the row is kept.
 
 - [x] Selecting a verse shows the row between Highlight and Copy
 - [x] It looks native in both bible.com themes
-- [ ] Highlight, Copy, Compare and Share all still work
+- [x] Highlight, Copy, Compare and Share all still work
 - [x] Selecting ten verses in a row inserts exactly one copy each time — never
       two, never zero
 - [x] Closing and reopening the menu re-inserts correctly
@@ -112,17 +112,19 @@ lives on the row itself and no reference to the row is kept.
 Expect this to need revisiting. Keep the selector knowledge in the understanding
 file, not scattered in comments, so the next repair is a one-file change.
 
-The ticked items were run on live bible.com on 2026-11-10, logged out, by pasting
-the code into the page (`conventions/03-task-workflow.md`): `bible-dom.js`, the
-selection parts of `capture.js`, `menu.js`, and the guard and observer from
-`content.js` with `schedule()` recording its calls. They have **not** been run as
-an installed extension, and the alignment code was not loaded. Five open-and-close
-cycles came to 20 `schedule()` calls and 875 records with `menu.js` and without it,
-in two runs of each. Also checked at 375px wide and under an `/ar/` interface.
+Measured on live bible.com on 2026-11-10, logged out, by pasting the code into the
+page (`conventions/03-task-workflow.md`): `bible-dom.js`, the selection parts of
+`capture.js`, `menu.js`, and the guard and observer from `content.js` with
+`schedule()` recording its calls. The alignment code was not loaded for that run.
+Five open-and-close cycles came to 20 `schedule()` calls and 875 records with
+`menu.js` and without it, in two runs of each. Also checked at 375px wide and under
+an `/ar/` interface.
 
-Still to check by hand in real Chrome before `Status` moves to `Done`:
+Checked by hand in real Chrome with the extension installed, and reported working
+on 2026-11-10: a real click on the row logging the selection, the `Aa` size change,
+separators, Highlight, Copy, Compare and Share, the row's place in a signed-in menu,
+and the row arriving about 80 ms after the first tap in a chapter. The signed-in
+menu's rows were reported, not measured.
 
-- A signed-in menu. Nobody has seen its rows, so index 1 is unconfirmed there.
-- The unticked item above. Applying a highlight was deliberately not tried.
-- The standing regression check on a parallel chapter.
-- Whether the row arriving about 80 ms after the first tap in a chapter is noticeable.
+`Alt+P/A/S` were left out of the regression check. They were already dead in real
+Chrome before this task and are tracked by B-006.

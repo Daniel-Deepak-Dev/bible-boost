@@ -4,9 +4,10 @@
 > selection behaviour and header were measured during T-008 on Exodus 13 (TAOVBSI
 > and NKJV, both orders) and Romans 1 (CEV), and the header link again under `/de/`
 > and `/ta/` interfaces during T-012. The action list was measured during T-013 on
-> Exodus 13 at 1024px and 375px wide, and under an `/ar/` interface. Not checked: a
-> signed-in session, whose rows may differ, and what applying a highlight does to
-> the verse's classes or to the list.
+> Exodus 13 at 1024px and 375px wide, and under an `/ar/` interface. Not measured: a
+> signed-in session's rows, although the save row was reported landing correctly
+> there by hand during T-013, and what applying a highlight does to the verse's
+> classes or to the list.
 
 ## What selecting a verse does
 
