@@ -22,6 +22,10 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
 
 (() => {
   // ---------- URL ----------
+  // /bible/<versionId>/<slug>. Not anchored, so whatever comes before /bible/ is no concern of ours,
+  // and shared by the code that reads this path and the code that rewrites it (T-056).
+  const PATH_RE = /\/bible\/(\d+)\/([^/?#]+)/;
+
   // /bible/339/EXO.13.TAOVBSI?parallel=114
   // Book codes are always 3 chars (JHN, 1CO, 3JN) and a chapter is always digits, so this also
   // rejects book-intro refs like "JHN.INTRO1", which bible.com renders with no parallel column.
@@ -47,7 +51,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
 
   function parseUrl(href = location.href) {
     const u = new URL(href);
-    const m = u.pathname.match(/\/bible\/(\d+)\/([^/?#]+)/);
+    const m = u.pathname.match(PATH_RE);
     if (!m) return null;
     const par = u.searchParams.get('parallel');
     const r = m[2].match(REF_RE); // "JHN.3.16.NIV" -> JHN.3, the chapter, which is what we want
@@ -57,6 +61,47 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
       parallel: par && /^\d+$/.test(par) ? par : null,
       abbr: abbrOfSlug(m[2]), // of the version at id, and null when the URL does not carry one
     };
+  }
+
+  // The slug the same page goes by under the other version (T-056 R4 to R7).
+  //
+  // The old abbreviation names the version that just left the path, so it can never stay: NKJV's
+  // page would be calling itself TAOVBSI. It comes off through ABBR_RE's raw capture and not through
+  // abbrOfSlug, which is decoded, so no longer the text in the slug, and which answers null for
+  // EXO.13.BAD%E7, where the abbreviation would then be left in place. The capture always runs to
+  // the end of the slug, so slicing its length off the end cannot touch anything else.
+  //
+  // With nothing usable to put back, the slug simply ends at the chapter or verse, which bible.com
+  // serves without a redirect (01-urls-and-routing.md, trap 4). A bare number is not usable:
+  // resolveVersion answers with the numeric id when it knows nothing better, and EXO.13.114 would
+  // read as a verse. The test is the character class from ABBR_RE's own lookahead, so writing a slug
+  // and reading one cannot disagree about what counts as verses, and NASB1995 still gets through.
+  function swappedSlug(slug, newPrimaryAbbr) {
+    const old = slug.match(ABBR_RE)?.[1];
+    const base = old ? slug.slice(0, -old.length - 1) : slug; // the 1 is the dot in front of it
+    const usable = newPrimaryAbbr && !/^[\d,-]+$/.test(newPrimaryAbbr);
+    return usable ? `${base}.${encodeURIComponent(newPrimaryAbbr)}` : base;
+  }
+
+  // The same page with the two versions trading sides, or null when there is nothing to trade.
+  //
+  // bible.com has no left-or-right setting. The version in the path goes on the left and the one in
+  // ?parallel= on the right, measured on 2026-11-10 with 114 then 339, 339 then 114, 114 then 392 and
+  // 114 then 111, so rewriting the URL is the whole of a swap.
+  //
+  // The dock decides whether its button exists from this answer (T-057), which is why every reason
+  // for there being nothing to swap is settled here and not restated there. A ?parallel= repeating
+  // the id renders one column, and a book intro, whose ref is null, renders no parallel column at all.
+  //
+  // The rewrite goes through a function and not a replacement string, because a $ in a slug would
+  // otherwise be read as a capture group.
+  function swappedUrl(href = location.href, newPrimaryAbbr = null) {
+    const loc = parseUrl(href);
+    if (!loc || !loc.ref || !loc.parallel || loc.parallel === loc.id) return null;
+    const u = new URL(href);
+    u.pathname = u.pathname.replace(PATH_RE, (_, __, slug) => `/bible/${loc.parallel}/${swappedSlug(slug, newPrimaryAbbr)}`);
+    u.searchParams.set('parallel', loc.id);
+    return u.toString();
   }
 
   // ---------- Columns ----------
@@ -131,5 +176,5 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     return el.querySelector(':scope > [class*="_label"]');
   }
 
-  BB.dom = { REF_RE, VID_RE, LANG_RE, VERSE_SEL, parseUrl, columnEls, columns, langOf, usfmOf, firstSpans, verseLabel };
+  BB.dom = { REF_RE, VID_RE, LANG_RE, VERSE_SEL, parseUrl, swappedUrl, columnEls, columns, langOf, usfmOf, firstSpans, verseLabel };
 })();

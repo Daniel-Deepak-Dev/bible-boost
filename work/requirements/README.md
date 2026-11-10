@@ -33,6 +33,7 @@ is an index, not a board.
 | [EPIC-06](EPIC-06-import-export/EPIC.md) | **Import / export** — JSON, CSV, Markdown, backup | T-042 … T-049 |
 | [EPIC-07](EPIC-07-release/EPIC.md) | **Polish and release** | T-050 … T-055 |
 | [EPIC-08](EPIC-08-maintenance/EPIC.md) | **Maintenance** — pre-existing debt | B-001 … B-011 |
+| [EPIC-09](EPIC-09-version-swap/EPIC.md) | **Swap sides** — trade the two parallel versions left and right | T-056 … T-058 |
 
 ## Suggested order
 
@@ -47,6 +48,8 @@ Exceptions worth knowing:
   time — doing it early de-risks EPIC-05.
 - **B-001** and **B-002** block a store submission and are independent of
   everything else. Resolve them deliberately rather than at submission time.
+- **EPIC-09** depends only on T-001 and T-004, both Done, so it can be picked up
+  at any time.
 
 ## Dependency spine
 
@@ -66,6 +69,9 @@ T-021 ──> T-022, T-023, T-025
 T-025 ──> T-026 … T-029
 T-005 ──> T-036 ──> T-038 … T-041
 T-048 ──> T-046, T-047
+
+T-001 ──> T-056 ──> T-057 ──> T-058
+T-004 ──> T-057
 ```
 
 ## Writing a new task

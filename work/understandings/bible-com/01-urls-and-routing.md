@@ -42,6 +42,25 @@ out of `content.js` in T-001). It returns
    builds. On a verse URL, `JHN.3.16.NIV`, it is the fourth dot-part, and a menu
    link can read `EXO.13.1-2,4.TAOVBSI`. `parseUrl` handles all of these.
 
+## Swapping the two versions
+
+bible.com has no left-or-right setting: the path's version goes on the left, so a swap
+is the two ids trading places. `BB.dom.swappedUrl(href, newPrimaryAbbr)` in
+`src/content/bible-dom.js` is the canonical rewrite (T-056), and it returns `null`
+when there is nothing to swap. Any other code that needs that answer should call it.
+
+- **The abbreviation has to change with the id.** It names the path's version, so
+  leaving it would call NKJV's page TAOVBSI. What bible.com does with such a mismatch
+  has not been tested.
+- **Strip it with `ABBR_RE`'s raw capture, not `parseUrl().abbr`.** That value is
+  decoded, and it is `null` when decoding fails, as on `EXO.13.BAD%E7`.
+- **Never write a bare number as the abbreviation.** `resolveVersion` answers with
+  the numeric id when it knows nothing better, and `EXO.13.114` reads as a verse.
+- **`URL.pathname` leaves existing percent-escapes alone when set**, so an
+  `encodeURIComponent` result is not encoded twice, and a stray `%` stays literal
+  instead of throwing. Confirmed by the tests on Node 26.13.0. Chrome follows the same
+  URL standard but was not run.
+
 ## SPA navigation
 
 bible.com is client-side routed. Changing chapter or version does **not** reload

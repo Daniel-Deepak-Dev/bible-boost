@@ -37,6 +37,7 @@ on-page side panel and a dedicated full-page app; search, import and export.
 | [EPIC-06](work/requirements/EPIC-06-import-export/EPIC.md) | Import and export — JSON, CSV, Markdown, backup |
 | [EPIC-07](work/requirements/EPIC-07-release/EPIC.md) | Polish and release |
 | [EPIC-08](work/requirements/EPIC-08-maintenance/EPIC.md) | Maintenance — pre-existing debt |
+| [EPIC-09](work/requirements/EPIC-09-version-swap/EPIC.md) | Swap sides — trade the two parallel versions left and right |
 
 ### Decisions
 
