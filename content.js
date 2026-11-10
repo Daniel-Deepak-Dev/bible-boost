@@ -238,10 +238,14 @@
   // A source of 'id' means resolveVersion found nothing and handed the number back as the
   // abbreviation, which is not one.
   function parallelAbbr() {
-    const vid = parseUrl()?.parallel;
-    const col = columnEls().find((c) => c.getAttribute('class').match(VID_RE)?.[1] === vid);
+    const col = columnOf(parseUrl()?.parallel);
     const version = col && BB.capture?.resolveVersion(col);
     return version && version.source !== 'id' ? version.abbr : null;
+  }
+
+  // The column showing this version, whichever side it is on, or undefined when there is none.
+  function columnOf(vid) {
+    return columnEls().find((c) => c.getAttribute('class').match(VID_RE)?.[1] === vid);
   }
 
   // bible.com puts the path's version on the left, so the whole of a swap is a new URL, and the
@@ -253,7 +257,130 @@
   // location.href does not change until the navigation commits and both clicks compute one target.
   function swapSides() {
     const target = swappedUrl(location.href, parallelAbbr());
-    if (target) location.assign(target);
+    if (!target) return;
+    stashSwapPosition();
+    location.assign(target);
+  }
+
+  // ---------- Reading position across a swap ----------
+  // A swap is a full page load, so the reader would otherwise land at the top of the chapter, which
+  // at verse 140 of Psalm 119 is a long way from where they were. So swapSides() notes the verse at
+  // the top of the screen and how far down the screen it sits, and the page that loads next puts it
+  // back. Keeping that distance, rather than aligning the verse to the top, is what lets bible.com's
+  // sticky chrome go unmeasured: whatever covers the top of the page covers it on both sides of the
+  // swap.
+  //
+  // sessionStorage and not chrome.storage.sync, because this belongs to one tab and one navigation
+  // and must not spend sync's write quota. Every access is in a try, because a page with storage
+  // blocked throws, and remembering a position must never get in the way of the swap itself.
+  const SWAP_POSITION_KEY = 'bb-swap-position';
+  // How long after a swap the position is held. It has to outlast a slow load and bible.com applying
+  // the reader's settings, and it is a judgement of those and not a measurement.
+  const SWAP_POSITION_MAX_AGE_MS = 15000;
+  let swapPosition = null;
+  let swapPositionLanded = false;
+
+  function clearStoredSwapPosition() {
+    try { sessionStorage.removeItem(SWAP_POSITION_KEY); } catch { /* blocked, so nothing was kept */ }
+  }
+
+  function forgetSwapPosition() {
+    swapPosition = null;
+    clearStoredSwapPosition();
+  }
+
+  // Read once, as this file loads, so that the many passes through refresh() in the life of a page
+  // cost one comparison and not a storage read each. JSON.parse(null) is null, which is the ordinary
+  // case of there being nothing to restore.
+  try {
+    swapPosition = JSON.parse(sessionStorage.getItem(SWAP_POSITION_KEY));
+  } catch {
+    forgetSwapPosition();
+  }
+
+  // The position is held for a while after the restore, so the moment the reader moves the page
+  // themselves it has to let go, or the next pass would drag them back. The dock is excepted, because
+  // pressing the swap button is not the reader moving the page, and letting go there would throw away
+  // the very position stashSwapPosition is about to reuse.
+  if (swapPosition) {
+    const letGo = (e) => { if (!e.target.closest?.('[data-bb-own]')) forgetSwapPosition(); };
+    for (const type of ['wheel', 'touchstart', 'keydown', 'mousedown']) {
+      window.addEventListener(type, letGo, { capture: true, passive: true });
+    }
+  }
+
+  // Walks firstSpans, which is in document order, and stops at the first verse whose top is on
+  // screen, so this reads one verse's layout per verse scrolled past and is not a measuring pass.
+  // At the very top of the page there is nothing to keep: the next page starts there anyway.
+  //
+  // A position still being held means the reader has not moved since the last swap, so this swap is
+  // asked to keep that same place and it is reused rather than measured again. That is what stops
+  // repeated swaps creeping: a measurement carries whatever error the page has at that moment into
+  // the next page, where the next one adds to it. Before this, with Footnotes off, verse 6 of Exodus
+  // 13 climbed 19px on every swap.
+  function stashSwapPosition() {
+    try {
+      const loc = parseUrl();
+      const write = (position) => sessionStorage.setItem(SWAP_POSITION_KEY, JSON.stringify({ ...position, at: Date.now() }));
+      if (swapPosition?.ref === loc.ref) return write(swapPosition);
+      if (!window.scrollY) return;
+      for (const [usfm, el] of firstSpans(columnOf(loc.id))) {
+        const offset = topOf(el);
+        if (offset < 0) continue;
+        return write({ ref: loc.ref, vid: loc.id, usfm, offset });
+      }
+    } catch (err) {
+      console.debug('[BibleBoost] could not note the reading position', err);
+    }
+  }
+
+  // Called at the end of every refresh(), after align() has set the gaps a verse's position depends
+  // on. Until there is something to scroll to it simply returns, and the next schedule() tries again,
+  // which is why this needs no timer of its own.
+  //
+  // It keeps correcting after the first time, because the first time is too early to be the last. The
+  // server's HTML knows nothing of the reader's settings, so bible.com applies them after hydration:
+  // measured 2026-11-10 with the footnotes=false cookie, the server sent every note as _note whatever
+  // the cookie said, the page changed them to _hide about 400 ms after the restore, and the text above
+  // verse 6 of Exodus 13 came out 19px shorter. Those changes reach here through the observer like any
+  // other.
+  //
+  // The stored copy goes on the first success, so a reload does not come back to this verse, and only
+  // then. A later pass that cleared it too could land between the click on the swap button and the
+  // page unloading, and delete the position that click has just written.
+  //
+  // Less than a pixel is left alone, because the browser snaps a scroll to whole pixels and would
+  // otherwise be asked for the same fraction on every pass.
+  //
+  // ready, because until the stored settings arrive align() is running on the defaults, and for a
+  // reader with alignment off those gaps are about to disappear. columns(), because alignment needs
+  // both columns and the second one arriving would move the verse.
+  //
+  // The verse is looked up in the column of the version it was read from, wherever that is now. A
+  // swap changes the sides and not the versions, so it is still there. Looking in the new left column
+  // would miss a verse that one version combines and the other does not, as CEV does with
+  // ROM.1.3+ROM.1.4.
+  //
+  // 'instant' and not the default, which would defer to any scroll-behavior the page sets, and the
+  // reader should not watch the chapter go past. The document is what scrolls (02-verse-dom.md).
+  function restoreSwapPosition() {
+    if (!swapPosition || !ready) return;
+    const { ref, vid, usfm, offset, at } = swapPosition;
+    // Written so that an entry with no usable time counts as expired: NaN < anything is false.
+    if (parseUrl()?.ref !== ref || !(Date.now() - at < SWAP_POSITION_MAX_AGE_MS)) {
+      forgetSwapPosition();
+      return;
+    }
+    if (!columns()) return;
+    const col = columnOf(vid);
+    const verse = col && firstSpans(col).get(usfm);
+    if (!verse) return;
+    if (!swapPositionLanded) {
+      swapPositionLanded = true;
+      clearStoredSwapPosition();
+    }
+    const drift = topOf(verse) - offset;
+    if (Math.abs(drift) >= 1) window.scrollBy({ top: drift, behavior: 'instant' });
   }
 
   // ---------- On-page switch ----------
@@ -372,6 +499,7 @@
   function refresh() {
     renderDock();
     align();
+    restoreSwapPosition();
   }
 
   // ---------- Keep in sync with navigation, re-renders, font/size changes ----------

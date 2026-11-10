@@ -86,6 +86,10 @@ height without any DOM change.
 **If you add a feature that must survive navigation, hook `schedule()` — do not
 add a fifth polling loop.**
 
+A full load is different: both columns are in the server's HTML, verse 140 of Psalm
+119 included (measured 2026-11-10), so they exist when a content script runs at
+`document_idle`.
+
 To drive the same client-side navigation by hand, from the page's own console
 context, use `window.next.router.push('/bible/339/EXO.13.TAOVBSI?parallel=1588')`.
 Code injected for a test survives it, where `location.href =` would wipe it. Seen

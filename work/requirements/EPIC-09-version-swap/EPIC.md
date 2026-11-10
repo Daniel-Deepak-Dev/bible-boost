@@ -49,11 +49,11 @@ around. Notes already saved are not touched.
 
 ## Definition of done
 
-- [ ] On a parallel chapter, the dock shows a ⇄ button after the A switch
-- [ ] One click puts each version on the other side
-- [ ] The swapped order survives chapter navigation, Parallel off and on, the popup's
+- [x] On a parallel chapter, the dock shows a ⇄ button after the A switch
+- [x] One click puts each version on the other side
+- [x] The swapped order survives chapter navigation, Parallel off and on, the popup's
       Open button and a browser restart
-- [ ] A link naming the other order opens as written
-- [ ] After a swap the reader is at the same verse, not the top of the chapter
-- [ ] Alignment, separators and `Alt+P/A/S` are unaffected on the swapped page
-- [ ] With `DEBUG_SCHEDULE = true`, using the button does not spam `align()`
+- [x] A link naming the other order opens as written
+- [x] After a swap the reader is at the same verse, not the top of the chapter
+- [x] Alignment, separators and `Alt+P/A/S` are unaffected on the swapped page
+- [x] With `DEBUG_SCHEDULE = true`, using the button does not spam `align()`

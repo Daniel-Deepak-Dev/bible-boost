@@ -115,6 +115,12 @@ Romans 1 (CEV and NIV):
   verse. Tell them apart by whether it holds a `_body`.
 - **`verseLabel` finds nothing with Numbers and Titles off**, which is B-011.
 - T-009's checks all ran with both switches on, which is the default.
+- **The server does not apply these.** Footnotes off is a `footnotes=false` cookie, and
+  the HTML for NKJV Exodus 13 had 32 `_note _x` with or without it (2026-11-10). The
+  page rewrites them to `_hide` during hydration, about 400 ms after `document_idle`,
+  and **the layout shrinks then**: the text above verse 6 came out 19px shorter. Anything
+  measured at load is stale once that happens, and scrollY did not compensate. T-058
+  has to keep correcting because of it.
 
 ## Poetry and what else is inside a verse
 
@@ -136,6 +142,22 @@ rect; without one it uses the verse's **first** line box, not its last:
 ```js
 return (label ? rects[rects.length - 1] : rects[0]).top;
 ```
+
+## What scrolls
+
+The **document**. Measured 2026-11-10 on `/bible/339/PSA.119.TAOVBSI?parallel=114` at
+1600 x 1000: `document.scrollingElement` is `<html>`, and `window.scrollTo(0, 3000)`
+moved verse 140's top by exactly 3000px.
+
+- **An ancestor of the column has `overflow-y: auto` and never scrolls.**
+  `_yv-bible-text` measured 19018 for both `clientHeight` and `scrollHeight`. It is
+  easy to mistake for the scroller.
+- `scroll-behavior` is `auto` on `html` and `body`, and `overflow-anchor` and
+  `history.scrollRestoration` are both `auto`.
+- **Sticky chrome covers the top 129px** at that size: the 72px `header`, then the 57px
+  row of version chips. A verse can have a top on screen and still be behind it.
+- **A click on the page's own scrollbar reaches a `window` `mousedown` listener**, with
+  `html` as the target and `clientX` inside the scrollbar (seen 2026-11-10).
 
 ## Selection state
 

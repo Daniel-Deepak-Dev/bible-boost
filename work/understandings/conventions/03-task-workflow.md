@@ -65,8 +65,21 @@ Each of these cost a round of confusion during T-012.
   does not look at the host, and `DEBUG_SCHEDULE` can be switched on as the file is
   served. It proves the extension's own logic and nothing about bible.com, so it ticks
   no box that names a live page. Found during T-057.
+- **A local proxy runs the real files on the real page.** A throwaway Node server in the
+  scratchpad can fetch bible.com's pages, drop the CSP header, turn absolute `/_next` URLs
+  relative, and add the content scripts at `DOMContentLoaded`. The real page hydrates, and
+  bugs a stand-in cannot show appear, as T-058's creep did. Cache every response. Reader
+  settings are cookies on localhost, so set them through the page's own Settings panel. A
+  timeline of the verse's top sampled every 25 ms from the page's start is what found the
+  cause. Found during T-058.
+- **Test with the reader's settings changed, not only the defaults.** T-058's creep did not
+  exist on a default profile and appeared at once with Footnotes off.
 - **A hidden browser pane can refuse real input.** A key press timed out once with the
   pane hidden and worked when retried. Found during T-057.
+- **A hidden browser pane never fires `requestAnimationFrame`**, even with
+  `document.visibilityState` reading `visible`. `schedule()` ends in one, so a pass that
+  depends on it silently never happens, and that looks like a bug in the code under
+  test. Replace it with a `setTimeout` on the test page. Found during T-058.
 - **The built-in browser's `javascript_tool` is not held to the CSP.** T-014 set
   `window.BB = {}` and pasted each file's IIFE straight in, without its `var BB` line
   and with no `<script>` element.
