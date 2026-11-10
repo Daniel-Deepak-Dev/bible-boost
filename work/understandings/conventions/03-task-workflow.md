@@ -33,6 +33,63 @@ How to pick up and finish a task in `work/requirements/`.
    Chrome, or about a trap a future session would fall into, add it to the right
    file under `work/understandings/` — or create a new one. This is not optional
    bookkeeping; it is the main defence against repeated bugs.
+5. **Write the hand-test guide** if anything changed that the user can see or
+   click. See below.
+
+## The hand-test guide
+
+Most Acceptance boxes here need a person, the unpacked extension and a live page.
+A checklist says *what* must be true, and leaves the user to work out how to get
+there. The guide closes that gap. The user asked for it on 2026-11-10, for every
+task with something to test in the UI.
+
+**When.** Whenever a session's work changes something visible or clickable, whether
+or not the task is Done. Pure logic that `node --test` covers, and docs-only work,
+get no guide; say so in one line instead.
+
+**Where.** In the task file, as `## Test it by hand` after **Acceptance**, and in
+full in the closing message so the user need not open the file. A later session
+that changes the work **rewrites** the section rather than appending to it.
+
+**Shape.** Numbered steps, in this order:
+
+1. **Load the change.** Always first: `chrome://extensions` → BibleBoost → the
+   reload arrow, then reload every bible.com tab that was open. A content script
+   does not update in a tab that was already open. For the popup, close it and
+   open it again.
+2. **Reach the starting state.** The exact URL, the window width, the theme, and
+   signed in or out. Say how to get each one:
+   - Theme: bible.com's account menu, the round button at the top right, then
+     **Appearance → Light** or **Dark** (verified 2026-11-10).
+   - A tablet width: DevTools' device toolbar, `Ctrl+Shift+M`, **Responsive** at
+     820 × 1180, an iPad Air held upright.
+   - A large screen: a maximised window on the biggest monitor at hand, or
+     **Responsive** at 1920 × 1080.
+   - Never a phone width. See AGENTS.md, Target screens.
+   - The standing page is `/bible/339/EXO.13.TAOVBSI?parallel=114`.
+3. **One action per step, then what to expect.** Name a control by what is on the
+   screen: its visible label, its icon or its place ("the slim **B** tab on the
+   right edge"). Name keys exactly. Describe the result as something seen ("the
+   bottom-left corner is rounded and the right side is square"), never as a
+   property value.
+4. **Tie each step to an Acceptance box**, ending it with
+   `→ Acceptance: <the box's words>`. The user can then answer "step 6 failed",
+   and the next session knows which box stays empty.
+5. **Finish with the standing regression** if page DOM was touched.
+6. **Say what to send back on a failure**: a screenshot, the Console output from
+   the **BibleBoost** context, or the step number and what was seen instead.
+
+**Rules.**
+
+- **Check every step against the code or a live page before writing it.** A
+  button's label, a key, a URL. A guide with one wrong name costs the user more
+  than no guide, because they stop trusting the rest.
+- **Cover every unticked box that a person can see.** A box the session already
+  verified some other way can be left out of the guide, as long as the task's
+  Notes say how it was checked.
+- **When the user reports back, tick exactly the boxes their steps cover**, and
+  write "Checked by hand by the user, <date>" in Notes. A step they skipped
+  ticks nothing.
 
 ## Checking page code from a console
 
@@ -141,6 +198,17 @@ Each of these cost a round of confusion during T-012.
   to look at it.
 - **The save toast is gone in five seconds**, which is less than one round trip of
   separate tool calls. Press Undo in the same call as the save.
+- **A hidden browser pane can return the same screenshot twice.** During B-019, moving every
+  stand-in by tens of pixels left the next screenshot unchanged. `tabs_context` said the pane
+  was hidden. Do not trust a picture taken while it is.
+- **Hit-testing proves a rounded clip without a picture.** `document.elementFromPoint` respects
+  `border-radius` with `overflow: hidden`, so a point 2px inside a rounded corner returns
+  whatever is behind the box, and the same point with `overflow: visible` returns the child.
+  B-019 used this to show `#bb-panel` clips its frame. A modal `<dialog>` makes the rest of the
+  page inert, and every point then returns the dialog, so close it first.
+- **`fetch` from bible.com to localhost fails**, as `connect-src` says it will. To run the
+  real `content.css` on the live page, minify it and paste it into a `CSSStyleSheet` with
+  `replaceSync`. Found during B-019.
 
 ## Status values
 

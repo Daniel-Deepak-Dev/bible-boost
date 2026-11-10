@@ -79,6 +79,36 @@ no `chrome-extension:`. `style-src` is hashes with no `'unsafe-inline'`, while
 `style-src-attr` allows inline style attributes. For what `frame-src` means for the
 panel's iframe, see `../extension/05-mv3-constraints.md`.
 
+## Corner radii
+
+Measured 2026-11-10 with `getComputedStyle` on `/bible/339/EXO.13.TAOVBSI?parallel=114`,
+1280x900, dark, logged out, each surface opened by hand (B-019). Radius does not change
+with the theme.
+
+| Surface | Radius | Class |
+|---|---|---|
+| Reader settings popover ("Aa"), 360px wide | 24px | `rounded-24` |
+| Account menu popover, 300px wide | 16px | `rounded-16` |
+| Version picker popover | 8px | `rounded-8` |
+| Verse action menu card | 16px top corners, 24px from 640px, bottom corners square | `rounded-t-16 md:rounded-t-24` |
+| The sign-up card inside that menu | 16px | `rounded-16` |
+| Sidebar nav items | 12px | `rounded-12` |
+| Size and font options in reader settings | 4px | `rounded-4` |
+| Buttons, the search field, colour swatches, close buttons | a pill or a circle | `rounded-[9999px]`, `rounded-full` |
+
+So bible.com has a scale, not one radius: 4px for a control, 16px or 24px for anything that
+floats, and a pill for buttons. The version picker's 8px is the odd one out.
+
+**An edge-fixed surface rounds only its open side.** The verse menu is fixed to the bottom of
+the window, and only its top corners are rounded. At phone width it is as wide as the window,
+and its top corners are still rounded where they meet the window's sides.
+
+The popovers' shadow is `0 4px 12px rgba(0, 0, 0, 0.5)` on dark, and the menu card's
+`0 2px 6px rgba(0, 0, 0, 0.45)`.
+
+These are Tailwind utility classes. They describe what bible.com does; never select on them.
+How the extension uses this is in `../conventions/02-css-and-theming.md`.
+
 ## Fonts
 
 The page font stack is `aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif`,

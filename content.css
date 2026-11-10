@@ -28,7 +28,8 @@ html[data-bb-align] [data-bb-col] [data-bb-v]::before {
 /* ---------- Theme tokens ----------
    Keep in sync with src/shared/theme.css. A content script's stylesheet cannot @import a
    chrome-extension:// URL reliably, so on-page UI needs its own copy of every token it draws with:
-   the dock's ten, then, after the blank line in each block, the nine the save popover draws with.
+   the dock's ten, then, after the blank line in each block, the eleven the save popover and every
+   radius draw with. theme.css says where each radius was measured.
 
    Values measured off bible.com's own UI. The page picks its theme with html.light / html.dark
    independently of the OS, so that class has to win: it scores (0,1,1) against :root at (0,1,0),
@@ -64,6 +65,8 @@ html[data-bb-align] [data-bb-col] [data-bb-v]::before {
   --bb-accent:     #3D79C2;
   --bb-danger:     #DE2E3C;
   --bb-radius:     4px;
+  --bb-radius-lg:  16px;
+  --bb-radius-pill: 999px;
   --bb-gap-sm:     4px;
   --bb-gap-md:     8px;
 }
@@ -148,7 +151,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   display: flex;
   gap: 4px;
   padding: 5px;
-  border-radius: 999px;
+  border-radius: var(--bb-radius-pill, 999px);
   background: var(--bb-surface);
   border: 1px solid var(--bb-border);
   box-shadow: var(--bb-shadow);
@@ -172,7 +175,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   gap: 7px;
   padding: 6px 10px 6px 7px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--bb-radius-pill, 999px);
   background: transparent;
   color: var(--bb-text);
   font: inherit;
@@ -221,7 +224,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   align-items: center;
   padding: 5px 7px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--bb-radius-pill, 999px);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -246,7 +249,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   position: relative;
   width: 32px;
   height: 16px;
-  border-radius: 999px;
+  border-radius: var(--bb-radius-pill, 999px);
   background: var(--bb-track-off);
   transition: background 0.15s;
   flex-shrink: 0;
@@ -257,7 +260,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   left: 2px;
   width: 16px;
   height: 12px;
-  border-radius: 999px;
+  border-radius: var(--bb-radius-pill, 999px);
   background: var(--bb-thumb);
   transition: transform 0.15s;
 }
@@ -349,7 +352,11 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
    the selected verse is what this is about and it should stay in sight.
 
    line-height is normal throughout. A Tamil line box is taller than a Latin one at the same size, so
-   a fixed height or a line-height of 1 would clip the vowel signs in a Tamil tag or topic. */
+   a fixed height or a line-height of 1 would clip the vowel signs in a Tamil tag or topic.
+
+   The corners are the floating-surface radius, 16px, which is bible.com's account menu and the card
+   inside its verse menu. It was 8px, and beside that menu it read as a square box (B-019). 16px is
+   also the 12px of padding plus the fields' 4px, so the field corners sit on the same centre. */
 #bb-save-pop {
   box-sizing: border-box;
   width: min(340px, calc(100vw - 32px));
@@ -359,7 +366,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   inset: auto;
   padding: 12px;
   border: 1px solid var(--bb-border, #DDDBDB);
-  border-radius: 8px;
+  border-radius: var(--bb-radius-lg, 16px);
   background: var(--bb-surface, #FFFFFF);
   color: var(--bb-text, #121212);
   box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
@@ -452,7 +459,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   gap: 2px;
   max-width: 100%;
   padding: 1px 2px 1px 8px;
-  border-radius: 999px;
+  border-radius: var(--bb-radius-pill, 999px);
   background: var(--bb-surface-3, #EDEBEB);
   font-size: 13px;
   overflow-wrap: anywhere;
@@ -462,7 +469,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   flex: none;
   padding: 0 5px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--bb-radius-pill, 999px);
   background: transparent;
   color: var(--bb-text-2, #636161);
   font: inherit;
@@ -473,7 +480,11 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 #bb-save-pop .bb-chip button:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); }
 
 /* A solid fill rather than the translucent surface, because this opens on top of the fields below
-   it and their text would show through. */
+   it and their text would show through.
+
+   The list's radius is its options' 4px plus its own 4px of padding, 8px, so each option's corner
+   follows the list's. A surface inside a surface takes the radius of what it holds plus its padding,
+   not --bb-radius-lg: at 16px a list this short would look like a second popover. */
 #bb-save-pop .bb-combo { position: relative; }
 
 #bb-save-pop .bb-list {
@@ -487,7 +498,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   padding: var(--bb-gap-sm, 4px);
   overflow-y: auto;
   border: 1px solid var(--bb-border, #DDDBDB);
-  border-radius: var(--bb-radius, 4px);
+  border-radius: calc(var(--bb-radius, 4px) + var(--bb-gap-sm, 4px));
   background: var(--bb-surface-2, #F6F4F4);
   box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
   list-style: none;
@@ -565,7 +576,9 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
    --bb-text, because --bb-accent falls under the contrast small text needs on a dark surface.
 
    340px is the popover's own width, and the popover is clamped so that much fits to the right of
-   where it was. */
+   where it was. Its corners are the popover's too, so the one seems to turn into the other. On a box
+   this short 16px leaves little straight edge at either end, and that is intended: it is a floating
+   surface like the popover, not a pill like the dock. */
 #bb-toast {
   position: fixed;
   z-index: 2147483001;
@@ -576,7 +589,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   max-width: min(340px, calc(100vw - 32px));
   padding: 8px 8px 8px 14px;
   border: 1px solid var(--bb-border, #DDDBDB);
-  border-radius: 8px;
+  border-radius: var(--bb-radius-lg, 16px);
   background: var(--bb-surface-2, #F6F4F4);
   color: var(--bb-text, #121212);
   box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
@@ -638,7 +651,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   padding: 0;
   border: 1px solid var(--bb-border, #DDDBDB);
   border-right: 0;
-  border-radius: 999px 0 0 999px;
+  border-radius: var(--bb-radius-pill, 999px) 0 0 var(--bb-radius-pill, 999px);
   background: var(--bb-surface, rgba(255, 255, 255, 0.92));
   color: var(--bb-text, #121212);
   box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
@@ -665,6 +678,14 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   opacity: 1;
 }
 
+/* Rounded on the side that faces the page and square against the window, which is how bible.com's own
+   verse menu sits on the bottom edge: rounded-t-16, md:rounded-t-24, and nothing on the corners that
+   touch the window (measured 2026-11-10, B-019). The border follows the curve on three sides, as the
+   tab's does, because a border-left alone tapers to nothing round a rounded corner.
+
+   overflow: hidden is what rounds the frame. A radius rounds only this box's own border and
+   background, and a child is clipped to the curve only when overflow is not visible, so without it the
+   frame's square corners would stand out past the border. */
 #bb-panel {
   position: fixed;
   top: 0;
@@ -673,7 +694,10 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   z-index: 2147482000;
   box-sizing: border-box;
   width: var(--bb-panel-width, 30%);
-  border-left: 1px solid var(--bb-border, #DDDBDB);
+  overflow: hidden;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-right: 0;
+  border-radius: var(--bb-radius-lg, 16px) 0 0 var(--bb-radius-lg, 16px);
 }
 
 #bb-panel-frame {
@@ -689,6 +713,9 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   #bb-panel {
     width: 100%;
     border-left: 0;
+    /* No corner rule of its own. Phones are not a target (decided 2026-11-10, see AGENTS.md), so the
+       panel keeps the base rule's rounded left corners here even though they now sit on the window's
+       edge. That is a known loose end, not a choice to copy. */
   }
 
   #bb-panel-tab[aria-expanded="true"] { right: 0; }
@@ -715,7 +742,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   align-items: center;
   padding: 5px 7px;
   border: 1px solid var(--bb-border, #DDDBDB);
-  border-radius: 999px;
+  border-radius: var(--bb-radius-pill, 999px);
   background: var(--bb-surface, rgba(255, 255, 255, 0.92));
   box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
   backdrop-filter: blur(8px);
@@ -776,7 +803,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   max-width: min(280px, calc(100vw - 40px));
   padding: 8px 14px;
   border: 1px solid var(--bb-border, #DDDBDB);
-  border-radius: 8px;
+  border-radius: var(--bb-radius-lg, 16px);
   background: var(--bb-surface-2, #F6F4F4);
   color: var(--bb-text, #121212);
   box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));

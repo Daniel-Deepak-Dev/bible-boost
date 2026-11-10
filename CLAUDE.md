@@ -51,6 +51,15 @@ The standing regression check after any change to page-side code:
 > Open `/bible/339/EXO.13.TAOVBSI?parallel=114` — verses align, separators draw,
 > `Alt+P` / `Alt+A` / `Alt+S` work, and changing the reader's "Aa" size re-aligns.
 
+**Hand the user the steps, not just the checklist.** Whenever your work changed
+something they can see or click, end with a numbered guide to test it by hand:
+how to load the change, where to go, what to do and what each step should show,
+each step tied to an Acceptance box. Write it in the task file under
+`## Test it by hand` and in your closing message. This is step 5 of AGENTS.md's
+*When you finish a task*, and the shape is in
+[`03-task-workflow.md`](work/understandings/conventions/03-task-workflow.md).
+It applies to a task left In progress too.
+
 ## Leave the knowledge behind
 
 Finishing a task includes updating `work/understandings/` with anything learned

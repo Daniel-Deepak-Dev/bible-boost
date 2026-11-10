@@ -2,7 +2,8 @@
    Keep in sync with content.css. A content script's stylesheet cannot @import a
    chrome-extension:// URL reliably, so on-page UI carries its own copy of every token it draws
    with, and a value changed here has to be changed there too. That is the dock's ten, and since
-   T-014 the nine after the blank line in each block as well, for the save popover.
+   T-014 the eleven after the blank line in each block as well, for the save popover and, since
+   B-019, the radius of everything else.
 
    The panel and the notes page <link> this file. The popup does not: it keeps its own unprefixed
    set, because its switch is deliberately not the dock's red (--switch-on is #121212 / #636161),
@@ -53,11 +54,21 @@
    #353333, but a white label on it is only 3.48:1, so a filled danger button on dark takes
    #121212 text (5.38:1).
 
-   --bb-radius and --bb-gap-sm/md do not vary by theme, so they live only in :root and the other
-   three layers inherit them. 4px is the radius of the popup's rows and fields, which is
-   bible.com's own card pattern; 4px and 8px are the popup's tightest and next spacings.
+   The three radii and --bb-gap-sm/md do not vary by theme, so they live only in :root and the
+   other three layers inherit them. 4px and 8px are the popup's tightest and next spacings.
    --bb-gap-sm/md have nothing to do with --bb-gap, the per-verse alignment spacer content.js
-   writes inline. */
+   writes inline.
+
+   The radii are bible.com's own scale, measured with getComputedStyle on 2026-11-10 (B-019).
+   --bb-radius is a control: a field, a button, a list option. bible.com's size and font options
+   in its reader settings are 4px, and so are the popup's rows. It is not their card radius, as
+   this comment used to say. Their cards are 16px. --bb-radius-lg is any surface that floats: the
+   save popover, the toast, the hint, the side panel. bible.com's account menu and the card inside
+   its verse menu are 16px, and its settings popover and its verse menu on a wide window are 24px.
+   16px everywhere was the user's choice, and it is also the popover's 12px of padding plus the
+   4px of the fields inside, so the two curves share a centre. --bb-radius-pill is a pill: the
+   dock, its switches, the chip, the panel tab. bible.com writes 9999px; anything past half the
+   height draws the same shape. */
 :root {
   --bb-sep-color:  rgba(128, 128, 128, 0.14);
   --bb-surface:    rgba(255, 255, 255, 0.92);
@@ -77,6 +88,8 @@
   --bb-accent:     #3D79C2;
   --bb-danger:     #DE2E3C;
   --bb-radius:     4px;
+  --bb-radius-lg:  16px;
+  --bb-radius-pill: 999px;
   --bb-gap-sm:     4px;
   --bb-gap-md:     8px;
 }

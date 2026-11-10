@@ -25,6 +25,12 @@
     --brand:       #DE2E3C;
     --brand-hover: #C72736;
     --chevron:     #636161;
+    /* The extension's radius scale, under this file's unprefixed names (B-019). 4px is a control,
+       bible.com's own for the size and font options in its reader settings. A pill is a pill. The
+       popup draws no floating surface of its own, since Chrome draws the window, so it has no
+       --bb-radius-lg counterpart. */
+    --radius:      4px;
+    --radius-pill: 999px;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -60,6 +66,8 @@
 
   /* ---- header --------------------------------------------------------- */
   .brand { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+  /* The one literal radius allowed: it softens the app icon's own square artwork and is not a
+     surface or a control, so the scale does not apply (B-019). */
   .brand img { width: 20px; height: 20px; border-radius: 5px; }
   h1 {
     margin: 0;
@@ -72,7 +80,7 @@
   /* ---- primary action -------------------------------------------------- */
   #open {
     display: block; width: 100%; height: 34px;
-    border: 0; border-radius: 999px;
+    border: 0; border-radius: var(--radius-pill, 999px);
     background: var(--brand); color: #fff;
     font-size: 13px; font-weight: 700; line-height: 1;
     cursor: pointer;
@@ -96,12 +104,12 @@
     color: var(--text-2);
   }
 
-  /* ---- settings rows (filled cards, 4px radius - their pattern) --------- */
+  /* ---- settings rows (filled, --radius - their control pattern) -------- */
   .rows { display: flex; flex-direction: column; gap: 4px; }
   .row {
     display: flex; align-items: center; gap: 10px;
     min-height: 32px; padding: 6px 10px;
-    border-radius: 4px;
+    border-radius: var(--radius, 4px);
     background: var(--surface-2);
     cursor: pointer; user-select: none;
   }
@@ -124,14 +132,14 @@
   }
   .switch .track {
     position: absolute; inset: 0;
-    border-radius: 999px;
+    border-radius: var(--radius-pill, 999px);
     background: var(--switch-off);
     transition: background-color 150ms ease;
   }
   .switch .knob {
     position: absolute; top: 2px; left: 2px;
     width: 16px; height: 12px;   /* a stadium, not a circle - as on bible.com */
-    border-radius: 999px;
+    border-radius: var(--radius-pill, 999px);
     background: var(--knob);
     transition: transform 150ms ease;
   }
@@ -163,7 +171,7 @@
     color: var(--text-1);
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: 4px;
+    border-radius: var(--radius, 4px);
     appearance: none; -webkit-appearance: none;
     cursor: pointer;
   }
@@ -179,7 +187,7 @@
     color: var(--text-1);
     background: var(--surface-2);
     border: 1.5px solid transparent;
-    border-radius: 4px;
+    border-radius: var(--radius, 4px);
   }
   .custom::placeholder { color: var(--text-3); }
   .custom:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
@@ -191,7 +199,7 @@
     font-size: 10px; font-weight: 600; line-height: 1.5;
     color: var(--text-2);
     background: var(--surface-3);
-    border-radius: 3px;
+    border-radius: var(--radius, 4px);
   }
 
   @media (prefers-reduced-motion: reduce) {

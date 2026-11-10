@@ -32,7 +32,7 @@ is an index, not a board.
 | [EPIC-05](EPIC-05-search/EPIC.md) | **Search** — bilingual, across every field | T-036 … T-041 |
 | [EPIC-06](EPIC-06-import-export/EPIC.md) | **Import / export** — JSON, CSV, Markdown, backup | T-042 … T-049 |
 | [EPIC-07](EPIC-07-release/EPIC.md) | **Polish and release** | T-050 … T-055 |
-| [EPIC-08](EPIC-08-maintenance/EPIC.md) | **Maintenance** — pre-existing debt | B-001 … B-018 |
+| [EPIC-08](EPIC-08-maintenance/EPIC.md) | **Maintenance** — pre-existing debt | B-001 … B-019 |
 | [EPIC-09](EPIC-09-version-swap/EPIC.md) | **Swap sides** — trade the two parallel versions left and right | T-056 … T-058 |
 
 ## Suggested order

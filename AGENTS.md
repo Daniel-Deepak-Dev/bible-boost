@@ -13,6 +13,7 @@ A Chrome MV3 extension that enhances reading on bible.com. Vanilla JavaScript,
 | Reading or writing notes data | [`extension/02-storage-model.md`](work/understandings/extension/02-storage-model.md) |
 | Adding a module | [`extension/01-architecture.md`](work/understandings/extension/01-architecture.md) |
 | Writing any code | [`conventions/01-code-style.md`](work/understandings/conventions/01-code-style.md) |
+| Styling any surface, in any of the UIs | [`conventions/02-css-and-theming.md`](work/understandings/conventions/02-css-and-theming.md) |
 
 **Do not guess about bible.com's DOM.** It has been studied in detail, and
 several obvious assumptions are documented as wrong. Guessing is how this project
@@ -49,6 +50,29 @@ gets bugs.
 8. **Compare before writing to storage.** `storage.sync` fails silently past
    ~120 writes/minute. Follow the `remember()` pattern in `content.js`.
 
+9. **Nothing BibleBoost draws is a square box.** bible.com rounds its surfaces,
+   and ours sit beside them. Every corner comes from a token, never a literal:
+   `--bb-radius` (4px) for a control, `--bb-radius-lg` (16px) for anything that
+   floats, `--bb-radius-pill` for a pill. A surface fixed to the window's edge
+   rounds only the side facing the page. The popup uses `--radius` and
+   `--radius-pill`. See the Corner radius section of
+   [`conventions/02-css-and-theming.md`](work/understandings/conventions/02-css-and-theming.md).
+
+## Target screens
+
+Tablets, PCs and large monitors: **768px wide and up**, which is where the
+`@media (max-width: 767px)` rules in `content.css` stop applying. **Phones are
+not a target.** This was the user's decision, on 2026-11-10.
+
+- Do not design for, test at, or write Acceptance for a width under 768px. A
+  task that asks for phone-width work predates this decision: strike that part
+  when you pick it up, and say so in its Notes.
+- Leave the phone-width rules already in `content.css` as they are, unless a
+  task is about removing them. They are untested from here on, not deleted.
+- Chrome on an iPad does not run extensions. "Tablet" therefore means a Windows
+  or ChromeOS tablet, or a desktop window at tablet size, and that is what a
+  test at 820px stands in for.
+
 ## Code style
 
 Match the existing source — a reviewer should not be able to tell which files are
@@ -75,9 +99,19 @@ Write comments like that. Terse "what" comments are a downgrade here.
 4. **Record what you learned** in `work/understandings/` — anything a future
    session would otherwise have to rediscover. If a file there is wrong, fix it
    in the same change.
+5. **Give the user a step-by-step guide to test it by hand** whenever your work
+   changed anything they can see or click: a page surface, the popup, the
+   panel, a shortcut. This applies even when the task is not Done, because the
+   boxes only the user can tick are usually why it is not. Number the steps from
+   reloading the extension to the result each action should show, and tie each
+   step to the Acceptance box it ticks. Put the guide in the task file under
+   `## Test it by hand` **and** in your closing message. The shape is in
+   [`conventions/03-task-workflow.md`](work/understandings/conventions/03-task-workflow.md).
+   Work with nothing visible to test gets no guide, and you say so in one line.
 
 Step 4 is not bookkeeping. It is the main defence against the same bug being
-found twice.
+found twice. Step 5 is what turns "verify by hand" into something the user can
+actually do in five minutes.
 
 ## Tests
 

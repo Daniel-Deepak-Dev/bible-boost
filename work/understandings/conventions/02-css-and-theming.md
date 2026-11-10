@@ -54,18 +54,20 @@ changed in the other. Those are the dock's ten:
 --bb-track-off  --bb-track-on --bb-thumb   --bb-shadow --bb-focus
 ```
 
-and, since the save popover (T-014), after the blank line in each block:
+and, since the save popover (T-014) and the radius scale (B-019), after the blank line in
+each block:
 
 ```css
 --bb-surface-2  --bb-surface-3  --bb-text-2  --bb-text-3
---bb-accent     --bb-danger     --bb-radius  --bb-gap-sm  --bb-gap-md
+--bb-accent     --bb-danger     --bb-radius  --bb-radius-lg  --bb-radius-pill
+--bb-gap-sm     --bb-gap-md
 ```
 
 Centre a fixed element with `left: 0; right: 0; width: fit-content; margin: 0 auto`,
 not `left: 50%` and a transform. A box at `left: 50%` can only be as wide as the half
 of the viewport to its right: the save toast wrapped at 375px, at 188px wide.
 
-`--bb-thumb`, `--bb-focus`, `--bb-radius` and `--bb-gap-sm/md` are declared only
+`--bb-thumb`, `--bb-focus`, the three radii and `--bb-gap-sm/md` are declared only
 in `:root` and deliberately inherited, since they do not vary by theme.
 `--bb-gap-sm/md` are unrelated to `--bb-gap`, the alignment spacer `content.js`
 writes inline on verses.
@@ -98,6 +100,46 @@ The built-in browser's `prefers-color-scheme` emulation works on a page served
 from localhost, so `getComputedStyle` can read every OS and page-class combination
 of a page linking `theme.css`. It cannot load the unpacked extension, so anything
 about the dock on live bible.com is still a manual check.
+
+## Corner radius
+
+**Nothing BibleBoost draws is a square box.** bible.com rounds everything it floats, so a
+square card beside its menu looks bolted on. That was B-019, reported by the user. Every
+corner comes from one of three tokens:
+
+| Token | Value | For | bible.com's own |
+|---|---|---|---|
+| `--bb-radius` | 4px | A control: field, button, list option, close button | Reader settings' size and font options, 4px |
+| `--bb-radius-lg` | 16px | A floating surface: popover, toast, hint, side panel | Account menu and the menu's inset card, 16px |
+| `--bb-radius-pill` | 999px | A pill: dock, switch track and knob, chip, panel tab, tag chip | Buttons and the search field, 9999px |
+
+bible.com's settings popover and its verse menu on a wide window are 24px. 16px everywhere
+was the user's choice, with no breakpoint. The measurements are in
+`../bible-com/05-theme-and-page-chrome.md`.
+
+1. **Never a literal.** A `border-radius` reads a token, with its fallback, as every
+   `var()` does. The check is
+   `grep -nE "border-radius:\s*[0-9]" content.css src/ui/*.html`, which must find nothing.
+2. **A surface inside a surface takes what it holds plus its padding.** The save popover's
+   list is 4px options inside 4px of padding, so it is
+   `calc(var(--bb-radius, 4px) + var(--bb-gap-sm, 4px))`, which is 8px. The same arithmetic
+   is why 16px suits the popover: 12px of padding and 4px fields. Do not add a fourth token
+   for a nested surface.
+3. **A surface fixed to the window's edge rounds only the side that faces the page.**
+   `#bb-panel` is fixed to the right and rounds its top-left and bottom-left only, as
+   `#bb-panel-tab` already did, and as bible.com's verse menu does against the bottom. The
+   border goes on every side that is rounded, since a single border tapers to nothing round
+   a curve.
+4. **Clip what is inside.** A radius rounds a box's own border and background, not its
+   children. `#bb-panel` needs `overflow: hidden` to round its iframe.
+5. **Inside the panel frame, round controls but never `body`.** The host's `#bb-panel`
+   already clips the frame, so a radius on `body` would only draw a second curve inside the
+   first.
+
+**The popup** keeps its own unprefixed names, `--radius` and `--radius-pill`, at the same
+values. It has no `--bb-radius-lg` counterpart because it draws no floating surface: Chrome
+draws its window. Its `.brand img` keeps a literal 5px, the one exception, because that
+rounds the app icon's artwork rather than a surface.
 
 ## Rules
 
