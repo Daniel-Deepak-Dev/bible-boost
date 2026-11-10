@@ -28,7 +28,10 @@ verse, fragments included, and raises the menu:
 - A selection has no size limit. All 176 verses of Psalm 119 can be tapped, and the
   header then reads `சங்கீதம் 119:1-176 TAOVBSI` (measured 2026-11-10, T-016).
 - bible.com may scroll to keep the tapped verse clear of the menu: tapping Exodus
-  13:4 moved the page by 200px. Test scripts must re-measure before each tap.
+  13:4 moved the page by 200px. Test scripts must re-measure before each tap. Tapping
+  13:3 at 1024px moved it 480px and it was still moving 700 ms later, with the Browser
+  pane in the background, so anything placed beside a verse has to follow scrolling
+  rather than measure once.
 - Client-side navigation clears the selection and closes the menu.
 - A drag across several verses selects text and adds no class. A short drag inside
   **one** verse does both: the verse gets the class and a text range exists too,
@@ -147,6 +150,18 @@ Measured during T-014 on Exodus 13, logged out, with the save popover open throu
   menu. The dialog stayed, with the typed text in it, and its trigger was disconnected.
 - **Two buttons can read "Cancel".** The menu's close button has that `aria-label`, so
   a search by name finds it as well as the popover's own.
+- **A text selection does not survive it.** Measured during T-015 with a range over
+  NKJV's Exodus 13:4. `showModal()` alone collapsed the range, because it moves focus, and
+  closing the dialog did not bring it back. A clone of the `Range` taken beforehand can be
+  put back afterwards. The class on a tapped verse is not affected.
+- **`close` still arrives on a dialog that has already been removed.** 650 ms after
+  `close()` and `remove()` during T-015, with the Browser pane in the background.
+
+## A click elsewhere on the page
+
+Measured during T-015 on Exodus 13 with a real click on a button appended to `body`. It
+neither cleared a tap selection nor closed the menu, and it did not collapse a text range,
+with no `preventDefault` on `mousedown`.
 
 ## The header link is the best thing on the page
 

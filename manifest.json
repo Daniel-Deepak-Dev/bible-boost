@@ -69,6 +69,7 @@
         "content.js",
         "src/content/capture.js",
         "src/content/save-popover.js",
+        "src/content/quickbar.js",
         "src/content/menu.js",
         "src/content/panel-host.js"
       ],

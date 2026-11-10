@@ -663,10 +663,17 @@
       save({ separators: !settings.separators });
       return true;
     },
+    // Not in the manifest's commands. Chrome allows four suggested keys and T-029 has the last of them.
+    // quickbar.js runs after this file, so it is looked for at the moment of the press. Nothing selected
+    // still counts as using the key, because it answers with a hint (T-015 R4). Only a quickbar.js that
+    // failed to load leaves the key alone.
+    'save-selection': () => { BB.quickbar?.save(); return !!BB.quickbar; },
   };
 
-  // Keyboard fallback: Alt+P parallel, Alt+A alignment, Alt+S separators
-  const KEY_COMMANDS = { KeyP: 'toggle-parallel', KeyA: 'toggle-align', KeyS: 'toggle-separators' };
+  // Keyboard fallback: Alt+P parallel, Alt+A alignment, Alt+S separators. Alt+N is not a fallback: this
+  // listener is its only route (T-015 R2), so it shares the guard below for nothing extra, and the guard
+  // is what stops it firing while somebody types in the notes panel.
+  const KEY_COMMANDS = { KeyP: 'toggle-parallel', KeyA: 'toggle-align', KeyS: 'toggle-separators', KeyN: 'save-selection' };
   document.addEventListener('keydown', (e) => {
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     const t = e.target;

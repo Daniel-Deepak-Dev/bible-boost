@@ -21,6 +21,7 @@ It keeps bible.com's own verses, so tapping a verse still opens Highlight / Copy
   collapses to the two shortcut letters (`P` / `A`) and dims; hovering or tabbing into it spells the labels out.
   The on/off tracks never collapse, so you can still read the state at a glance without reaching for it.
 - Shortcuts: Alt+P parallel, Alt+A align, Alt+S separators. Change them at `chrome://extensions/shortcuts`.
+  Alt+N saves the selected verse as a note. It works on bible.com only and is not listed there, so it cannot be changed.
 - Toolbar popup: all the toggles including **Verse separators**, show/hide the on-page switch, and both versions.
 - Separators are deliberately not on the floating switch — it is set once and then left alone, so it lives in
   the popup and on Alt+S. Hide the switch entirely in the popup if you prefer the shortcuts.

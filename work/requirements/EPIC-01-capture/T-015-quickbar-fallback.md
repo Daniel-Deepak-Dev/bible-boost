@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-01 Capture |
-| Status | Not started |
+| Status | Done |
 | Depends on | T-004, T-008 |
 | Blocks | — |
 | Size | S |
@@ -60,7 +60,10 @@ positioned near the bottom edge, as `content.css` already does for the dock.
 - `src/content/quickbar.js` — new
 - `content.js` — one more case in the existing keydown handler
 - `manifest.json` — add to the `js` array
+- `content.css` — the chip and the hint. A content script cannot load `theme.css`, so
+  R5's styling has to live here (the same reason as T-014)
 - `README.md` — document `Alt+N` alongside the other shortcuts
+- `test/quickbar.test.js` — new, for the one pure part, where the chip goes
 
 ## Reference
 
@@ -73,17 +76,17 @@ positioned near the bottom edge, as `content.css` already does for the dock.
 
 ## Acceptance
 
-- [ ] Selecting a verse shows the chip; deselecting hides it
-- [ ] Clicking it opens the same popover as the menu row, with the same draft
-- [ ] `Alt+N` saves the selection with no mouse
-- [ ] `Alt+N` while typing in a text field does **not** fire
-- [ ] `Alt+N` with nothing selected shows a hint
-- [ ] **With `menu.js` removed from the manifest, the whole save flow still
+- [x] Selecting a verse shows the chip; deselecting hides it
+- [x] Clicking it opens the same popover as the menu row, with the same draft
+- [x] `Alt+N` saves the selection with no mouse
+- [x] `Alt+N` while typing in a text field does **not** fire
+- [x] `Alt+N` with nothing selected shows a hint
+- [x] **With `menu.js` removed from the manifest, the whole save flow still
       works**
-- [ ] With `DEBUG_SCHEDULE = true`, the chip appearing and disappearing a dozen
+- [x] With `DEBUG_SCHEDULE = true`, the chip appearing and disappearing a dozen
       times does not spam `schedule()`
-- [ ] The chip never covers the selected verse
-- [ ] `Alt+P`, `Alt+A`, `Alt+S` are unaffected
+- [x] The chip never covers the selected verse
+- [x] `Alt+P`, `Alt+A`, `Alt+S` are unaffected
 
 ## Notes
 
@@ -92,6 +95,37 @@ that has never been tested without the primary is not a fallback.
 
 `BB.savePopover.open(chipEl)` opens the popover, and it takes no argument for `Alt+N`,
 with nothing to anchor to or give focus back to (T-014). It reads the verses once, as
-it opens, so a text selection collapsing afterwards cannot change what is saved. Not
-measured: whether moving focus into the popover does collapse one. If it does, Cancel
-cannot bring it back unless this task keeps the `Range`.
+it opens, so a text selection collapsing afterwards cannot change what is saved.
+`showModal` does collapse one, measured during this task, so `quickbar.js` clones the
+`Range` before opening and puts it back on the dialog's `close`.
+
+Three things the requirements left open, decided here. With no place that avoids the
+verse the chip hides, so R1's "whenever" has that exception as well as R7's. The draft
+stays `source: 'menu'`, since R1 asks for the same draft as the row and `NOTE_SOURCES` has
+nothing closer. `Alt+N` is not in the manifest's `commands`, because T-029 needs the last
+suggested key.
+
+A `mousedown` guard on the chip was planned and dropped. A real press on a button left a
+text selection whole, so it would have guarded nothing.
+
+Checked on 2026-11-10 through a local proxy of the real page
+(`conventions/03-task-workflow.md`), with the real content scripts and `content.css`,
+`menu.js` left out, the worker stood in, and `requestAnimationFrame` replaced because the
+Browser pane was hidden. Clicks, a text drag and key presses were real. At 1024, 760 and
+375px, in both themes, the chip was never on a selected verse, for one verse, several, and a
+selection taller than the window. Twelve show-and-hide cycles made no `schedule()` calls.
+A run with `menu.js` loaded sent byte-identical drafts from the row, the chip and `Alt+N`.
+Cancelling after a text drag brought the selection back and focus to the chip. `Aa` and
+Align re-placed the chip, and `Alt+P/A/S` worked by real key press.
+
+The proxy could not show three things, so they were checked by hand in real Chrome and
+reported working on 2026-11-10. That run used a copy of the extension with `menu.js` gone from
+the copy's manifest, which left a shared working folder alone.
+
+- The save through the chip against the real worker, with no row in bible.com's menu. What
+  was seen is the "Saved to" confirmation, which only follows the worker's `ok`. The stored
+  note was not looked up.
+- `Alt+N` opening the popover, and its hint with nothing selected. `Alt+P/A/S` were reported
+  dead in that Chrome through this same listener, so this is a clue for B-006, and it is
+  written down there.
+- R7's chapter navigation. The chip went when the next-chapter arrow was pressed.

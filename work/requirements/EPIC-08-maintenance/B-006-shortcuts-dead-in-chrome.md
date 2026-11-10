@@ -145,6 +145,14 @@ That points to one of two things:
 
 ## Notes
 
+**A clue from T-015 (2026-11-10).** `Alt+N` was reported working in the user's real Chrome,
+through the same `keydown` listener in `content.js`, and it has no `chrome.commands` binding.
+So that listener does receive an Alt+letter press there, which counts against the page
+listener being broken, and against AltGr or Alt being taken across the board. What is left is
+something particular to P, A and S. One untested idea is that a key Chrome has bound never
+reaches the page, so the fallback cannot fire for it, and the command is then lost on its way
+to the tab. Whether `Alt+P/A/S` are still dead was not rechecked on that date.
+
 **Known limitation: the dock tooltips name the default keys** ("Toggle parallel
 mode (Alt+P)"). Content scripts cannot call `chrome.commands.getAll()`, so a
 rebound key is not reflected there. Fixing that needs a message round trip to

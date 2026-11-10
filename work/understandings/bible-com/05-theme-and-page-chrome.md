@@ -60,6 +60,12 @@ Their stylesheet writes `--tabbar-h` as `calc(72px + env(safe-area-inset-bottom,
 and the same with 95px, so on a phone with a home indicator it is more than the table
 says. Read it, never hardcode it.
 
+Reading it from script takes one more step. `getPropertyValue('--tabbar-h')` returned
+`calc(72px + 0px)` at 375px and `calc(95px + 0px)` at 760px, because a custom property's
+computed value keeps the arithmetic, and `parseFloat` of that is `NaN`. Put the sum on a
+real length property and read that one. `#bb-chip` uses `scroll-margin-bottom`, which does
+nothing to a fixed element and reads back as `72px` (T-015).
+
 **There is no published height for the top chrome.** On 2026-11-10 every stylesheet of
 `/bible/339/EXO.13.TAOVBSI?parallel=114` was scanned for a custom property naming a
 height, header, tab bar or nav, and these two bars were the only ones. Clearing the

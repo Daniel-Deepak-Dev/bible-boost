@@ -35,13 +35,13 @@ Any node BibleBoost adds **inside `document.body`** is a `childList` mutation:
 | Injected menu row in bible.com's popover | **Yes** |
 | Panel host element being created | **Yes**, once |
 | Panel host width / class changes | **Yes** if class changes |
-| Save chip appearing and disappearing | **Yes**, every time |
+| Save chip appearing and disappearing | **Once**, the first time. After that it toggles `hidden`, which is not observed |
 | Typing inside the panel **iframe** | **No** — a different document |
 | Panel squeezing the page (width change) | Via ResizeObserver, which is **wanted** |
 
-Without a guard, typing a note with the save chip visible can re-run `align()`
-several times a second. All of these still fire the observer. The guard below
-decides which of them reach `schedule()`.
+Without a guard, any of these that repeats can re-run `align()` several times a
+second. The rows marked **Yes** still fire the observer. The guard below decides
+which of them reach `schedule()`.
 
 ## Why the original code was safe and element-adding code is not
 
@@ -103,6 +103,11 @@ The save popover (T-014) was measured the same way, on live bible.com, with
 chips and closing it again came to 26 batches of records, every one ours, and
 `schedule()` stayed at the 2 calls it had before the popover first opened. `open` on a
 `<dialog>` is not observed, because only `class` is.
+
+The save chip (T-015) was measured through a local proxy of the real page. Twelve
+show-and-hide cycles, driven by a text range so that bible.com added nothing of its own,
+came to no mutation records and no `schedule()` calls. Its first appearance on a fresh page
+added no `schedule()` call either, because the guard drops that one record.
 
 The panel host (T-017) was measured through a local proxy of the real page. Ten opens
 and closes made no `schedule()` calls, while two class changes on `body` straight

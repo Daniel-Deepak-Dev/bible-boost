@@ -90,6 +90,14 @@ Each of these cost a round of confusion during T-012.
   to the copy being served, so the page can ask the frame what it knows. A `data:` frame and a
   `srcdoc` frame make two different kinds of stranger. It proves nothing about
   `chrome-extension:` origins or the isolated world. Found during T-017.
+- **Through the proxy, a chapter link is a full page load.** The `_rsc` request answers 200
+  with a real payload and the whole document is reloaded anyway, so the proxy cannot show what
+  client-side navigation does. Why was not worked out. Found during T-015.
+- **A hidden browser pane delivers `scroll` events late**, 390 ms and 970 ms after `scrollTo`
+  when measured. A check that reads 300 ms later sees UI that follows scrolling as stuck. Found
+  during T-015.
+- **Focusing bible.com's search box opens a dropdown over the reader.** Neither blur nor Escape
+  closed it, so reload before carrying on. Found during T-015.
 - **The panel's frame is its own Console context.** On `top`, or in the content script's
   **BibleBoost** entry, `document` is bible.com's, so asking it about the panel gives
   `undefined`, which looks like a broken channel. Right-click inside the panel and choose

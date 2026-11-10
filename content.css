@@ -694,6 +694,111 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   #bb-panel-tab[aria-expanded="true"] { right: 0; }
 }
 
+/* ---------- Save chip ----------
+   The dock's pill, for the dock's reason: it sits over the text for as long as it is up, so at rest it
+   is one dimmed icon, and the word only slides out for somebody reaching for it. The 18px icon with 5px
+   above and below is the dock's swap button.
+
+   One below the dock, so that a verse near the bottom right can never put this over a switch.
+
+   quickbar.js sets top and right. scroll-margin-bottom does nothing to a fixed element and is here to
+   be read: it is the height of bible.com's bottom bars as a resolved length. --tabbar-h itself cannot
+   be read from script, because below 1010px it is a calc() and a custom property's computed value keeps
+   the arithmetic undone.
+
+   The [hidden] rule has to be written out, because display: flex beats the browser's own, and without
+   it the chip would never go away. */
+#bb-chip {
+  position: fixed;
+  z-index: 2147482999;
+  display: flex;
+  align-items: center;
+  padding: 5px 7px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: 999px;
+  background: var(--bb-surface, rgba(255, 255, 255, 0.92));
+  box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
+  backdrop-filter: blur(8px);
+  color: var(--bb-text, #121212);
+  font: 600 12px/normal aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
+  opacity: 0.7;
+  cursor: pointer;
+  user-select: none;
+  scroll-margin-bottom: calc(var(--tabbar-h, 0px) + var(--audio-bar-h, 0px));
+  transition: opacity 0.18s ease;
+}
+
+#bb-chip[hidden] { display: none; }
+
+#bb-chip:hover,
+#bb-chip:focus-visible { opacity: 1; }
+
+#bb-chip:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); outline-offset: 1px; }
+
+#bb-chip svg {
+  display: block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#bb-chip span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 0;
+  opacity: 0;
+  transition: max-width 0.18s ease, padding 0.18s ease, opacity 0.14s ease;
+}
+
+#bb-chip:hover span,
+#bb-chip:focus-visible span {
+  max-width: 4em;
+  padding-inline-start: 5px;
+  opacity: 1;
+}
+
+/* ---------- Alt+N hint ----------
+   Above the dock and not at the top of the viewport, which is where T-014's confirmation sat and went
+   unseen, dark on bible.com's dark search bar. It only ever appears with nothing selected, so bible.com's
+   verse menu is not up to be covered. The 72px is the dock's 24, its 40px of height and a gap of 8. */
+#bb-hint {
+  position: fixed;
+  right: 20px;
+  bottom: calc(72px + var(--tabbar-h, 0px) + var(--audio-bar-h, 0px));
+  z-index: 2147483000;
+  box-sizing: border-box;
+  max-width: min(280px, calc(100vw - 40px));
+  padding: 8px 14px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: 8px;
+  background: var(--bb-surface-2, #F6F4F4);
+  color: var(--bb-text, #121212);
+  box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
+  font: 600 14px/normal aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
+}
+
+#bb-hint[hidden] { display: none; }
+
+/* The dock's own phone-width clamp, plus the same 48px. */
+@media (max-width: 767px) {
+  #bb-hint {
+    bottom: calc(max(96px, calc(24px + var(--tabbar-h, 0px) + var(--audio-bar-h, 0px))) + 48px);
+  }
+}
+
+/* Here and not in the block at the end of the file, to keep the chip's rules in one place. It only has
+   to come after them. */
+@media (prefers-reduced-motion: reduce) {
+  #bb-chip,
+  #bb-chip span { transition: none; }
+}
+
 /* Last in the file on purpose: these selectors tie with the ones above, so source order is what
    makes them win. */
 @media (prefers-reduced-motion: reduce) {
