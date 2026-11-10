@@ -72,6 +72,19 @@ Each of these cost a round of confusion during T-012.
   settings are cookies on localhost, so set them through the page's own Settings panel. A
   timeline of the verse's top sampled every 25 ms from the page's start is what found the
   cause. Found during T-058.
+- **The proxy can run the real worker as well.** Stub only `chrome.*`, in a script injected
+  at the top of `<head>`. At `DOMContentLoaded`, `import` `background.js` first, then add the
+  content scripts, and route `sendMessage` to the listener the worker registered, because
+  `content.js` registers one too. A save then goes through the real router and `repo.js` into
+  real IndexedDB at the localhost origin. Delete that database afterwards, from a page that has
+  no connection open. Found during T-016.
+- **The reader's settings stay on localhost between sessions.** `footnotes=false` from T-058
+  was still there, so read `document.cookie` before calling a run the default. Found during
+  T-016.
+- **The built-in browser refuses a service worker.** `navigator.serviceWorker.register` failed
+  with "An unknown error" on a script that `fetch` and a module `Worker` both loaded. A `Worker`
+  shows a module loads with no `window` or DOM, and nothing about a real worker's events. Found
+  during T-016.
 - **Test with the reader's settings changed, not only the defaults.** T-058's creep did not
   exist on a default profile and appeared at once with Footnotes off.
 - **A hidden browser pane can refuse real input.** A key press timed out once with the

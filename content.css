@@ -372,7 +372,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 /* The rules below set display, which would otherwise beat the hidden attribute. */
 #bb-save-pop [hidden] { display: none; }
 
-/* Two lines at most, for a long run of verses. T-016 replaces the list itself with a range. */
+/* Two lines at most, for a selection with many gaps. Unbroken runs already collapse to one range. */
 #bb-save-pop .bb-ref {
   display: -webkit-box;
   -webkit-box-orient: vertical;

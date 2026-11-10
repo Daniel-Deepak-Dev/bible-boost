@@ -64,7 +64,7 @@ suggestion.
 | Turning a message into a reply (lookup, unknown type, throws) | `src/background/router.js` (`dispatch`); the handler table is in `background.js` |
 | Note, topic and tag operations, the `notesRev` signal, choosing an index | `src/background/repo.js`; every write goes through its private `mutate()` |
 | Schema version, `newId()`, record defaults, validators and normalizers | `src/shared/schema.js` |
-| Reading a verse key, canonical order, range captions | `src/shared/refs.js` |
+| Reading a verse key, canonical order, range captions | `src/shared/refs.js`. The save popover's caption is `captionOf` in `save-popover.js`, a copy because a classic script cannot import a module, and `test/save-popover.test.js` holds the two together |
 | The versions the popup offers | `src/shared/versions.js`, loaded by content scripts and re-exported by `refs.js` |
 | NFC, case folding and tokenizing, for anything that compares text | `src/shared/normalize.js` |
 | Any rendering of notes | `src/ui/app/*` |

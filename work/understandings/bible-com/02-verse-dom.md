@@ -113,7 +113,10 @@ Romans 1 (CEV and NIV):
   Moses…` if `_hide` is not removed.
 - **A `_hide` is a number or a note.** Those were the only two kinds found inside a
   verse. Tell them apart by whether it holds a `_body`.
-- **`verseLabel` finds nothing with Numbers and Titles off**, which is B-011.
+- **`verseLabel` finds nothing with Numbers and Titles off**, which is B-011. That
+  switch is a `numbersTitles=false` cookie. Several verses saved with it off get no
+  `displayRef`, so the caption reads `EXO.13.3-4`, while a single verse still gets one
+  from the menu header (measured 2026-11-10).
 - T-009's checks all ran with both switches on, which is the default.
 - **The server does not apply these.** Footnotes off is a `footnotes=false` cookie, and
   the HTML for NKJV Exodus 13 had 32 `_note _x` with or without it (2026-11-10). The

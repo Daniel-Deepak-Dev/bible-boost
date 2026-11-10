@@ -25,6 +25,8 @@ verse, fragments included, and raises the menu:
 - Tapping another verse **adds** to the selection. Tapping a selected verse removes
   it. The Close button clears the whole selection.
 - Selection order does not matter to the DOM. Tapping 2 then 1 reads as 1, 2.
+- A selection has no size limit. All 176 verses of Psalm 119 can be tapped, and the
+  header then reads `சங்கீதம் 119:1-176 TAOVBSI` (measured 2026-11-10, T-016).
 - bible.com may scroll to keep the tapped verse clear of the menu: tapping Exodus
   13:4 moved the page by 200px. Test scripts must re-measure before each tap.
 - Client-side navigation clears the selection and closes the menu.

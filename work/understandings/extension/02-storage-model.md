@@ -125,6 +125,10 @@ in a Chrome 152 page on 2026-11-09 (T-005).
   way through a three-note trash, and with a real `ConstraintError`.
 - **`verses[].book`, `.chapter` and `.verse` come from `usfm`**, never from the
   draft, and a combined `JHN.1.1+JHN.1.2` is stored under `JHN.1.1`.
+- **`verses` are in canonical order, and `verseKeys` with them.** `cleanNoteFields` sorts
+  with `compareUsfm` on create and on a patch, so no surface has to (T-016). A draft's
+  order means nothing: a text range running from the left column into the right gave
+  21, 22, 1, 2 in Exodus 13, because `verseEls` reads one column and then the other.
 - **`primary` is required and `parallel` is optional.** `cleanSide` refuses a null
   primary with "has no primary text", which refuses the whole draft. `versePair` can
   return one, for a verse selected in the parallel column that the primary version

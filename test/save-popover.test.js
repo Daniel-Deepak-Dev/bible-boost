@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { cleanNoteDraft } from '../src/shared/schema.js';
+import { formatRange } from '../src/shared/refs.js';
 
 const SOURCE = readFileSync(new URL('../src/content/save-popover.js', import.meta.url), 'utf8');
 const VID_RE = /(?:^|[\s_])vid(\d+)(?:\s|$)/;
@@ -46,8 +47,8 @@ function load(pairs, refs = {}) {
   };
   const context = vm.createContext({ BB });
   vm.runInContext(SOURCE, context);
-  const { readVerses } = context.BB.savePopover.debug;
-  return { asked, verses: (usfms) => wire(readVerses({ usfms })) };
+  const { readVerses, captionOf } = context.BB.savePopover.debug;
+  return { asked, verses: (usfms) => wire(readVerses({ usfms })), captionOf };
 }
 
 const stored = (verses) => cleanNoteDraft({ source: 'menu', verses }).fields.verses;
@@ -115,10 +116,95 @@ test('a verse with neither side reaches the worker and is refused', () => {
   assert.throws(() => stored(verses(['EXO.13.2'])), /EXO\.13\.2 has no primary text/);
 });
 
-test('several verses make one entry each, in the order the selection gave them', () => {
+test('several verses make one entry each', () => {
   const { verses } = load({
     'EXO.13.2': { primary: tamil, parallel: english },
     'EXO.13.4': { primary: tamil, parallel: english },
   });
   assert.deepEqual(stored(verses(['EXO.13.2', 'EXO.13.4'])).map((v) => v.usfm), ['EXO.13.2', 'EXO.13.4']);
+});
+
+// ---------- The caption (T-016 R5) ----------
+const { captionOf } = load({});
+const inExodus = (name, chapter, ...numbers) => numbers.map((n) => ({ usfm: `EXO.${chapter}.${n}`, displayRef: `${name} ${chapter}:${n}` }));
+const exodus13 = (...numbers) => inExodus('Exodus', 13, ...numbers);
+
+test('a contiguous run reads as one range', () => {
+  assert.equal(captionOf(exodus13(2, 3, 4)), 'Exodus 13:2-4');
+});
+
+test('a range keeps the name the version gives the book', () => {
+  assert.equal(captionOf(inExodus('யாத்திராகமம்', 13, 2, 3, 4)), 'யாத்திராகமம் 13:2-4');
+});
+
+// The digits in "2. Mose" and in the chapter must not be mistaken for the verse's own number.
+test('a book name with digits in it survives', () => {
+  assert.equal(captionOf(inExodus('2. Mose', 13, 2, 3)), '2. Mose 13:2-3');
+  assert.equal(captionOf(inExodus('Exodus', 13, 13, 14)), 'Exodus 13:13-14');
+});
+
+test('a gap takes a comma, as bible.com writes it', () => {
+  assert.equal(captionOf(exodus13(2, 4)), 'Exodus 13:2,4');
+  assert.equal(captionOf(exodus13(2, 3, 4, 6, 8, 9)), 'Exodus 13:2-4,6,8-9');
+});
+
+// 9, 10, 11 only form a run if they are compared as numbers.
+test('a run collapses across a change in digit count', () => {
+  assert.equal(captionOf(exodus13(9, 10, 11)), 'Exodus 13:9-11');
+});
+
+test('the order verses arrive in does not change the caption', () => {
+  assert.equal(captionOf(exodus13(4, 2, 3)), 'Exodus 13:2-4');
+});
+
+test('each chapter gets its own heading', () => {
+  assert.equal(captionOf([...inExodus('Exodus', 14, 1), ...exodus13(2, 3)]), 'Exodus 13:2-3; Exodus 14:1');
+});
+
+test('one verse with no reference sends the whole caption to the canonical form', () => {
+  const [a, b, c] = exodus13(2, 3, 4);
+  assert.equal(captionOf([a, { ...b, displayRef: null }, c]), 'EXO.13.2-4');
+  assert.equal(captionOf([a, { ...b, displayRef: '' }, c]), 'EXO.13.2-4');
+});
+
+// CEV writes Romans 1:3-4 as one element, keyed ROM.1.3.
+test('a combined verse in a range sends the caption to the canonical form', () => {
+  const romans = [{ usfm: 'ROM.1.3', displayRef: 'Romans 1:3-4' }, { usfm: 'ROM.1.5', displayRef: 'Romans 1:5' }];
+  assert.equal(captionOf(romans), 'ROM.1.3,5');
+});
+
+test('a combined verse that ends in the digits of its own number is not cut', () => {
+  const verses = [{ usfm: 'JHN.1.1', displayRef: 'John 1:1-11' }, { usfm: 'JHN.1.12', displayRef: 'John 1:12' }];
+  assert.equal(captionOf(verses), 'JHN.1.1,12');
+});
+
+test('digits that are not the key\'s send the caption to the canonical form', () => {
+  const verses = [{ usfm: 'EXO.13.2', displayRef: 'خروج ١٣:٢' }, { usfm: 'EXO.13.3', displayRef: 'خروج ١٣:٣' }];
+  assert.equal(captionOf(verses), 'EXO.13.2-3');
+});
+
+test('a lone verse keeps its reference whole', () => {
+  assert.equal(captionOf([{ usfm: 'ROM.1.3', displayRef: 'Romans 1:3-4' }]), 'Romans 1:3-4');
+  assert.equal(captionOf([{ usfm: 'EXO.13.2', displayRef: null }]), 'EXO.13.2');
+});
+
+// The popover's formatter is a copy, because a classic script cannot import refs.js. This is what stops
+// the two from drifting. No selection across books here: formatRange orders books from a table the copy
+// has no need for, since one page is one book.
+test('with no references the caption is exactly what formatRange gives', () => {
+  const cases = [
+    ['EXO.13.2'],
+    ['EXO.13.2', 'EXO.13.3', 'EXO.13.4'],
+    ['EXO.13.2', 'EXO.13.4'],
+    ['EXO.13.2', 'EXO.13.3', 'EXO.14.1'],
+    ['EXO.14.1', 'EXO.13.3', 'EXO.13.2'],
+    ['EXO.13.2', 'EXO.13.3', 'EXO.13.4', 'EXO.13.6', 'EXO.13.8', 'EXO.13.9'],
+    ['EXO.13.10', 'EXO.13.9', 'EXO.13.11'],
+    ['EXO.9.1', 'EXO.13.1'],
+    ['EXO.13.2', 'EXO.13.2', 'EXO.13.3'],
+    ['EXO.13.2', 'JHN.INTRO1', 'EXO.13.3'],
+  ];
+  for (const usfms of cases) {
+    assert.equal(captionOf(usfms.map((usfm) => ({ usfm, displayRef: null }))), formatRange(usfms), usfms.join());
+  }
 });

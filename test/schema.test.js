@@ -208,6 +208,19 @@ test('verseKeys match verses', () => {
   assert.deepEqual(fields.verseKeys, ['EXO.13.2', 'EXO.13.3']);
 });
 
+// T-016 R4. 1CO comes before ACT as plain strings, and 2 comes after 10.
+test('verses are stored in canonical order, whatever order they arrived in', () => {
+  const { fields } = clean({ verses: ['1CO.1.1', 'EXO.13.10', 'ACT.1.1', 'EXO.13.2'].map((usfm) => verse(usfm)) });
+  const canonical = ['EXO.13.2', 'EXO.13.10', 'ACT.1.1', '1CO.1.1'];
+  assert.deepEqual(fields.verses.map((v) => v.usfm), canonical);
+  assert.deepEqual(fields.verseKeys, canonical);
+});
+
+test('a patch that changes the verses puts them in canonical order too', () => {
+  const { fields } = cleanNotePatch({ verses: [verse('EXO.14.1'), verse('EXO.13.3'), verse('EXO.13.2')] });
+  assert.deepEqual(fields.verseKeys, ['EXO.13.2', 'EXO.13.3', 'EXO.14.1']);
+});
+
 test('verseKeys holds a verse once, however often it appears', () => {
   assert.deepEqual(deriveVerseKeys([{ usfm: 'EXO.13.2' }, { usfm: 'EXO.13.2' }]), ['EXO.13.2']);
 });

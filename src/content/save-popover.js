@@ -39,6 +39,11 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   const ANCHOR_GAP = 8;  // between the verse and the popover
   const TOAST_MS = 5000; // T-035 R2's "~5 seconds"
 
+  // How many verses a note can hold before saving it asks first (T-016 R7). This is about mistakes and
+  // not capacity: all 176 verses of Psalm 119 in parallel read in 258 ms and came to 61 KB (2026-11-10),
+  // so a chapter this size saves without trouble. It is just rarely what somebody meant to do.
+  const MANY_VERSES = 50;
+
   // Everything belonging to the popover that is open now, or null. There can only be one, and building
   // it fresh on every open means nothing has to be reset and nothing stays on the page between saves.
   let pop = null;
@@ -106,6 +111,55 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // reference and it speaks only while the menu is up, and this way the reference on the popover is
   // exactly what gets saved, whatever the page does in the meantime.
   const readVerses = (selection) => selection.usfms.map(verseRefOf);
+
+  // ---------- The caption ----------
+  // BOOK.chapter.verse, the same shape refs.js and schema.js accept. Repeated here for the same reason
+  // as fold() above: this is a classic script and refs.js is an ES module.
+  const KEY_RE = /^([A-Z0-9]{3}\.(\d+))\.(\d+)$/;
+
+  // The one line that names a whole selection (T-016 R5): "Exodus 13:2-4" rather than three labels. Runs
+  // collapse and gaps take a comma, which is how bible.com's own menu header writes the same selection:
+  // "யாத்திராகமம் 13:1-2,4". Chapters are kept apart even when they touch (R3), the same as formatRange.
+  //
+  // This is formatRange with a localized heading, and it has to be a second copy because refs.js cannot
+  // be imported here. test/save-popover.test.js runs both over the same keys, so if they drift a test
+  // fails. It needs no book table: everything selected on one page is from one book.
+  //
+  // Only the first verse of each chapter gives up its displayRef, and that is cut, not read: the verse's
+  // own number comes off the end and what is left is the heading, whatever script or punctuation it is
+  // in. Every other number comes from the key. So nothing here parses a reference (T-012 R2).
+  //
+  // The heading is used only if every verse's reference ends in that verse's own number, or the cut
+  // would land in the wrong place. Three ordinary things fail that test and get the canonical form:
+  //   a verse with no reference, which is every verse with Numbers and Titles switched off (B-011)
+  //   a combined verse: CEV's ROM.1.3 reads "Romans 1:3-4", so it would give "Romans 1:3-4-6"
+  //   a version whose digits are not ASCII, where the key's number is not the one printed
+  // The lookbehind is for a combined verse ending in the digits of its own first number. JHN.1.1
+  // written "1-11" passes a plain endsWith and would cut to "John 1:1-1".
+  //
+  // A lone verse skips all of that because nothing has to be added to it, and "Romans 1:3-4" is right.
+  function captionOf(verses) {
+    if (verses.length === 1) return verses[0].displayRef || verses[0].usfm;
+
+    const rows = verses.flatMap(({ usfm, displayRef: ref }) => {
+      const key = KEY_RE.exec(usfm);
+      return key ? [{ chapter: key[1], chapterNo: Number(key[2]), verse: Number(key[3]), ref }] : [];
+    }).sort((a, b) => a.chapterNo - b.chapterNo || a.verse - b.verse);
+
+    const localized = rows.every(({ ref, verse }) => ref && new RegExp(`(?<!\\d)${verse}$`).test(ref));
+    const chapters = new Map();
+    for (const { chapter, verse, ref } of rows) {
+      if (!chapters.has(chapter)) {
+        chapters.set(chapter, { heading: localized ? ref.slice(0, -String(verse).length) : `${chapter}.`, runs: [] });
+      }
+      const { runs } = chapters.get(chapter);
+      const last = runs.at(-1);
+      if (last && verse <= last.to + 1) last.to = verse;
+      else runs.push({ from: verse, to: verse });
+    }
+    const spell = ({ from, to }) => (from === to ? `${from}` : `${from}-${to}`);
+    return [...chapters.values()].map(({ heading, runs }) => heading + runs.map(spell).join(',')).join('; ');
+  }
 
   // ---------- The suggestion list ----------
   // Shared by the topic picker and the tag input, which differ only in what they list and what picking
@@ -349,8 +403,19 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   //
   // title is not sent: a note with none falls back to its verse range when it is shown. The panel is
   // opened through ?. since the panel is EPIC-02 and this button stays disabled until it exists.
+  //
+  // A very large selection asks once first (T-016 R7). It is a second press and not window.confirm, which
+  // would stop the page and announce itself as "www.bible.com says". The message names the count because
+  // that is what tells a slip apart from a chapter somebody meant to keep. It returns ahead of clearError
+  // and setBusy, so the warning stays up and the popover stays usable. The flag belongs to this popover,
+  // so the next large selection asks again, and it survives a failed save, because a retry is not a new
+  // decision.
   async function save({ openPanel = false } = {}) {
     if (pop.busy) return;
+    if (pop.verses.length > MANY_VERSES && !pop.manyConfirmed) {
+      pop.manyConfirmed = true;
+      return showError(`This saves ${pop.verses.length} verses as one note. Press Save again to go ahead.`);
+    }
     addTag(pop.tagInput.value);
     clearError();
     setBusy(true);
@@ -478,6 +543,9 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // over it would throw away the note.
   //
   // The preventDefault on Escape is what stops the browser's own close from also running.
+  //
+  // e.repeat because holding Ctrl+Enter sends the key over and over, and the second one would answer
+  // save()'s question about a very large selection before anyone had read it.
   function onKeydown(e) {
     e.stopPropagation();
     if (e.isComposing) return;
@@ -485,7 +553,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
       wrapTab(e);
     } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      save();
+      if (!e.repeat) save();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       requestClose();
@@ -522,7 +590,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // by defining BB.panel.open.
   function build(verses, trigger) {
     const dialog = make('dialog', { id: 'bb-save-pop', 'data-bb-own': '', 'aria-label': 'Save to BibleBoost' });
-    const reference = verses.map((v) => v.displayRef || v.usfm).join(', ');
+    const reference = captionOf(verses);
 
     const topicInput = make('input', { id: 'bb-save-topic', type: 'text', dir: 'auto', autocomplete: 'off', spellcheck: 'false', placeholder: 'Find or create a topic' });
     const topicRowsEl = make('ul', { id: 'bb-save-topic-list', class: 'bb-list', role: 'listbox' });
@@ -564,7 +632,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
 
     const here = {
       dialog, trigger, verses, body, error, saveBtn, topicInput, tagInput, chips,
-      topic: UNCATEGORIZED, topics: [], knownTags: [], tags: [], busy: false,
+      topic: UNCATEGORIZED, topics: [], knownTags: [], tags: [], busy: false, manyConfirmed: false,
     };
     here.topicList = suggestionList(topicInput, topicRowsEl, topicRows, pickTopic, { autoActive: true });
     here.tagList = suggestionList(tagInput, tagRowsEl, tagRows, pickTag);
@@ -651,6 +719,6 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   BB.savePopover = {
     open,
     // For test/save-popover.test.js, which runs this draft through the worker's real validator.
-    debug: { readVerses },
+    debug: { readVerses, captionOf },
   };
 })();

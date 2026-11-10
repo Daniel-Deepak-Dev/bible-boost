@@ -12,6 +12,7 @@
  * `node --test` can cover it (T-007 R3). The single global it uses, crypto.randomUUID, exists
  * in a service worker and in Node 19 and later.
  */
+import { compareUsfm } from './refs.js';
 
 // ---------- Version ----------
 // Written into the meta store on first open and read back on every open (T-003 R4). Bump it only
@@ -227,6 +228,10 @@ export const deriveVerseKeys = (verses) => [...new Set(verses.map((v) => v.usfm)
 //
 // Being the one caller of deriveVerseKeys here is how create and update stay in step (R3).
 //
+// Verses are put in canonical order here, ahead of that call, so that verses and verseKeys agree and
+// every way of writing a note gets the same order (T-016 R4). It is here and not in the content script
+// because compareUsfm is in an ES module, which a classic script cannot import.
+//
 // topicId is passed through unchecked. Whether it names a real topic needs the database, so
 // repo.js settles it inside the transaction (R2).
 function cleanNoteFields(raw) {
@@ -246,7 +251,7 @@ function cleanNoteFields(raw) {
   }
   if (raw.verses !== undefined) {
     if (!Array.isArray(raw.verses)) throw new Error('Verses must be a list.');
-    fields.verses = raw.verses.map(cleanVerse);
+    fields.verses = raw.verses.map(cleanVerse).sort((a, b) => compareUsfm(a.usfm, b.usfm));
     fields.verseKeys = deriveVerseKeys(fields.verses);
   }
   return { fields, tagEntries };
