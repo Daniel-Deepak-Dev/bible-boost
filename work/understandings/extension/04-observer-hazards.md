@@ -119,9 +119,12 @@ The pinned squeeze (T-018) writes `--bb-squeeze` inline on `<html>` and
 `body`, and only `class` is watched. What re-runs alignment is the reflow: at
 1400x900 a 30% squeeze took each column from 534px to 327px wide, and a
 `ResizeObserver` on the columns fired once for it (measured with no extension,
-2026-11-10). Whether `content.js`'s own observer then counts one or a few `schedule()`
-calls across the 0.2s transition is not yet measured, because the run that could have
-shown it was in a hidden pane (below).
+2026-11-10). With the extension, in a real Chrome on 2026-11-11, alignment and
+separators were right after both pinning and unpinning, and since `panel-host.js` calls
+no `schedule()` of its own for a pin, that was `content.js`'s observer at work. Whether
+it counts one or a few `schedule()` calls across the 0.2s transition is still not
+measured: the first run that could have shown it was in a hidden pane (below), and the
+hand test did not take the `DEBUG_SCHEDULE` log.
 
 A marked root that shifts the text is still caught: the `ResizeObserver` on the
 columns calls `schedule()` independently of this guard. That only sees a change

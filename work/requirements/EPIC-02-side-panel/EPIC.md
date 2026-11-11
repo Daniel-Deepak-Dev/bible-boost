@@ -33,9 +33,9 @@ free.
 ## Definition of done
 
 - [ ] A floating tab sits at the right edge of every bible.com reader page
-- [ ] Opening it pinned squeezes the reader; both parallel columns stay fully
+- [x] Opening it pinned squeezes the reader; both parallel columns stay fully
       visible and aligned
-- [ ] Unpinned, it overlays with a shadow
+- [x] Unpinned, it overlays with a shadow
 - [ ] Width is draggable and survives a reload
 - [ ] It follows bible.com's light/dark theme
 - [ ] Notes can be created, edited and deleted from it

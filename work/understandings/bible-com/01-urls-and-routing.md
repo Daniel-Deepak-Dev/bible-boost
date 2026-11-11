@@ -81,7 +81,10 @@ independent mechanisms, all feeding one throttled `schedule()` (80 ms + rAF):
 
 Plus a ResizeObserver on the column elements (re-bound by a 1 s interval when the
 column set changes) for the reader's own "Aa" font-size control, which changes
-height without any DOM change.
+height without any DOM change. The same observer is what re-aligns after T-018's
+pinned squeeze: `padding-right` on `body` narrows the columns, they re-wrap and grow
+taller, and it fires. Nothing else calls `schedule()` for a pin. Seen working in a
+real Chrome on 2026-11-11, after both pin and unpin.
 
 **If you add a feature that must survive navigation, hook `schedule()` — do not
 add a fifth polling loop.**

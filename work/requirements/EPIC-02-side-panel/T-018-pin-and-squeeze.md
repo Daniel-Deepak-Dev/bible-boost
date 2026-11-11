@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Epic | EPIC-02 Side panel |
-| Status | In progress |
+| Status | Done |
 | Depends on | T-017 |
 | Blocks | — |
 | Size | M |
@@ -98,19 +98,19 @@ reading should stay where it was.
 
 ## Acceptance
 
-- [ ] Pinned at 1400px: both parallel columns are fully visible, none clipped
-- [ ] After pinning, verses are still correctly aligned and separators still line
+- [x] Pinned at 1400px: both parallel columns are fully visible, none clipped
+- [x] After pinning, verses are still correctly aligned and separators still line
       up across columns
-- [ ] After unpinning, alignment is still correct
-- [ ] Unpinned, the panel overlays with a shadow and the reader does not move
-- [ ] Closing the panel restores the page exactly — no leftover width constraint,
+- [x] After unpinning, alignment is still correct
+- [x] Unpinned, the panel overlays with a shadow and the reader does not move
+- [x] Closing the panel restores the page exactly — no leftover width constraint,
       no inline styles on bible.com elements
-- [ ] Disabling the extension with the panel pinned leaves a normal page
+- [x] Disabling the extension with the panel pinned leaves a normal page
 - ~~Below 768px, the pin control is hidden and the panel is full-width~~ — struck
   2026-11-10: phones are not a target (AGENTS.md, Target screens). The behaviour R6
   describes is built and was seen once at 375px (Notes), but it is not tested from here on.
-- [ ] Pinning does not jump the scroll position
-- [ ] With `prefers-reduced-motion`, there is no width transition
+- [x] Pinning does not jump the scroll position
+- [x] With `prefers-reduced-motion`, there is no width transition
 
 ## Test it by hand
 
@@ -189,7 +189,7 @@ host's `pin`/`state` handling, the squeeze switch, the place-holding, and the on
 `content.css` rule under its own **Pinned squeeze** banner, with `body` in the
 `prefers-reduced-motion` block that ends the file. The rule went in after B-019's commit
 `df313aa`, because that session had `content.css` open and the two would otherwise have
-tangled. Nothing is ticked above. The proxy runs below used the same rule text, appended
+tangled. Nothing was ticked then; the hand test of 2026-11-11 (below) ticked them. The proxy runs below used the same rule text, appended
 as `content.css` was served, but every box names something seen in a real Chrome, and
 that is the hand test.
 
@@ -226,7 +226,8 @@ stood in for `requestAnimationFrame`, the transition was switched off because a 
 does not advance it, and **ResizeObserver callbacks never arrived**, because they are
 delivered in the rendering step. A synthetic `resize` event, one of `schedule()`'s own
 triggers, stood in for the observer. So R3 through the real observer, the hold during the
-transition, `prefers-reduced-motion`, and a long chapter are **not verified**.
+transition, `prefers-reduced-motion`, and a long chapter are **not verified**. The hand
+test of 2026-11-11 (below) covered all four.
 
 The proxy's requests to bible.com carried a browser `user-agent` string. That was taken out
 once the auto-mode classifier flagged changing the user agent as getting past a bot check,
@@ -239,5 +240,31 @@ what is left is the hand test above, in a real Chrome. One developer check goes 
 for R3 itself: with `DEBUG_SCHEDULE = true` in `content.js`, pinning should log a few
 `not a mutation` lines (the ResizeObserver), and opening and closing unpinned none. Step 6
 of the hand test is the user-visible half of the same thing.
+
+**Hand test in a real Chrome (2026-11-11).** The user ran all 14 steps of *Test it by hand*
+in their own Chrome and reported every one passing, which ticks every live box above. That
+covers what the proxy run could not: the hold during the 0.2s slide (step 5),
+`prefers-reduced-motion` (step 10), and a long chapter (step 11).
+
+R3 is settled by steps 6 and 7, and not by reasoning. `panel-host.js` never calls
+`schedule()` when the pin changes: `apply()` only stores, holds and renders. So the only
+thing that can re-align the columns after a squeeze is `content.js`'s `ResizeObserver` on
+them, and alignment being right after both pin and unpin means it fired. The
+`DEBUG_SCHEDULE` count was not taken, so how many passes one squeeze costs across the
+transition is still unmeasured.
+
+Not reported, so still unknown: step 13 *before* the reload, that is, whether a page stays
+narrowed while the extension is switched off. Step 14 was reported passing as a whole;
+B-006 is not updated from that, because `Alt+P/A/S` were not reported separately.
+
+**Seen during the hand test, and not T-018's.** A bible.com URL opened in a new tab showed
+no BibleBoost at all until BibleBoost's toolbar icon was clicked. Chrome then showed
+"Reload this page to apply your updated settings on this site", and after the reload
+everything worked. That bubble is Chrome's site-access prompt: Chrome was holding the
+extension back from the page, rather than a script of ours failing on it. BibleBoost
+reaches bible.com only through its content-script match, there is no `host_permissions`,
+and Chrome's per-extension **Site access** setting governs that match like any host
+permission; "On click" behaves exactly like this. `manifest.json` has not changed since
+T-015 (`1245674`). The setting in that Chrome profile is still to be confirmed.
 
 **Found while doing this:** B-020, bible.com's verse menu partly under the panel.
