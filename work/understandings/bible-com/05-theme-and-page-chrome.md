@@ -127,6 +127,13 @@ scroll-anchoring spec's suppression triggers. Taking the padding off again put t
 back at exactly 152px. Anything that narrows the page has to keep the reader's place
 itself, as `panel-host.js` does.
 
+**Switching the extension off does not undo it.** Seen by hand on 2026-11-11, in T-018's
+step 13: with the panel pinned, turning BibleBoost off in `chrome://extensions` left the
+open tab narrowed until the tab was reloaded. The narrowing needs both the `body` rule in
+`content.css` and the `--bb-squeeze` written on `<html>`, so both stayed in the tab, and
+nothing of ours ran at the switch to remove either. Only a reload gives back a normal page.
+Whether the edge tab and the panel's frame stayed too was not noted.
+
 The reader grid keeps two columns, because its `md:grid-cols-2` follows the window, not the
 space it is given. At 375px bible.com dropped `?parallel=` from the URL on its own, as
 `03-columns-and-versions.md` describes.

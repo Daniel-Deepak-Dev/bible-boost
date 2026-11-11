@@ -157,11 +157,11 @@ reading should stay where it was.
     panel. Whatever bible.com shows at that width, one version or two, stays fully
     visible beside the panel.
 13. With the panel pinned, at full width, open `chrome://extensions` in another tab and
-    switch BibleBoost **off**. Go back to the bible.com tab *without reloading* and note
-    whether the page is still narrowed. Then reload it. After the reload the page is a
-    normal full-width bible.com with no BibleBoost tab.
-    → Acceptance: *Disabling the extension with the panel pinned leaves a normal page*.
-    Say what you saw before the reload too: it is not known yet.
+    switch BibleBoost **off**. Go back to the bible.com tab *without reloading*: the page
+    is still narrowed, and that is expected, because nothing of ours runs at the switch to
+    undo it (Notes). Then reload it. After the reload the page is a normal full-width
+    bible.com with no BibleBoost tab.
+    → Acceptance: *Disabling the extension with the panel pinned leaves a normal page*
 14. Switch BibleBoost back **on**, reload the tab, and run the standing regression:
     verses align, separators draw, `Alt+P` / `Alt+A` / `Alt+S` work (B-006 is still
     open on those), and changing the reader's **Aa** size re-aligns. Do the **Aa** change
@@ -253,8 +253,15 @@ them, and alignment being right after both pin and unpin means it fired. The
 `DEBUG_SCHEDULE` count was not taken, so how many passes one squeeze costs across the
 transition is still unmeasured.
 
-Not reported, so still unknown: step 13 *before* the reload, that is, whether a page stays
-narrowed while the extension is switched off. Step 14 was reported passing as a whole;
+Step 13 *before* the reload, reported later the same day: with the panel pinned and
+BibleBoost switched off, the open tab **stayed narrowed** until it was reloaded, and was a
+normal full-width page after. Two things outlived the switch, not one. The narrowing is
+`content.css`'s `body` rule, `padding-right: calc(var(--bb-squeeze, 0) * …)`, and it needs
+the `--bb-squeeze` that `panel-host.js` wrote on `<html>` too, so both the injected
+stylesheet and the inline property stayed in the tab, and nothing of ours ran at the switch
+to take them off. The box asks for a normal page after the reload, which holds, so it stays
+ticked and there is no B-task. Whether the edge tab and the panel's frame stayed as well was
+not noted. Step 14 was reported passing as a whole;
 B-006 is not updated from that, because `Alt+P/A/S` were not reported separately.
 
 **Seen during the hand test, and not T-018's.** A bible.com URL opened in a new tab showed
