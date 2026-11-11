@@ -178,6 +178,16 @@ Each of these cost a round of confusion during T-012.
   `chrome.storage` works too. Unlike the proxy this proves real origins, the real isolated
   world, the real CSP and real storage. Worked on Chrome 157. Branded Chrome is said to have
   dropped `--load-extension` (from its release notes, not tried here). Found during T-017.
+
+  **bible.com now challenges it.** Later the same day, during T-018, the same recipe got a
+  page titled "Client Challenge" asking for the characters in an image, instead of the
+  reader. **Do not try to get past it**, by changing the user agent or any other way:
+  that is defeating a bot check, and auto mode refused it. Treat headless Chrome as closed
+  for live bible.com, and leave those boxes for the user's own Chrome.
+- **Send no made-up user agent from the proxy either.** T-018's proxy first sent a browser's
+  `user-agent` string upstream, which is the same thing, and it was taken out. Whether
+  bible.com answers Node's own user agent with the real page was not established after
+  that.
 - **Test with the reader's settings changed, not only the defaults.** T-058's creep did not
   exist on a default profile and appeared at once with Footnotes off.
 - **A hidden browser pane can refuse real input.** A key press timed out once with the
@@ -186,6 +196,15 @@ Each of these cost a round of confusion during T-012.
   `document.visibilityState` reading `visible`. `schedule()` ends in one, so a pass that
   depends on it silently never happens, and that looks like a bug in the code under
   test. Replace it with a `setTimeout` on the test page. Found during T-058.
+
+  **It skips the whole rendering step, not only that.** CSS transitions stay at
+  `currentTime` 0, so a transitioned length reads as its starting value, and
+  `ResizeObserver` callbacks never arrive, so nothing it should trigger happens. Taking a
+  screenshot renders a frame, and a transition can finish under it, so a value read before
+  the screenshot and one read after disagree. When the session is not open in a window,
+  the pane cannot be shown. Switch transitions off on the test page, stand in for the
+  observer with something that calls the same code (a `resize` event reaches
+  `schedule()`), and say plainly what that leaves unchecked. Found during T-018.
 - **The built-in browser's `javascript_tool` is not held to the CSP.** T-014 set
   `window.BB = {}` and pasted each file's IIFE straight in, without its `var BB` line
   and with no `<script>` element.

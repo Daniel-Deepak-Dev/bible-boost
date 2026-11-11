@@ -71,6 +71,66 @@ nothing to a fixed element and reads back as `72px` (T-015).
 height, header, tab bar or nav, and these two bars were the only ones. Clearing the
 header would mean measuring it, so the panel simply starts at `top: 0` (T-017).
 
+## Page layout
+
+Measured 2026-11-10 at 1400x900 on `/bible/339/EXO.13.TAOVBSI?parallel=114`, dark, logged
+out (T-018). The classes are Tailwind's and describe the page; never select on them.
+
+```
+body.bg-canvas
+  div.grid  lg:grid-cols-[var(--rail-w)_minmax(0,1fr)]     the app shell
+    aside   sticky, 220px (--rail-w), hidden below lg       the left rail
+    div     flex-col                                         1165px wide here
+      header  sticky top-0, 72px
+      main#main
+        div.pbe-24
+          div  sticky, 57px, from y=72                       the version chips (parallel only)
+          div.grid  max-w-container-xl (1200px), md:grid-cols-2, px-10
+            the two vid columns, 534px each here
+          div  sticky to the bottom                          Previous / Next Chapter
+      footer
+```
+
+- **The top chrome is 129px here:** the 72px header and the 57px chip row, both sticky.
+  Neither height is published (above), so anything that has to clear them, such as the
+  panel's reading line, stays well below rather than relying on the number.
+- **The header's right side holds bible.com's controls:** Audio at 1078px, Exit Parallel,
+  **Settings ("Aa") at 1158px**, Get the app, and Account at 1305–1345px. Anything laid over
+  the right of the window covers them.
+- **The verse action menu is not in that flow.** Its root is `position: fixed`, from
+  `--rail-w` to the window's right edge, and centres a 480px card in it: 562–1042px here.
+  Narrowing the page does not move it (B-020).
+- `body` has no padding of its own (`0px`) and no inline style. `<html>` carries an inline
+  `color-scheme: dark;`. bible.com uses Headless UI, which marks `<html>` with
+  `data-headlessui-focus-visible`, and whose dialog scroll lock writes `padding-right` onto
+  `<html>`. That last part comes from Headless UI's source, not from seeing it happen here.
+- The reader settings popover is `position: absolute`, `z-index: 1500`, under its button.
+  Opening it writes nothing onto `body` or `<html>`.
+
+### Narrowing the page
+
+How T-018 makes room for a pinned panel, and why it is `body`:
+
+| Narrowed by 30% | Columns | The rest |
+|---|---|---|
+| `body`, `padding-right` | 260–587px and 603–929px | the header ends at the panel's 969px |
+| `main#main`, `padding-right` | the second ends near 995px, under the panel | header controls stay under the panel |
+
+A percentage is taken of the containing block. On `body` that is the 1385px the window
+leaves beside its scrollbar, the same width a fixed element's `width: 30%` is taken of, so
+the page and a fixed panel meet exactly. On `main` it is the 1165px beside the rail.
+
+**Chrome's scroll anchoring does not survive it.** Narrowing re-wraps every line, and with
+padding on `body`, `<html>` or `main` alike, `scrollY` stayed at 1489 while verse 10 moved
+from 152px to 1241px. A change to `padding` on an ancestor of the anchor node is one of the
+scroll-anchoring spec's suppression triggers. Taking the padding off again put the verse
+back at exactly 152px. Anything that narrows the page has to keep the reader's place
+itself, as `panel-host.js` does.
+
+The reader grid keeps two columns, because its `md:grid-cols-2` follows the window, not the
+space it is given. At 375px bible.com dropped `?parallel=` from the URL on its own, as
+`03-columns-and-versions.md` describes.
+
 ## Content-Security-Policy
 
 Read from a reader page's response header on 2026-11-10. `frame-src` lists `'self'`,

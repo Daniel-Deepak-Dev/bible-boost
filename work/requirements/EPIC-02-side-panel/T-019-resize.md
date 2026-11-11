@@ -88,3 +88,16 @@ on the reset.
 The seventh and eighth acceptance items are the real test. Test on a long
 chapter, pinned — that is where an unthrottled implementation falls over, and a
 short chapter will hide the problem completely.
+
+**What T-018 left for this task (2026-11-10).**
+
+- The squeeze rule in `content.css` reads `--bb-panel-width`, with the same 30%
+  fallback the panel and the tab use, so setting that one variable moves all three.
+  Set it on `documentElement`: it is the only common ancestor of the tab, the panel
+  and `body`.
+- That rule gives `body` a `transition: padding-right 0.2s`. While a pinned panel is
+  being dragged, switch the transition off, or every width written animates a reflow
+  of the whole page (R6, R9).
+- A width change while pinned re-wraps the page just as pinning does, so the verse
+  being read moves. `holdPosition()` in `panel-host.js` is what T-018 uses to keep it
+  in place. Call it before the width written on release.

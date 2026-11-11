@@ -9,7 +9,8 @@
  * which the page observer cannot see. See work/understandings/extension/01-architecture.md, rule 4.
  *
  * Nothing here reads the panel's contents or knows what it shows. It places the box, remembers whether
- * it was open, and carries messages. What pinning does to the page is T-018's, and the width is T-019's.
+ * it was open and pinned, narrows the page beside a pinned panel (T-018), and carries messages. The
+ * width is T-019's.
  *
  * Classic script, and the manifest runs it AFTER bible-dom.js, which it reads as it loads. content.js
  * runs before this file and reaches it through BB.panel?. at the moment of each refresh.
@@ -17,7 +18,7 @@
 var BB = (typeof BB !== 'undefined') ? BB : {};
 
 (() => {
-  const { parseUrl } = BB.dom;
+  const { parseUrl, columnEls, firstSpans, verseLabel, VID_RE } = BB.dom;
 
   // In storage.local and not storage.sync, because this is per-device UI state: a panel left open on
   // the desktop says nothing about a phone-sized window elsewhere, and sync's write quota is for the
@@ -30,6 +31,14 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // on the tab must not be what finds that out.
   const PANEL_URL = chrome.runtime.getURL('src/ui/panel.html');
   const PANEL_ORIGIN = new URL(PANEL_URL).origin;
+
+  // The width content.css treats as a phone, where the panel covers the whole window and the squeeze
+  // rule does not exist (T-017's R10, T-018's R6). Keep the two in step. The stylesheet alone decides
+  // whether the page is narrowed; this copy is for telling the panel whether to offer the pin, and for
+  // not holding the reader's place through a squeeze that is not going to happen.
+  const NARROW = window.matchMedia('(max-width: 767px)');
+
+  const html = document.documentElement;
 
   let state = { ...DEFAULTS };
   let ready = !store; // never act on or persist anything until the stored state has actually loaded
@@ -64,14 +73,21 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     if (frameReady) frame.contentWindow.postMessage(msg, PANEL_ORIGIN);
   }
 
-  const announce = () => send({ bb: 'state', open: state.panelOpen });
+  // canPin is worked out here because the panel cannot: a media query inside the frame measures the
+  // frame, which is 30% of a wide window and so reads as narrow there too.
+  const announce = () => send({
+    bb: 'state', open: state.panelOpen, pinned: state.panelPinned, canPin: !NARROW.matches,
+  });
 
   // Own-property only, so that { bb: 'constructor' } finds nothing, the same care the worker's router
   // takes with msg.type.
+  //
+  // pin writes storage on the panel's say-so, which is safe only because onMessage below checks the
+  // sender's window and not just its origin (B-012).
   const HANDLERS = {
     ready() { frameReady = true; announce(); },
     close() { setOpen(false); },
-    pin(msg) { if (typeof msg.pinned === 'boolean') persist({ panelPinned: msg.pinned }); },
+    pin(msg) { if (typeof msg.pinned === 'boolean') setPinned(msg.pinned); },
   };
 
   // A real barrier in this direction, unlike the panel's check of the messages going the other way,
@@ -131,6 +147,134 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     window.addEventListener('message', onMessage);
   }
 
+  // ---------- Squeezing the page ----------
+  // Pinned and open on a reader page, the page is narrowed so that the panel sits beside it instead of
+  // over the second column. This file only says whether: it writes --bb-squeeze on <html> as 1, and
+  // the one rule in content.css that reads it supplies the width, the breakpoint and the transition.
+  // Without that stylesheet the property does nothing, so it cannot narrow a page on its own.
+  const squeezing = () => !!parseUrl() && state.panelOpen && state.panelPinned;
+
+  // Written only when it changes, because render() runs at the end of every refresh(). Neither write is
+  // observed: <html> is outside body, and the page observer only watches class.
+  //
+  // R4: nothing of ours stays on <html> afterwards. bible.com usually keeps an inline color-scheme
+  // there, but where it has no style attribute of its own, removing the last property would leave an
+  // empty style="" behind, so that goes too.
+  function setSqueeze(on) {
+    if (on === (html.style.getPropertyValue('--bb-squeeze') === '1')) return;
+    if (on) {
+      html.style.setProperty('--bb-squeeze', '1');
+      return;
+    }
+    html.style.removeProperty('--bb-squeeze');
+    if (!html.getAttribute('style')) html.removeAttribute('style');
+  }
+
+  // A pin restored at load is the page settling, not a change the user made, so it is not animated.
+  // getAnimations() brings styles up to date before it answers, so the transition that setting the
+  // property has just started is already in the list to be finished.
+  function settle() {
+    for (const a of document.body.getAnimations()) {
+      if (a.transitionProperty === 'padding-right') a.finish();
+    }
+  }
+
+  // ---------- Keeping the reader's place ----------
+  // R8. Narrowing the page re-wraps every line above the verse being read, and with nothing done the
+  // text slides away under a scroll position that has not changed. Measured on 2026-11-10 at 1400x900:
+  // narrowing body moved verse 10 of Exodus 13 from 152px to 1241px, with scrollY still 1489.
+  //
+  // Chrome's scroll anchoring exists to prevent exactly that, and it stood aside. A change of padding on
+  // an ancestor of the anchor is one of the things that switch it off, and body is an ancestor of
+  // everything. It stood aside for padding on html and on main#main too, so no other target would have
+  // let the browser do this.
+  //
+  // So this file holds one element still itself, for long enough to cover the layout that keeps moving
+  // after the switch: every frame of the 0.2s transition, schedule()'s 80ms throttle, and the align()
+  // pass that follows, which adds its gaps and moves the text again. A frame loop corrects as it goes,
+  // and render(), which content.js calls straight after align(), corrects once more, so that a pass
+  // landing between two frames is not left on screen.
+  const HOLD_MS = 600;
+
+  // Anything the user does to the page means they have moved on, and a hold still running would drag
+  // them back, so any of these ends it. Captured and passive, because they only have to be heard.
+  const LET_GO = ['wheel', 'pointerdown', 'keydown'];
+
+  // A third of the way down the window, and not its top, because bible.com's sticky header and version
+  // row cover the first 129px at 1400x900 and publish no height for either
+  // (05-theme-and-page-chrome.md). A verse under them is not the one being read.
+  const READING_LINE = 1 / 3;
+
+  let hold = null;
+
+  // The top of an element's first line box, or undefined when it has none to measure, as when it has
+  // been hidden. The same reading align()'s topOf() takes, so that what is held still is what alignment
+  // lines up.
+  const lineTop = (el) => el.getClientRects()[0]?.top;
+
+  // Which verse the user is reading, as { el, top }: the element to hold still, and where. null when
+  // there is nothing to hold, such as a reader page whose columns have not rendered.
+  //
+  // The verse is the last one whose number is at or above the reading line, which makes it the one
+  // whose text crosses that line. Its number, and not the verse element, is what gets held: the number
+  // sits after the spacer align() puts in front of a verse, so a gap that grows moves it exactly as it
+  // moves the text. The verse element's own box would start at the spacer and stay put. A verse whose
+  // number has been switched off is held by its first line instead.
+  //
+  // The primary column, found by its vid and never by position (03-columns-and-versions.md), because it
+  // is the one every reader page has. After align() the other column's verses start level with it.
+  // The first verse stands in when the reader is above all of them, at the top of the chapter.
+  function readAnchor() {
+    const id = parseUrl()?.id;
+    const cols = columnEls();
+    const col = cols.find((c) => c.getAttribute('class').match(VID_RE)[1] === id) || cols[0];
+    if (!col) return null;
+    const line = innerHeight * READING_LINE;
+    let anchor = null;
+    for (const verse of firstSpans(col).values()) {
+      const label = verseLabel(verse);
+      const el = label?.getClientRects().length ? label : verse;
+      const top = lineTop(el);
+      if (top === undefined) continue;
+      if (anchor && top > line) break;
+      anchor = { el, top };
+    }
+    return anchor;
+  }
+
+  function holdPosition() {
+    const anchor = readAnchor();
+    if (!anchor) return;
+    const running = !!hold;
+    hold = { ...anchor, until: performance.now() + HOLD_MS };
+    if (running) return;
+    LET_GO.forEach((type) => window.addEventListener(type, release, { capture: true, passive: true }));
+    requestAnimationFrame(tick);
+  }
+
+  // Whole pixels only, so that sub-pixel layout noise does not turn into a scroll every frame. An
+  // element that has gone, or can no longer be measured, ends the hold rather than steering by nothing.
+  function keepPlace() {
+    if (!hold) return;
+    const now = hold.el.isConnected ? lineTop(hold.el) : undefined;
+    if (now === undefined || performance.now() > hold.until) {
+      release();
+      return;
+    }
+    const drift = now - hold.top;
+    if (Math.abs(drift) >= 1) window.scrollBy(0, drift);
+  }
+
+  function tick() {
+    keepPlace();
+    if (hold) requestAnimationFrame(tick);
+  }
+
+  function release() {
+    hold = null;
+    LET_GO.forEach((type) => window.removeEventListener(type, release, { capture: true }));
+  }
+
   // ---------- Rendering ----------
   // Everything on the page follows from the state through here, and it is what content.js calls at the
   // end of every refresh(), so the tab comes and goes with client-side navigation with no observer or
@@ -143,6 +287,11 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   //
   // isConnected in case something does take them away. Putting the box back does reload the frame, so
   // frameReady starts over and the panel's new 'ready' sets it again.
+  //
+  // data-bb-pinned is the panel's look, and follows the pin whether or not the panel is open or the
+  // window wide. The squeeze is the page's, and only while open on a reader page, so leaving a reader
+  // page by client-side navigation puts the page back. keepPlace() is last because content.js calls
+  // this straight after align() has moved the text again.
   function render() {
     if (!ready) return;
     const onReader = !!parseUrl();
@@ -158,10 +307,27 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     }
     tab.hidden = !onReader;
     tab.setAttribute('aria-expanded', String(state.panelOpen));
-    if (box) box.hidden = !onReader || !state.panelOpen;
+    if (box) {
+      box.hidden = !onReader || !state.panelOpen;
+      box.toggleAttribute('data-bb-pinned', state.panelPinned);
+    }
+    setSqueeze(squeezing());
+    keepPlace();
   }
 
-  // ---------- Opening and closing ----------
+  // ---------- Opening, closing and pinning ----------
+  // Both go through apply(), so that anything that moves the page holds the reader's place first, while
+  // the verse being read is still where the user last saw it. The page moves when the squeeze changes on
+  // a window wide enough for content.css to apply it: pinning or unpinning an open panel, and opening or
+  // closing a pinned one.
+  function apply(patch) {
+    const was = squeezing();
+    persist(patch);
+    if (squeezing() !== was && !NARROW.matches) holdPosition();
+    render();
+    announce();
+  }
+
   // Focus is only moved when it would otherwise be lost, which is when it was inside the frame that is
   // about to disappear. In that case the top document's activeElement is the iframe element itself.
   //
@@ -170,9 +336,14 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   function setOpen(open) {
     if (!ready || !parseUrl()) return;
     if (!open && frame && document.activeElement === frame) tab.focus({ preventScroll: true });
-    persist({ panelOpen: open });
-    render();
-    announce();
+    apply({ panelOpen: open });
+  }
+
+  // A pin is kept below 768px too, where it changes nothing on the page, so that the panel sits beside
+  // the page again as soon as the window is wide enough.
+  function setPinned(pinned) {
+    if (!ready || !parseUrl()) return;
+    apply({ panelPinned: pinned });
   }
 
   const open = () => setOpen(true);
@@ -187,10 +358,26 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
       state = { ...DEFAULTS, ...stored };
       ready = true;
       render();
+      settle();
     });
   } else {
     render();
   }
+
+  // The stylesheet applies or drops the squeeze by itself as the window crosses 768px. The panel only
+  // has to be told whether to show its pin.
+  NARROW.addEventListener('change', announce);
+
+  // R4 on the way out. A page being thrown away takes the property with it anyway, but one going into
+  // the back/forward cache would keep it, so it is taken off here. If the page comes back from that
+  // cache with the panel still open and pinned, the ordinary route puts it back, without animating,
+  // for the same reason as at load.
+  window.addEventListener('pagehide', () => setSqueeze(false));
+  window.addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    render();
+    settle();
+  });
 
   // open is what T-014's Save & open panel button tests for, so defining it is what turns that on.
   BB.panel = { open, close, toggle, refresh: render };

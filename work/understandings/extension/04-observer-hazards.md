@@ -114,6 +114,15 @@ and closes made no `schedule()` calls, while two class changes on `body` straigh
 afterwards made two, so the count was live. It toggles `hidden` and `aria-expanded`,
 and neither is observed.
 
+The pinned squeeze (T-018) writes `--bb-squeeze` inline on `<html>` and
+`data-bb-pinned` on the panel's own box. Neither is observed: `<html>` is outside
+`body`, and only `class` is watched. What re-runs alignment is the reflow: at
+1400x900 a 30% squeeze took each column from 534px to 327px wide, and a
+`ResizeObserver` on the columns fired once for it (measured with no extension,
+2026-11-10). Whether `content.js`'s own observer then counts one or a few `schedule()`
+calls across the 0.2s transition is not yet measured, because the run that could have
+shown it was in a hidden pane (below).
+
 A marked root that shifts the text is still caught: the `ResizeObserver` on the
 columns calls `schedule()` independently of this guard. That only sees a change
 in the column's height, so UI placed inside the verse columns would need more
@@ -131,6 +140,11 @@ thought. No task planned so far does that.
   with or without the guard, so it proves nothing. Use `textContent` or `append`.
 - Logging is `console.log` on purpose. Chrome hides `console.debug` by default,
   and a hidden log would look like a passing test.
+- **A hidden browser pane never delivers `ResizeObserver` callbacks.** They run in
+  the rendering step, which a hidden page skips, as it skips
+  `requestAnimationFrame` and CSS transitions. A squeeze there left alignment 1404px
+  out with `schedule()` never called, which looks exactly like the observer missing a
+  resize. Seen 2026-11-10 (T-018). Show the pane, or treat the log as saying nothing.
 - With the console on Verbose, a verse tap can also print `[Violation] Forced
   reflow while executing JavaScript took 30ms` (seen 2026-11-09). Chrome does not
   name the source. `align()` forces layout on purpose and runs after every tap,

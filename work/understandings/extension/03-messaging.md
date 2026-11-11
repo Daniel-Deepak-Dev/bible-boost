@@ -234,12 +234,12 @@ proxy of the real page, where the panel was on a second port.
 | Direction | Message | Purpose |
 |---|---|---|
 | panel → host | `{bb:'ready'}` | the panel's listener exists, so the host can start sending |
-| host → panel | `{bb:'state', open}` | sent on `ready` and on every open or close |
+| host → panel | `{bb:'state', open, pinned, canPin}` | sent on `ready`, on every open, close or pin, and when the window crosses 768px. `canPin` is false below 768px, where the panel is full-width and nothing is squeezed. The host works it out because a media query inside the frame measures the frame (T-018) |
 | host → panel | `{bb:'theme', theme:'dark'}` | relay `html.dark` (the page observer cannot see it) |
 | host → panel | `{bb:'context', ref:'EXO.13', versions:[...]}` | what chapter is on screen |
 | host → panel | `{bb:'selection', draft}` | user hit save with a verse selected |
 | panel → host | `{bb:'resize', width}` | user dragged the edge |
-| panel → host | `{bb:'pin', pinned}` | squeeze vs overlay |
+| panel → host | `{bb:'pin', pinned}` | squeeze vs overlay, from the pin button (T-018). The host stores it, which is safe only because of the `source` check. The button changes only when the host's `state` comes back |
 | panel → host | `{bb:'close'}` | collapse to the edge tab |
 
 Prefix every message with `bb:` so stray traffic is trivially ignored.

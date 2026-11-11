@@ -634,7 +634,8 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
    it keeps its intrinsic 150px, so #bb-panel takes the geometry and the frame fills it.
 
    --bb-panel-width is not set by anything yet. It is here for T-019, and it is why the tab can ride on
-   the panel's left edge with no measuring. hidden needs stating because the tab sets display. */
+   the panel's left edge, and the pinned squeeze below can match the panel, with no measuring. hidden
+   needs stating because the tab sets display. */
 #bb-panel-tab {
   position: fixed;
   top: 0;
@@ -719,6 +720,44 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   }
 
   #bb-panel-tab[aria-expanded="true"] { right: 0; }
+}
+
+/* ---------- Pinned squeeze ----------
+   Unpinned, the panel is a layer over the page and casts the dock's shadow. Pinned, the page is
+   narrowed so that the panel sits beside it, not over the second column, and the shadow goes, because
+   the panel is now part of the layout and its border alone marks the edge (T-018).
+
+   The whole page is narrowed, and not bible.com's reader wrapper main#main. Measured on 2026-11-10 at
+   1400x900, with a 30% panel starting at 969px: bible.com's sticky header carries Audio, Settings ("Aa")
+   and Account at 1078-1345px, and narrowing main alone would have left the reader's own font-size
+   control under the panel. main's percentages are also of the wrong base: 30% of main is 30% of the
+   1165px beside the left rail, which ended the second column 26px under the panel. 30% of body is
+   30% of the same 1385px (the window less its scrollbar) that the fixed panel's width is taken of, so
+   the two edges meet. Pinned on body, the columns came to 260-587px and 603-930px, and the header
+   ended at the panel's edge.
+
+   padding-right and not padding-inline-end, because the panel is on the physical right whichever way
+   the interface reads. Never a transform, which would break the getBoundingClientRect() that align()
+   measures with. bible.com sets no padding on body (measured 0px), so the 0 this resolves to when
+   unpinned takes nothing away from it; the rule applies unpinned too so that unpinning animates.
+
+   panel-host.js writes --bb-squeeze on <html> as 1 while pinned and open, and removes it otherwise. On
+   its own the property does nothing, so it cannot narrow a page without this file. The multiply keeps
+   the geometry here, and --bb-panel-width is the variable the panel and the tab already read, so
+   T-019's width moves all three together.
+
+   Chrome's scroll anchoring stands aside for a padding change on an ancestor, so the verse being read
+   is held in place by panel-host.js, not by the browser.
+
+   From 768px only: below it the panel is full-width and there is no page beside it to narrow. */
+#bb-panel { box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14)); }
+#bb-panel[data-bb-pinned] { box-shadow: none; }
+
+@media (min-width: 768px) {
+  body {
+    padding-right: calc(var(--bb-squeeze, 0) * var(--bb-panel-width, 30%));
+    transition: padding-right 0.2s ease;
+  }
 }
 
 /* ---------- Save chip ----------
@@ -834,5 +873,6 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   #bb-dock .bb-full,
   #bb-dock .bb-track,
   #bb-dock .bb-thumb,
-  #bb-panel-tab { transition: none; }
+  #bb-panel-tab,
+  body { transition: none; }
 }

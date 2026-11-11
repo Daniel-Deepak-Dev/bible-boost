@@ -30,6 +30,7 @@ knowing before seven epics are built on top.
 | [B-017](B-017-popover-lists-overwrite-choices.md) | The save popover's late lists overwrite what the user already did | No |
 | [B-018](B-018-retag-sort-untested.md) | Nothing tests that `retag()` leaves a note's tags sorted | No |
 | [B-019](B-019-square-surfaces.md) | BibleBoost's surfaces are square beside bible.com's rounded ones | No |
+| [B-020](B-020-verse-menu-under-panel.md) | bible.com's verse menu sits partly under the side panel | No |
 
 ## How these relate to the notes project
 

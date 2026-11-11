@@ -22,7 +22,7 @@
       font: 400 14px/normal aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
     }
 
-    /* Compact because EPIC-02 says so. T-018 puts its pin control in this row. */
+    /* Compact because EPIC-02 says so. The pin (T-018) and the × are the only controls at rest. */
     header {
       display: flex;
       align-items: center;
@@ -34,6 +34,9 @@
 
     main { flex: 1; min-height: 0; overflow: auto; }
 
+    .bb-tools { display: flex; gap: 2px; }
+
+    #bb-pin,
     #bb-close {
       padding: 2px 8px;
       border: 0;
@@ -44,14 +47,58 @@
       cursor: pointer;
     }
 
+    #bb-pin:hover,
     #bb-close:hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+    #bb-pin:focus-visible,
     #bb-close:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); outline-offset: -2px; }
+
+    /* The pin is Tabler Icons' "pin" (MIT), from the same set as the dock's swap icon, stroked in
+       currentColor so it follows the text colour of whichever theme the panel is in. 16px with 3px
+       above and below is meant to come out at the ×'s own height, a 14px line with 2px of padding, so
+       that showing the pin does not make the row grow.
+
+       The state is aria-pressed and nothing else, so what a screen reader announces and what is drawn
+       cannot disagree. Pressed, it takes the full text colour and a fill one step off the panel's own:
+       --bb-surface-3 on --bb-surface-2. The [hidden] rule is needed because display: flex beats the
+       browser's own, and the host hides the pin wherever the window is too narrow to squeeze (R6). */
+    #bb-pin {
+      display: flex;
+      align-items: center;
+      padding: 3px 6px;
+    }
+
+    #bb-pin[hidden] { display: none; }
+
+    #bb-pin[aria-pressed="true"] {
+      background: var(--bb-surface-3, #EDEBEB);
+      color: var(--bb-text, #121212);
+    }
+
+    #bb-pin svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
   </style>
 </head>
 <body>
   <header>
     <span>BibleBoost</span>
-    <button id="bb-close" type="button" aria-label="Close panel">×</button>
+    <div class="bb-tools">
+      <button id="bb-pin" type="button" aria-pressed="false" aria-label="Pin beside the page" title="Pin beside the page" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4" />
+          <path d="M9 15l-4.5 4.5" />
+          <path d="M14.5 4l5.5 5.5" />
+        </svg>
+      </button>
+      <button id="bb-close" type="button" aria-label="Close panel">×</button>
+    </div>
   </header>
   <main></main>
   <script type="module" src="panel.js"></script>

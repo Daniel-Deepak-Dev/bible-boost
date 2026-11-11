@@ -1,7 +1,7 @@
 /*
  * BibleBoost — the side panel's page
  * A shell for now, so that the host has something to open and the channel between them can be seen to
- * work (T-017). T-021 fills it with the note list.
+ * work (T-017), plus the pin (T-018). T-021 fills it with the note list.
  *
  * This page cannot see bible.com. Anything page-shaped comes from src/content/panel-host.js by
  * postMessage, and the table of those messages is in work/understandings/extension/03-messaging.md.
@@ -22,10 +22,27 @@ function isFromHost(event) {
   return event.origin === HOST_ORIGIN && event.source === window.parent;
 }
 
-// The state is written where DevTools can read it, because this shell shows nothing else yet, and that
-// is how the round trip through the host gets checked.
+const pin = document.getElementById('bb-pin');
+
+// Open is written where DevTools can read it, because this shell shows nothing else yet, and that is
+// how the round trip through the host gets checked.
+//
+// pinned is the stored choice, and canPin is whether the window is wide enough to act on it. The host
+// has to say the second, because a media query in here measures this frame, which is 30% of a wide
+// window and so reads as narrow there too. A pin the window cannot honour is still shown as pressed
+// whenever the window is wide again, because the choice was kept.
+//
+// The name stays the same whichever way the pin is, and aria-pressed is what says which way that is.
+// Only the tooltip says what a click will do. None of this is a write, so it is fit to come from this
+// channel: a page script posting its own state can only change what the button shows.
 const HANDLERS = {
-  state(msg) { document.documentElement.dataset.bbOpen = String(!!msg.open); },
+  state(msg) {
+    document.documentElement.dataset.bbOpen = String(!!msg.open);
+    const pinned = !!msg.pinned;
+    pin.setAttribute('aria-pressed', String(pinned));
+    pin.title = pinned ? 'Pinned beside the page. Click to float over it' : 'Pin beside the page';
+    pin.hidden = !msg.canPin;
+  },
 };
 
 // Own-property only, so that { bb: 'constructor' } finds nothing.
@@ -40,6 +57,12 @@ window.addEventListener('message', (e) => {
 const send = (msg) => window.parent.postMessage(msg, HOST_ORIGIN);
 
 document.getElementById('bb-close').addEventListener('click', () => send({ bb: 'close' }));
+
+// The button is not flipped here. The host answers every pin it accepts with a state message, and that
+// is the only thing that changes the button, so it cannot show a pin the host refused or never got.
+pin.addEventListener('click', () => {
+  send({ bb: 'pin', pinned: pin.getAttribute('aria-pressed') !== 'true' });
+});
 
 // Last, so that the listener above already exists when the host answers.
 send({ bb: 'ready' });
