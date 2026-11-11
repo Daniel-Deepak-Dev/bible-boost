@@ -47,8 +47,8 @@ function load(pairs, refs = {}) {
   };
   const context = vm.createContext({ BB });
   vm.runInContext(SOURCE, context);
-  const { readVerses, captionOf } = context.BB.savePopover.debug;
-  return { asked, verses: (usfms) => wire(readVerses({ usfms })), captionOf };
+  const { readVerses, captionOf, startRow } = context.BB.savePopover.debug;
+  return { asked, verses: (usfms) => wire(readVerses({ usfms })), captionOf, startRow };
 }
 
 const stored = (verses) => cleanNoteDraft({ source: 'menu', verses }).fields.verses;
@@ -207,4 +207,36 @@ test('with no references the caption is exactly what formatRange gives', () => {
   for (const usfms of cases) {
     assert.equal(captionOf(usfms.map((usfm) => ({ usfm, displayRef: null }))), formatRange(usfms), usfms.join());
   }
+});
+
+// ---------- Where the topic list's highlight starts (B-013) ----------
+// The rows are shaped as topicRows builds them: Uncategorized always first, the hint or the create row
+// always last, and current only while nothing is being filtered. Only the list's arithmetic is here.
+// Which row topicRows marks, and what Enter then does, needs the popover open on a page.
+const { startRow } = load({});
+const row = (label, more = {}) => ({ label, ...more });
+const HINT = row('+ New topic: type a name', { hint: true });
+
+test('an unfiltered list starts on the topic already chosen, not on Uncategorized', () => {
+  assert.equal(startRow([row('Uncategorized'), row('Faith', { current: true }), row('Hope'), HINT]), 1);
+});
+
+test('with Uncategorized the chosen one, the list starts on it', () => {
+  assert.equal(startRow([row('Uncategorized', { current: true }), row('Faith'), HINT]), 0);
+});
+
+// What "fai" then Enter relies on: topicRows marks nothing current while there is a filter.
+test('a filtered list starts on its first match', () => {
+  assert.equal(startRow([row('Faith'), row('+ New topic "fai"', { create: 'fai' })]), 0);
+  assert.equal(startRow([row('+ New topic "xyz"', { create: 'xyz' })]), 0);
+});
+
+test('a hint is never started on, even one marked current', () => {
+  assert.equal(startRow([{ ...HINT, current: true }, row('Faith')]), 1);
+  assert.equal(startRow([HINT, row('Faith')]), 1);
+});
+
+test('a list of hints alone starts on nothing', () => {
+  assert.equal(startRow([HINT]), -1);
+  assert.equal(startRow([]), -1);
 });

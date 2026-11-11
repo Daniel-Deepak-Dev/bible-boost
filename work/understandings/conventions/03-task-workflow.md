@@ -211,6 +211,13 @@ Each of these cost a round of confusion during T-012.
 - **The worker can be stood in for.** `Object.defineProperty(window, 'chrome', ...)`
   with a `runtime.sendMessage` that answers like the router lets page code run a whole
   save. It proves nothing about what the real worker stores.
+- **The save popover runs on a blank page.** `save-popover.js` reads only `BB.dom`
+  (`VID_RE`, `columnEls`, `firstSpans`), `BB.capture` (`getSelection`, `versePair`,
+  `displayRef`) and `chrome.runtime.sendMessage`. A localhost page that stands in for those
+  three, set before the file loads, opens the real popover with `content.css`, and real key
+  presses in the built-in browser drive it. A stand-in worker that answers `topics/list`
+  seconds late, with the topics as they were when it was asked, is what showed B-017's
+  late-list timing, which a live page almost never does. Found during B-013.
 - **A screenshot can show only part of an emulated viewport.** At 1024x800 and 760x600
   the image held the top-left of the page. Read positions with
   `getBoundingClientRect` rather than from the picture, and move an element into view

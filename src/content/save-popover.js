@@ -176,16 +176,26 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // Enter means "this is the tag", and a highlight would turn the "fai" the user meant into "faith".
   //
   // startRow is which row that highlight starts on: rows in, an index out, or -1 for none.
+  //
+  // The owner's current row comes first (B-013). It used to be simply the first row that is not a
+  // hint, and the topic list always lists Uncategorized first, so with Faith preselected a Tab into
+  // the field and an Enter picked Uncategorized. The save then called rememberTopic(null), and the next
+  // popover opened on Uncategorized as well, with nothing on screen to say why except the name in the
+  // field changing. topicRows marks a row current only while nothing is being filtered, so once
+  // somebody types "fai" there is no current row, the first match is highlighted, and Enter takes
+  // Faith as it always did. A hint is never started on, even one marked current, since it cannot be
+  // picked.
   function startRow(rows) {
-    // TODO(human): B-013. This is the old rule, the first row that is not a hint. For the topic list
-    // that is always Uncategorized, so Enter on a freshly focused field throws away the topic that was
-    // preselected. topicRows now marks the current choice's row { current: true } while unfiltered.
-    return rows.findIndex((r) => !r.hint);
+    const current = rows.findIndex((r) => r.current && !r.hint);
+    return current >= 0 ? current : rows.findIndex((r) => !r.hint);
   }
 
   function suggestionList(input, list, getRows, pick, { autoActive = false } = {}) {
     let rows = [];
     let active = -1;
+    // Whether the highlight is where the arrow keys put it, rather than where open() did. Only
+    // refresh reads it.
+    let steered = false;
 
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-autocomplete', 'list');
@@ -216,6 +226,25 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
       rows = getRows(input.value);
       if (!rows.length) return close();
       active = autoActive ? startRow(rows) : -1;
+      steered = false;
+      draw();
+    }
+
+    // For an owner whose rows have changed underneath an open list (B-017 R4). A closed list stays
+    // closed, since opening one is the user's doing and not the data's.
+    //
+    // A row somebody arrowed to keeps the highlight if it is still listed, so a redraw cannot change
+    // what Enter is about to pick out from under them. A highlight that open() placed is placed again
+    // from the new rows, because the row it would choose now can be a better one: "fai" highlights
+    // + New topic "fai" while the topics are still on their way, and Faith once they have arrived.
+    function refresh() {
+      if (list.hidden) return;
+      const held = steered ? rows[active]?.label : null;
+      const fresh = getRows(input.value);
+      const at = fresh.findIndex((r) => !r.hint && r.label === held);
+      if (at < 0) return open();
+      rows = fresh;
+      active = at;
       draw();
     }
 
@@ -226,6 +255,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
       if (!live.length) return;
       const at = live.indexOf(active);
       active = live[(at + step + live.length + (at < 0 && step < 0 ? 1 : 0)) % live.length];
+      steered = true;
       draw();
     }
 
@@ -260,7 +290,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
       return false;
     }
 
-    return { open, close, onKey };
+    return { open, close, refresh, onKey };
   }
 
   // ---------- Status ----------
@@ -416,12 +446,19 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // here.topics by pickTopic, and a list the worker read before that topic existed does not have it,
   // so assigning the list dropped it. Then the remembered topic went in over the new one, because
   // focus had moved on to the note by then, and the note was saved to a topic nobody chose.
+  //
+  // A topic list already open when the answer lands is drawn again from it (B-017 R4). Otherwise
+  // somebody who tabbed into Topic early goes on seeing Uncategorized alone until they type, and
+  // "fai" then Enter makes a new topic called "fai" when they meant the Faith the list had not shown
+  // yet. refresh keeps a row they had arrowed to. The tag list needs none of this: with no known tags
+  // it has no rows, and a list with no rows closes, so it cannot be open before the answer.
   async function loadLists(here) {
     const [topics, tags] = await Promise.all([ask({ type: 'topics/list' }), ask({ type: 'tags/list' })]);
     if (pop !== here) return;
     if (topics.ok) {
       const listed = new Set(topics.topics.map((t) => t.id));
       here.topics = [...topics.topics, ...here.topics.filter((t) => !listed.has(t.id))];
+      here.topicList.refresh();
     }
     if (tags.ok) here.knownTags = tags.tags;
     const failed = [topics, tags].find((r) => !r.ok);
@@ -750,7 +787,8 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
 
   BB.savePopover = {
     open,
-    // For test/save-popover.test.js, which runs this draft through the worker's real validator.
-    debug: { readVerses, captionOf },
+    // For test/save-popover.test.js, which runs this draft through the worker's real validator, and
+    // checks which row the topic list starts on (B-013).
+    debug: { readVerses, captionOf, startRow },
   };
 })();

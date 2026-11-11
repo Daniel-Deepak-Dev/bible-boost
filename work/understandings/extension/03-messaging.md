@@ -182,6 +182,13 @@ The worker does **not** enumerate tabs. After any write it bumps a counter in
 `tags`. `notesRevIds` are always **note** ids, so it is empty when only a topic or a
 tag row changed. For those two kinds a listener should refetch rather than patch.
 
+**A `trash`, `restore` or `purge` that moved nothing still bumps**, with
+`notesRevIds: []`. `mutate()` bumps after every write and does not ask whether anything
+changed. Trashing a note that another tab already trashed does exactly this. For those
+three kinds an empty list does mean nothing happened, and a listener may skip it. For
+`topics` and `tags` it does not, as above. Whether the worker should stop sending the
+empty ones is open in B-015's Notes. Read from `repo.js` on 2026-11-11.
+
 **Watch `changes.notesRev`.** The bumps are queued so it rises by exactly one per
 write. Without the queue, two overlapping writes both read 42 and both store 43, and
 the second one changes only `notesRevIds`.

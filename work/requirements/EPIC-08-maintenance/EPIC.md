@@ -31,6 +31,7 @@ knowing before seven epics are built on top.
 | [B-018](B-018-retag-sort-untested.md) | Nothing tests that `retag()` leaves a note's tags sorted | No |
 | [B-019](B-019-square-surfaces.md) | BibleBoost's surfaces are square beside bible.com's rounded ones | No |
 | [B-020](B-020-verse-menu-under-panel.md) | bible.com's verse menu sits partly under the side panel | No |
+| [B-021](B-021-range-put-back-after-navigation.md) | Closing the save popover puts back a text selection whose page is gone | No |
 
 ## How these relate to the notes project
 
@@ -49,6 +50,10 @@ because T-007's Files list did not include `schema.js`.
 **B-012 to B-018 are from the notes work as well.** They came out of a code review of
 EPIC-00, EPIC-01 and T-017 on 2026-11-10, after those tasks were Done. None is a crash
 or a lost note. B-014 is the one that needs a live page before any code.
+
+**B-021 is from a second review of EPIC-00 and EPIC-01**, written up the same day and
+checked against the code on 2026-11-11. That review also added R4 to B-017 and a note to
+B-015, rather than new files.
 
 ## Adding to this epic
 

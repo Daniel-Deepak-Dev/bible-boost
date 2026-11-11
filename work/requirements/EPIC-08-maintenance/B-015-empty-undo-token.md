@@ -63,3 +63,19 @@ it", so that it offers Undo only when there is something to undo.
 - [ ] Trashing a note that is already in Trash gets a reply that offers no Undo
 - [ ] Trashing two notes, one already in Trash, gets a token that restores the other
 - [ ] `node --test` passes
+
+## Notes
+
+**The same no-op also sends a change signal (2026-11-10 review, checked 2026-11-11).**
+`mutate()` calls `bumpRev(kind, outcome.ids)` after every write, and `bumpRev` does not
+look at `ids`. So a `notes/trash` that moved nothing still increments `notesRev`, and so
+do a `notes/restore` or `notes/purge` that moved nothing. Every open surface then reloads
+its list for a change that did not happen. It is harmless, only wasted work, and it is
+not one of this file's requirements. Whoever settles R2 is deciding what "moved nothing"
+looks like, and is best placed to decide whether it should skip the bump too.
+
+**Do not skip the bump on an empty `ids` in `mutate()`.** `ids` names the notes whose
+records changed, not whether anything did. `createTopic` and `updateTopic` return
+`ids: []` on purpose, and so does `renameTag` when only a tag's label changes, and the
+surfaces still have to hear about those. A skip has to come from the three operations
+that move notes, where an empty `changed` really does mean nothing happened.
