@@ -30,7 +30,7 @@ is an index, not a board.
 | [EPIC-03](EPIC-03-full-page/EPIC.md) | **Full page** — the dedicated notes app | T-025 … T-030 |
 | [EPIC-04](EPIC-04-organization/EPIC.md) | **Organization** — topics, tags, trash | T-031 … T-035 |
 | [EPIC-05](EPIC-05-search/EPIC.md) | **Search** — bilingual, across every field | T-036 … T-041 |
-| [EPIC-06](EPIC-06-import-export/EPIC.md) | **Import / export** — JSON, CSV, Markdown, backup | T-042 … T-049 |
+| [EPIC-06](EPIC-06-import-export/EPIC.md) | **Import / export** — JSON, CSV, Markdown, backup, YouVersion | T-042 … T-049, T-059 |
 | [EPIC-07](EPIC-07-release/EPIC.md) | **Polish and release** | T-050 … T-055 |
 | [EPIC-08](EPIC-08-maintenance/EPIC.md) | **Maintenance** — pre-existing debt | B-001 … B-022 |
 | [EPIC-09](EPIC-09-version-swap/EPIC.md) | **Swap sides** — trade the two parallel versions left and right | T-056 … T-058 |
@@ -69,6 +69,7 @@ T-021 ──> T-022, T-023, T-025
 T-025 ──> T-026 … T-029
 T-005 ──> T-036 ──> T-038 … T-041
 T-048 ──> T-046, T-047
+T-046 ──> T-059
 
 T-001 ──> T-056 ──> T-057 ──> T-058
 T-004 ──> T-057

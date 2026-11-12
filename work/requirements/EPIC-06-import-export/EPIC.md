@@ -32,6 +32,7 @@ want to end up.
 | [T-047](T-047-csv-import.md) | CSV import, best effort | T-044, T-048 |
 | [T-048](T-048-import-validator.md) | Shared import validator | T-005 |
 | [T-049](T-049-backup-ux.md) | Backup UX and export nag | T-043 |
+| [T-059](T-059-import-from-youversion.md) | Import notes from the YouVersion Bible App | T-046, T-048 |
 
 T-048 should be done **before** either import task, not alongside them.
 

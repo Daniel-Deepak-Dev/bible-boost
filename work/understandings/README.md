@@ -31,6 +31,7 @@ Each file states one at the top:
 | [05-theme-and-page-chrome](bible-com/05-theme-and-page-chrome.md) | any new on-page UI |
 | [06-verse-action-menu](bible-com/06-verse-action-menu.md) | detecting a selection, the save-to-BibleBoost menu row |
 | [07-i18n-and-scripts](bible-com/07-i18n-and-scripts.md) | search, sorting, export, anything measuring text |
+| [08-youversion-account-data](bible-com/08-youversion-account-data.md) | anything wanting a user's YouVersion notes or highlights: MCP, the APIs, the internal moments API, the 19-digit id trap |
 
 ### This extension
 
