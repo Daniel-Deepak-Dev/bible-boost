@@ -259,9 +259,10 @@ function cleanNoteFields(raw) {
 
 // A blank body counts as no body, in every script, because trim() knows Unicode whitespace.
 //
-// The empty test applies to creating and not to updating (T-005 R2 and R4). Autosave sends a patch
-// about 600 ms after typing stops (T-022 R2), so someone clearing a standalone note to retype it
-// would otherwise get an error for a state they are only passing through.
+// The empty test applies to creating and not to updating (T-005 R2 and R4). It was written for
+// T-022's first autosave, which sent a patch mid-retype. That is gone (the panel saves on Save
+// since 2026-11-12), and the rule stays: an update that empties a body is the user's decision, and
+// the note keeps its verse or its title.
 export function cleanNoteDraft(draft) {
   if (!isRecord(draft)) throw new Error('A note draft must be an object.');
   const { fields, tagEntries } = cleanNoteFields(draft);

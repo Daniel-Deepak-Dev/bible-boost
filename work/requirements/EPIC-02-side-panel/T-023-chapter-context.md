@@ -91,3 +91,8 @@ fall back to All scope rather than showing an empty list.
 
 R3 is small and prevents the most likely support question. R6 prevents the most
 likely data-loss complaint.
+
+**From T-022 (2026-11-12).** Close the open editor before calling
+`list.setFilter` (`closeEditor()` in `panel.js` saves first). The list keeps an open
+row through a filter change, at the top, because it holds what is being typed, but
+a note from another chapter left open over a new chapter's list would confuse.

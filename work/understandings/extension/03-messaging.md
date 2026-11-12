@@ -217,6 +217,21 @@ milliseconds. Any other surface that patches from `notesRev` needs the same care
 another context moved it to the top with every row element on screen still the
 same object.
 
+**A surface cannot tell its own write from another's by the signal.** `notesRev`
+carries the kind and the ids, not who wrote, and the signal for an editor's own save
+can arrive before or after the reply to it. The editor (`src/ui/app/editor.js`,
+T-022) does not try. It queues a `notes/get` behind its own saves and compares the
+note with what it last stored, field by field: its own echo matches and changes
+nothing; a field changed elsewhere and untouched here is taken in; one changed on both
+sides is a conflict. Checked in a stand-in on 2026-11-12, not in two real tabs.
+
+**The reply to `notes/update` carries other surfaces' changes too**, because
+`updateNote` merges the patch over the stored record. A surface that keeps editing
+after a save must not take the reply whole as its new baseline, or its next patch
+sends those fields back as they were. The panel's editor closes on Save (T-022, since
+the user replaced autosave with a Save button), so it simply starts from the reply;
+an editor that stays open after saving, as the full page's may, has to merge it.
+
 Every surface listens with `chrome.storage.onChanged`. This works in content
 scripts and extension pages alike, needs no `tabs` permission, and lets a
 listener patch one row instead of refetching everything.

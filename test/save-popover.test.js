@@ -263,3 +263,20 @@ test('a list of hints alone starts on nothing', () => {
   assert.equal(startRow([HINT]), -1);
   assert.equal(startRow([]), -1);
 });
+
+// src/ui/app/suggest.js is the editor's copy of the popover's list (T-022), because a classic script
+// cannot import an ES module. The same rows through both copies, so that a change to one that is not
+// made to the other fails here.
+test('the editor\'s startRow agrees with the popover\'s', async () => {
+  const { startRow: editorStartRow } = await import('../src/ui/app/suggest.js');
+  const cases = [
+    [row('Uncategorized'), row('Faith', { current: true }), row('Hope'), HINT],
+    [row('Uncategorized', { current: true }), row('Faith'), HINT],
+    [row('Faith'), row('+ New topic "fai"', { create: 'fai' })],
+    [{ ...HINT, current: true }, row('Faith')],
+    [HINT, row('Faith')],
+    [HINT],
+    [],
+  ];
+  for (const rows of cases) assert.equal(editorStartRow(rows), startRow(rows), JSON.stringify(rows.map((r) => r.label)));
+});

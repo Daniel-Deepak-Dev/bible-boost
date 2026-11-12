@@ -38,7 +38,7 @@ free.
 - [x] Unpinned, it overlays with a shadow
 - [x] Width is draggable and survives a reload
 - [x] It follows bible.com's light/dark theme
-- [ ] Notes can be created, edited and deleted from it
+- [x] Notes can be created, edited and deleted from it
 - [ ] It defaults to the chapter on screen
 - [ ] `Alt+B` toggles it
 - [ ] With `DEBUG_SCHEDULE = true`, typing in the panel does not re-run

@@ -99,3 +99,19 @@ on note deletion, so `storage.local` does not accumulate orphans.
 R3 is what actually saves a user's work; `beforeunload` is a courtesy that
 browsers increasingly restrict. Build the draft buffer first and treat the
 dialog as secondary.
+
+**From T-022 (2026-11-12). There is no autosave any more**, so this task's premise
+has moved. The user replaced T-022's autosave with a **Save button** after trying it:
+an accidental edit was stored at once, over the old words. `src/ui/app/editor.js`
+now stores nothing until Save or Ctrl/Cmd+Enter, says `Unsaved changes` while there
+are any, and every way out of the editor goes through `close({ how })`, which asks
+before dropping a change (`cancel`) or offers Save, Discard or Keep editing (`ask`).
+A failed save shows `Not saved. <error>`, keeps the changes and stays open.
+
+So R1 ("flush, do not warn") no longer fits: a flush would be the very save the user
+asked not to happen. Leaving an editor should ask, as it already does in the panel.
+Closing the panel keeps the editor and its changes, since the frame only hides. What
+is still missing is R3, the draft buffer: a page reload or a crash loses unsaved
+changes today, and nothing warns. Do that first. Never act on a message from
+`panel-host.js`: nothing arriving by `postMessage` may cause a write
+(03-messaging.md).

@@ -95,3 +95,8 @@ those is a separate place to get it wrong; check each.
 
 R9 lists five independent places. Tick them one at a time — a trashed note
 reappearing in search is a small bug that reads as a serious one.
+
+**From T-022 (2026-11-12).** T-022 R7 lists Delete forever with a type-to-confirm.
+`src/ui/app/dialog.js` has only the plain confirm, because nothing could call
+type-to-confirm before this view exists. Add it there as an option of
+`confirmDialog`, so the panel and the full page share it.

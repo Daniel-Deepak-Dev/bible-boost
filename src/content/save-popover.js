@@ -163,7 +163,9 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
 
   // ---------- The suggestion list ----------
   // Shared by the topic picker and the tag input, which differ only in what they list and what picking
-  // does. A row is { label } plus whatever its owner wants back, or { label, hint: true } for one that
+  // does. The note editor has a copy, src/ui/app/suggest.js, because this is a classic script and that
+  // is an ES module (T-022). A change here belongs there too; test/save-popover.test.js holds the two
+  // startRow functions together. A row is { label } plus whatever its owner wants back, or { label, hint: true } for one that
   // can be seen and not chosen. An owner may also mark one row { current: true }, meaning it is the
   // choice already made, and that is as much as this list ever knows about what it is listing.
   //

@@ -1,13 +1,19 @@
 /*
  * BibleBoost — the side panel's page
- * The frame panel-host.js opens on bible.com (T-017): its pin (T-018), the page's theme (T-020) and the
- * note list (T-021).
+ * The frame panel-host.js opens on bible.com (T-017): its pin (T-018), the page's theme (T-020), the
+ * note list (T-021), and editing, creating and trashing notes in it (T-022).
  *
  * This page cannot see bible.com. Anything page-shaped comes from src/content/panel-host.js by
  * postMessage, and the table of those messages is in work/understandings/extension/03-messaging.md.
- * Notes never go that way: the list asks the service worker itself, through src/ui/app/store.js.
+ * Notes never go that way: the list and the editor ask the service worker themselves, through
+ * src/ui/app/store.js.
  */
-import { createList } from './app/list.js';
+import { createList, NEW_ROW } from './app/list.js';
+import { createEditor } from './app/editor.js';
+import { createToasts } from './app/toast.js';
+import { moveToTrash, offerUndo } from './app/trash.js';
+import { chooseDialog } from './app/dialog.js';
+import { ask } from './app/store.js';
 
 // The one page this can be framed in that means anything. Only www, because that is the only host the
 // content script matches.
@@ -81,13 +87,130 @@ pin.addEventListener('click', () => {
 // that nothing the list does can keep the × and the pin from working.
 send({ bb: 'ready' });
 
-// The list fills <main>. onOpen is left at its default, which does nothing, until T-022 expands a row
-// into its editor in place.
+// ---------- Notes ----------
+// One editor at a time, open inside the row of the note it edits (T-022 R1), or in a row of its own at
+// the top for a note being written (R4). editor is that editor, or null.
+//
+// Nothing is stored until the editor's Save (R2 as amended, 2026-11-12), so every way of leaving an editor
+// that has changes on it asks first, and the editor does the asking: see close() in editor.js.
+//
+// Opening, closing and trashing all wait their turn in one queue. Each can wait on the user, since
+// leaving an editor with changes asks what to do with them, and a second click arriving meanwhile must
+// not open a second editor over the first.
+let editor = null;
+let queue = Promise.resolve();
+const serial = (job) => (queue = queue.then(job).catch((err) => console.error('[BibleBoost] panel:', err)));
+
+// The row about to be opened, so that as the open row above it shrinks back, this one stays under the
+// pointer that just clicked it.
+let keepId = null;
+
+// A note that closes by being saved has moved to the top, as the newest, and its row is highlighted
+// there so that it can be seen what was updated (decided with the user, 2026-11-12). A new note's row
+// becomes the stored note's row first.
+function startEditor(note) {
+  const ed = createEditor({
+    note,
+    source: 'panel',
+    lookups: list.lookups,
+    onClose: ({ focus, saved }) => {
+      if (editor === ed) editor = null;
+      if (saved && list.openId === NEW_ROW) list.adopt(saved.id);
+      list.collapse({ focus, keep: keepId, flash: !!saved });
+    },
+  });
+  editor = ed;
+  return ed;
+}
+
+// Resolves to false if the user chose to keep editing, when the editor asked what to do with changes.
+// how is the editor's: 'ask' offers Save, Discard and Keep editing.
+async function closeEditor({ focus = false, keep = null, how = 'ask' } = {}) {
+  if (!editor) return true;
+  keepId = keep;
+  try {
+    return await editor.close({ focus, how });
+  } finally {
+    keepId = null;
+  }
+}
+
+// Enter on a row or a click on it. On the row already open it only puts the caret back in the note: the
+// row of a new note has no note of its own to pass, and an open one passes the note being edited.
+function onOpen(note) {
+  return serial(async () => {
+    if (editor && (!note || note.id === editor.id)) return editor.focus();
+    if (!note || !(await closeEditor({ keep: note.id }))) return;
+    const ed = startEditor(note);
+    if (list.open(note.id, ed.el)) ed.focus();
+    else await ed.close({ focus: false });
+  });
+}
+
+// R4: the + in the header. A note already being written keeps its place, and gets the caret back.
+function newNote() {
+  return serial(async () => {
+    if (editor && list.openId === NEW_ROW) return editor.focus();
+    if (!(await closeEditor())) return;
+    const ed = startEditor(null);
+    list.openNew(ed.el);
+    ed.focus();
+  });
+}
+
+// The row's trash button and Delete, and bbPanel.trash from the Console (R5, R7). The open note's editor
+// closes first and drops any unsaved change: the note goes to Trash as it was last saved, and that is
+// what Undo brings back. A new note that was never saved has nothing to trash: closing it is its delete,
+// and asks first if it has words in it.
+function onTrash(ids) {
+  return serial(async () => {
+    let wanted = [...ids];
+    const ed = editor;
+    if (ed && wanted.includes(list.openId)) {
+      if (!(await ed.close({ focus: false, how: ed.id ? 'discard' : 'cancel' }))) return false;
+      wanted = wanted.filter((id) => id !== NEW_ROW);
+      if (ed.id && !wanted.includes(ed.id)) wanted.push(ed.id);
+    }
+    const done = wanted.length ? await moveToTrash(wanted, { toasts, list }) : false;
+    if (!document.activeElement || document.activeElement === document.body) list.focus();
+    return done;
+  });
+}
+
+// The open note was trashed or purged in another tab or surface. With nothing unsaved the editor just
+// closes. With changes on screen the user chooses: keep them, saved into the note in Trash (the worker
+// accepts an update there), so that Undo brings the note back with them; or drop them. A note still in
+// Trash can be brought back from the toast; a purged one cannot, and the toast says only what happened.
+function onGone(id) {
+  return serial(async () => {
+    if (!editor || editor.id !== id) return;
+    let how = 'discard';
+    if (editor.dirty) {
+      how = await chooseDialog({
+        title: 'This note was moved to Trash elsewhere',
+        message: 'Keep your unsaved changes in it, so that Undo brings it back with them?',
+        choices: [{ value: 'discard', label: 'Discard them', kind: 'danger' }, { value: 'save', label: 'Keep them', kind: 'primary' }],
+        cancel: 'save',
+      });
+    }
+    await editor.close({ focus: true, how });
+    const reply = await ask({ type: 'notes/get', id });
+    if (reply.ok && reply.note) offerUndo([id], 'This note was moved to Trash elsewhere', { toasts, list });
+    else toasts.show({ message: 'This note was deleted elsewhere' });
+  });
+}
+
+document.getElementById('bb-new').addEventListener('click', newNote);
+
+// The list fills <main>, and the toasts sit under it, in the flow, so that they shorten the list
+// rather than cover its last row (R6).
 //
 // The handle on globalThis is for the console, as save-popover.js keeps BB.savePopover.debug: in the
 // panel's own frame (right-click inside it, Inspect), bbPanel.list.stats says how many rows the DOM
-// holds, and bbPanel.list.setFilter({ tag: 'x' }) shows the filtered empty state before T-023 gives the
-// panel a filter of its own. Nothing outside this frame can reach it: the page that frames the panel is
-// another origin.
-const list = createList(document.querySelector('main'));
-globalThis.bbPanel = { list };
+// holds, bbPanel.list.setFilter({ tag: 'x' }) shows the filtered empty state before T-023 gives the
+// panel a filter of its own, and bbPanel.trash([...ids]) trashes several notes at once the way T-027's
+// selection will (decided with the user, 2026-11-12). Nothing outside this frame can reach it: the page
+// that frames the panel is another origin.
+const list = createList(document.querySelector('main'), { onOpen, onTrash, onGone });
+const toasts = createToasts(document.body, { onFocusLost: () => list.focus() });
+globalThis.bbPanel = { list, trash: onTrash };

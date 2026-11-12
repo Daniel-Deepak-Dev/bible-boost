@@ -66,6 +66,11 @@ verse ref into the body, so notes can reference each other.
 
 **R9.** Autosave on debounce and on blur, as T-022, sending a **patch**.
 
+> **Overtaken 2026-11-12.** T-022 no longer autosaves: the user replaced it with a
+> Save button, so that an accidental edit is not stored over the old words.
+> `src/ui/app/editor.js` is shared and saves only on Save or Ctrl/Cmd+Enter, still as
+> a patch. Follow it here unless the user decides the full page should differ.
+
 **R10.** The textarea uses the page's UI font, not the scripture serif, and
 handles Tamil input correctly — including IME composition events, which must not
 trigger a save mid-composition.

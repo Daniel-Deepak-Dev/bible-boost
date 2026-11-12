@@ -169,6 +169,23 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 #bb-dock:hover,
 #bb-dock:focus-within { opacity: 1; }
 
+/* The side panel (T-017) takes the window's right edge from top to bottom, so the dock's corner is
+   inside it whenever it is open, and the dock is above it (T-017 R7). That covered the panel's last
+   row, an open note's Save button and, where the user found it on 2026-11-12, the Undo of the panel's
+   toast (B-022). So while the panel shows, the dock keeps its 20px from the panel's edge instead of
+   from the window's, over the reader and clear of the panel.
+
+   --bb-panel-w is the panel's own clamped width, declared on body and so inherited here, and its
+   percentage is resolved against the window by this fixed box just as it is by the panel. During a drag
+   the panel previews a width this does not see, and the dock catches up when the drag ends.
+
+   :has() on a direct child with an id, so that no change anywhere else in bible.com's DOM has to be
+   checked against it. From 768px only: below that the panel fills the window, there is no reader beside
+   it to move to, and the phone rules further down stand as they are. */
+@media (min-width: 768px) {
+  body:has(> #bb-panel:not([hidden])) > #bb-dock { right: calc(var(--bb-panel-w, 30%) + 20px); }
+}
+
 #bb-dock .bb-sw {
   display: flex;
   align-items: center;

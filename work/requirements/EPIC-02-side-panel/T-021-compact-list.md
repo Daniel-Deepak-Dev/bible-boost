@@ -54,6 +54,10 @@ keyboard.
 > `formatRange`'s USFM whenever any verse lacks a usable `displayRef`. It is the
 > save popover's caption logic, and `test/save-popover.test.js` holds the two
 > copies together. A note with no verse shows its title.
+>
+> **Later, T-022 R11 (2026-11-12).** A note with a verse and a title now shows the
+> title too, in bold at the start of the two-line preview. Same four things, same
+> fixed height. The user found titles shown nowhere once the panel could edit them.
 
 **R5.** The preview is **Markdown source, truncated** — not rendered. Rendering
 every row's Markdown is wasted work for two lines of text, and raw source is

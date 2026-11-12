@@ -32,6 +32,7 @@ knowing before seven epics are built on top.
 | [B-019](B-019-square-surfaces.md) | BibleBoost's surfaces are square beside bible.com's rounded ones | No |
 | [B-020](B-020-verse-menu-under-panel.md) | bible.com's verse menu sits partly under the side panel | No |
 | [B-021](B-021-range-put-back-after-navigation.md) | Closing the save popover puts back a text selection whose page is gone | No |
+| [B-022](B-022-dock-over-panel.md) | The dock covers the side panel's bottom-right corner | No |
 
 ## How these relate to the notes project
 

@@ -274,6 +274,23 @@ Each of these cost a round of confusion during T-012.
   `scrollTop` redraws through `requestAnimationFrame`, which the hidden pane throttles,
   so the rows on screen stay stale and any comparison with the worker fails for no
   reason. Home, End and PageUp go through code that draws at once. Found during T-021.
+- **The panel runs on its own, without the reader stand-in**, for anything inside it.
+  Serve the repository on one localhost port, add a classic `<script>` with the
+  `chrome` stub at the top of `panel.html`'s `<head>` as it is served, and have the
+  stub's `sendMessage` `import('/background.js')` on its first call and then answer
+  through the listener that registered. `panel.js` posts `ready` to a parent that is
+  itself and is refused with a warning about the target origin, which is harmless.
+  The editor, the toasts and the dialog of T-022 were all checked this way.
+- **A hidden pane never delivers a `<dialog>`'s `close` event.** `close()` shut it and
+  the event never came, so code waiting on the event waited for good: the panel's
+  queue of actions stopped behind it. `dialog.js` now answers from its buttons and
+  from the `cancel` event directly. A real window is not known to do this; the code
+  is simply no longer exposed to it. Found during T-022.
+- **The hidden pane's missing focus events reach the editor too**: `topic.focus()`
+  from a script did not open the topic list, which listens for `focus`. ArrowDown
+  opens it, and does go through the same code. Found during T-022.
+- **A toast is gone between two tool calls**, as the save toast was (above): the
+  panel's lasts five seconds too. Press Undo in the same call that trashed.
 - **Check which copy of a module ran.** Once, a page loaded straight after an edit ran the
   file from before it, served with `no-store`. `performance.getEntriesByType('resource')`
   gave the old `transferSize`, and a new query string on the page loaded the new file.

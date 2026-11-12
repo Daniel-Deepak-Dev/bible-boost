@@ -122,6 +122,12 @@ have a script read the characters out of the file and write the escapes from the
 Retyping the literal in order to replace it depends on the retyped text arriving
 decomposed, which is the thing in doubt.
 
+**An AI session's file-writing tool can do the same thing on the way in.** During
+T-022, a test written with `'கொ'` arrived on disk as the literal
+characters, both fixtures of the pair. The NFC check above caught it at once, and a
+script rewrote the escapes from the characters. So run the check after writing any
+fixture, whoever or whatever wrote it, and read the line back.
+
 ### Node 22 or later
 
 Two things set that floor, and neither can be fixed with a config file, because

@@ -102,3 +102,12 @@ R1 cannot hold for the save popover. `src/ui/app/toast.js` will be an ES module 
 a content script is a classic script, so `src/content/save-popover.js` carries its
 own small toast (T-014). It is the same idea in about twenty lines, and it has no
 stacking.
+
+**What T-022 already built (2026-11-12).** `src/ui/app/toast.js` exists and the
+panel uses it: one Undo action per toast, a × to dismiss, newest at the bottom,
+capped at three (the oldest goes), the timer re-arming while the toast is hovered or
+holds focus, a polite live region created empty, a fade with none under reduced
+motion, and in the panel it sits in the flow under the list. The messages carry a
+count (`trashedMessage`, `restoredMessage` in `src/ui/app/trash.js`). Left for this
+task: R2's other callers (topics, tags, bulk move and retag), R4's prior-state undo
+in `repo.js`, and its own Acceptance, none of which T-022 ticked.

@@ -150,6 +150,13 @@
 /* A note with no body shows its verse, in the secondary colour so it does not pass for the note. */
 .bb-preview[data-bb-verse] { color: var(--bb-text-2, #636161); }
 
+/* A note's title starts its preview, in bold and the full text colour even in front of a muted verse
+   (T-022, decided with the user on 2026-11-12). Inline, so the two-line clamp still ends the row. */
+.bb-preview .bb-title {
+  color: var(--bb-text, #121212);
+  font-weight: 700;
+}
+
 /* R3. Hidden at rest, there on hover and while the row holds focus. visibility rather than display, so
    the button keeps its place, and a hidden button cannot take focus, which keeps every other row's
    button out of the tab order without any tabindex bookkeeping. */
@@ -208,4 +215,420 @@
   color: var(--bb-text-2, #636161);
   font-size: 13px;
   line-height: 20px;
+}
+
+/* ---------- The open row (T-022) ----------
+   A row opens in place into its editor (R1), and is the one row allowed to be taller than the rest.
+   list.js measures how much taller off the row itself, and moves the rows below by that much, so its
+   height here is simply what its contents need.
+
+   Its fill stays the hovered row's, so it reads as that row grown rather than as a new surface, and
+   the trash button stays on show while it is open, whether or not focus is in it. The head keeps the
+   dot and the reference, and the tags and preview give way to the fields that edit them. */
+.bb-row[data-bb-open] {
+  z-index: 1;
+  height: auto;
+  background: var(--bb-surface-3, #EDEBEB);
+  cursor: default;
+}
+
+.bb-row[data-bb-open] .bb-tags,
+.bb-row[data-bb-open] .bb-preview { display: none; }
+
+.bb-row[data-bb-open] .bb-actions { visibility: visible; }
+
+/* ---------- Editor ----------
+   line-height is normal again in here, as the conventions ask for small text. The fixed 20px line is
+   the list's, for rows that must all be one height; this row has no height to keep, and a Tamil line
+   box is taller than a Latin one at the same size (07-i18n-and-scripts.md).
+
+   The fields take --bb-surface on the row's --bb-surface-3, white-ish on light grey and near-black on
+   dark grey, so where each one is can be seen in both themes without leaning on a border: dark
+   --bb-border is the same #353333 as the dark panel. */
+.bb-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  line-height: normal;
+  cursor: auto;
+}
+
+.bb-editor [hidden] { display: none; }
+
+.bb-ed-title,
+.bb-ed-body,
+.bb-ed-input,
+.bb-editor .bb-tagbox {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: var(--bb-radius, 4px);
+  background: var(--bb-surface, rgba(255, 255, 255, 0.92));
+  color: var(--bb-text, #121212);
+  font: inherit;
+}
+
+.bb-ed-title { font-weight: 600; }
+
+/* R9: the Markdown source, in a plain textarea. Six lines to start with and as tall as the user drags
+   it, never narrower than the row. Dragging it taller is a resize the list follows. */
+.bb-ed-body {
+  display: block;
+  min-height: 72px;
+  resize: vertical;
+}
+
+.bb-editor input::placeholder,
+.bb-editor textarea::placeholder {
+  color: var(--bb-text-2, #636161);
+  opacity: 1;
+}
+
+.bb-ed-title:focus-visible,
+.bb-ed-body:focus-visible,
+.bb-ed-input:focus-visible,
+.bb-editor .bb-tagbox:focus-within {
+  outline: 2px solid var(--bb-focus, #3D79C2);
+  outline-offset: -1px;
+}
+
+/* Topic and tags, each with a short label to its left. Two columns hold at 280px: the labels take
+   about 40px and the fields the rest. */
+.bb-ed-meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 6px 8px;
+}
+
+.bb-ed-meta label {
+  padding-top: 6px;
+  color: var(--bb-text-2, #636161);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bb-combo { min-width: 0; }
+
+/* The chips and the input wrap together as one row of items, as in the save popover. */
+.bb-editor .bb-tagbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-gap-sm, 4px);
+  padding-block: 3px;
+}
+
+.bb-editor .bb-chips { display: contents; }
+
+.bb-ed-tag {
+  flex: 1 1 80px;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--bb-text, #121212);
+  font: inherit;
+}
+
+/* A chip with its own remove button, so roomier than the list's chips and in the full text colour. */
+.bb-editor .bb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 0 2px 0 8px;
+  background: var(--bb-surface-3, #EDEBEB);
+  color: var(--bb-text, #121212);
+  font-size: 12px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.bb-editor .bb-chip button {
+  flex: none;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--bb-radius-pill, 999px);
+  background: transparent;
+  color: var(--bb-text-2, #636161);
+  font: inherit;
+  cursor: pointer;
+}
+
+.bb-editor .bb-chip button:hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+.bb-editor .bb-chip button:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); }
+
+/* The suggestion list (suggest.js) sits in the flow under its field, not over what follows: the open
+   row clips anything that overflows it, and the list's scroller would clip it again. So the row grows
+   while it is open, and list.js moves the rows below.
+
+   Its radius is its options' 4px plus its own 4px of padding, the save popover's arithmetic for a
+   surface inside a surface. */
+.bb-suggest {
+  max-height: 136px;
+  margin: 2px 0 0;
+  padding: var(--bb-gap-sm, 4px);
+  overflow-y: auto;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: calc(var(--bb-radius, 4px) + var(--bb-gap-sm, 4px));
+  background: var(--bb-surface, rgba(255, 255, 255, 0.92));
+  list-style: none;
+}
+
+.bb-suggest[hidden] { display: none; }
+
+.bb-suggest li {
+  padding: 5px 8px;
+  border-radius: var(--bb-radius, 4px);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.bb-suggest li[aria-selected="true"],
+.bb-suggest li:not([aria-disabled="true"]):hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+
+.bb-suggest li[aria-disabled="true"] {
+  color: var(--bb-text-2, #636161);
+  cursor: default;
+}
+
+/* R8, the conflict notice. It sits in the editor and takes no focus, so typing carries on through it.
+   Outlined in the accent rather than in red: it is a question about two versions, not an error. */
+.bb-ed-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--bb-accent, #3D79C2);
+  border-radius: var(--bb-radius, 4px);
+  background: var(--bb-surface, rgba(255, 255, 255, 0.92));
+  font-size: 12px;
+}
+
+.bb-ed-notice-actions {
+  display: flex;
+  gap: var(--bb-gap-sm, 4px);
+  margin-left: auto;
+}
+
+/* On --bb-surface rather than straight on the row, because --bb-danger is 4.60:1 on white and falls
+   under the 4.5:1 small text needs on the light grey of --bb-surface-3. */
+.bb-ed-error {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: var(--bb-radius, 4px);
+  background: var(--bb-surface, rgba(255, 255, 255, 0.92));
+  color: var(--bb-danger, #DE2E3C);
+  font-size: 12px;
+}
+
+/* The quiet state on the left ("Unsaved changes") and the two buttons on the right: Cancel or Close,
+   and Save, which stores the note (R2 as amended with the user, 2026-11-12). The status may wrap; the
+   buttons never do, and at 280px both fit beside a two-word status. */
+.bb-ed-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bb-gap-md, 8px);
+}
+
+.bb-ed-status {
+  min-width: 0;
+  color: var(--bb-text-2, #636161);
+  font-size: 12px;
+}
+
+.bb-ed-buttons {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+/* ---------- Buttons ----------
+   For the editor, the toasts and the dialog. A primary fill takes white on the accent (4.46:1). A
+   danger fill takes white on light --bb-danger (4.60:1) and #121212 on dark (5.38:1), because a white
+   label on the dark red is only 3.48:1 (theme.css). The focus ring is offset, since the accent is the
+   ring's own blue and would swallow it. */
+.bb-btn {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: var(--bb-radius, 4px);
+  background: transparent;
+  color: var(--bb-text, #121212);
+  font: 600 12px/normal aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+}
+
+.bb-btn:hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+
+.bb-btn:focus { outline: none; }
+.bb-btn:focus-visible {
+  outline: 2px solid var(--bb-focus, #3D79C2);
+  outline-offset: 2px;
+}
+
+.bb-btn[data-bb-primary] {
+  border-color: var(--bb-accent, #3D79C2);
+  background: var(--bb-accent, #3D79C2);
+  color: #FFFFFF;
+}
+
+.bb-btn[data-bb-danger] {
+  border-color: var(--bb-danger, #DE2E3C);
+  background: var(--bb-danger, #DE2E3C);
+  color: #FFFFFF;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .bb-btn[data-bb-danger] { color: #121212; }
+}
+
+html.dark .bb-btn[data-bb-danger] { color: #121212; }
+
+/* Save while there is nothing it could store. aria-disabled rather than disabled, so that the button
+   keeps focus if it is pressed (editor.js, showStatus). */
+.bb-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- A row just saved ----------
+   It moves to the top as the newest, and fades from an accent tint for 1.6s (FLASH_MS in list.js), so
+   that the user can see which row they updated: after a click on Save, a focused row shows no outline.
+   With reduced motion the tint is held for the same time and simply goes, with no fade. */
+.bb-row[data-bb-flash] { animation: bb-row-flash 1.6s ease-out; }
+
+@keyframes bb-row-flash {
+  from { background: color-mix(in srgb, var(--bb-accent, #3D79C2) 30%, transparent); }
+  to { background: transparent; }
+}
+
+/* ---------- Toasts ----------
+   In the flow under the list, not floating over it (T-022 R6): the stack takes its height from the list,
+   which scrolls in what is left, so it can never cover the last row. Never display: none, because it is
+   the live region and has to be there before a toast is put in it to be announced. Empty, it has no
+   height at all.
+
+   A floating surface, so --bb-radius-lg, on --bb-surface, which stands off the panel's --bb-surface-2
+   in both themes. */
+.bb-toasts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-gap-sm, 4px);
+}
+
+.bb-toasts:not(:empty) { padding: 0 var(--bb-gap-md, 8px) var(--bb-gap-md, 8px); }
+
+.bb-toast {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px 6px 12px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: var(--bb-radius-lg, 16px);
+  background: var(--bb-surface, rgba(255, 255, 255, 0.92));
+  color: var(--bb-text, #121212);
+  box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
+  font-size: 13px;
+  font-weight: 600;
+  line-height: normal;
+  animation: bb-toast-in 0.15s ease-out;
+}
+
+.bb-toast-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Undo in the text colour and outlined, because --bb-accent text falls under 4.5:1 on dark. */
+.bb-toast-act {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--bb-text-2, #636161);
+  border-radius: var(--bb-radius, 4px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.bb-toast-x {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--bb-radius, 4px);
+  background: transparent;
+  color: var(--bb-text-2, #636161);
+  font: 400 16px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.bb-toast-act:hover,
+.bb-toast-x:hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+
+.bb-toast-act:focus,
+.bb-toast-x:focus { outline: none; }
+.bb-toast-act:focus-visible,
+.bb-toast-x:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); outline-offset: 1px; }
+
+@keyframes bb-toast-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---------- Dialog ----------
+   R7's confirmations, in a modal <dialog>, which the browser centres. A floating surface, so
+   --bb-radius-lg, and narrow enough for the panel at 280px with 12px either side. */
+.bb-dialog {
+  box-sizing: border-box;
+  width: min(320px, calc(100vw - 24px));
+  padding: 16px;
+  border: 1px solid var(--bb-border, #DDDBDB);
+  border-radius: var(--bb-radius-lg, 16px);
+  background: var(--bb-surface-2, #F6F4F4);
+  color: var(--bb-text, #121212);
+  box-shadow: var(--bb-shadow, 0 4px 16px rgba(8, 7, 7, 0.14));
+  font: 400 13px/normal aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
+}
+
+.bb-dialog::backdrop { background: rgba(0, 0, 0, 0.3); }
+
+.bb-dialog-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.bb-dialog-text {
+  margin: 0;
+  color: var(--bb-text-2, #636161);
+  overflow-wrap: anywhere;
+}
+
+.bb-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--bb-gap-md, 8px);
+  margin-top: 16px;
+}
+
+/* Last in the file, as content.css does: the toast fades in, and does not even do that here, and a
+   saved row holds its tint instead of fading it. */
+@media (prefers-reduced-motion: reduce) {
+  .bb-toast { animation: none; }
+  .bb-row[data-bb-flash] {
+    animation: none;
+    background: color-mix(in srgb, var(--bb-accent, #3D79C2) 30%, transparent);
+  }
 }

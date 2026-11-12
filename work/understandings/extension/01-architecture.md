@@ -67,8 +67,11 @@ suggestion.
 | Reading a verse key, canonical order, range captions | `src/shared/refs.js`: `formatRange` in USFM, and `captionOf`, which a list row uses, in the page's own book names. The save popover's caption is a copy of `captionOf` in `save-popover.js`, because a classic script cannot import a module, and `test/save-popover.test.js` holds the two together |
 | The versions the popup offers | `src/shared/versions.js`, loaded by content scripts and re-exported by `refs.js` |
 | NFC, case folding and tokenizing, for anything that compares text | `src/shared/normalize.js` |
-| Any rendering of notes | `src/ui/app/*`: the list in `list.js` (T-021), styled by `src/ui/ui.css` |
-| The app's line to the worker, and hearing `notesRev` | `src/ui/app/store.js`: `ask()`, `loadLookups()`, `onNotesChange()` || Things both the worker and pages need | `src/shared/*` |
+| Any rendering of notes | `src/ui/app/*`, styled by `src/ui/ui.css`: the list in `list.js` (T-021), which also makes room for an open row; the editor in `editor.js` (T-022) |
+| The topic and tag combobox in the editor | `src/ui/app/suggest.js`, a copy of the save popover's `suggestionList`, because a classic script cannot import an ES module. `test/save-popover.test.js` holds the two `startRow` functions together |
+| Trashing notes with an undo toast, and the count confirm for several | `src/ui/app/trash.js` (`moveToTrash`, `offerUndo`), on `toast.js` and `dialog.js` (T-022) |
+| The app's line to the worker, and hearing `notesRev` | `src/ui/app/store.js`: `ask()`, `loadLookups()`, `onNotesChange()` |
+| Things both the worker and pages need | `src/shared/*` |
 
 ## Why not a framework
 

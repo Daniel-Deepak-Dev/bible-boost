@@ -131,7 +131,8 @@ export async function getNote(id) {
 
 // R4: a merge over the stored record, so a patch of { body } cannot lose the verses. verseKeys comes
 // along in `fields` whenever verses did, derived by the cleaner. Editing a trashed note is allowed,
-// so an autosave that loses a race with a delete in another tab does not lose the words.
+// so a save that loses a race with a delete in another tab does not lose the words. The panel relies
+// on it to keep unsaved changes in a note trashed elsewhere, when asked to (T-022).
 export async function updateNote(id, patch) {
   const key = cleanId(id);
   const { fields, tagEntries } = cleanNotePatch(patch);

@@ -97,3 +97,9 @@ clears.
 R6 is the requirement most likely to be skipped and most likely to be noticed.
 "Undo" that restores a wrong-but-plausible state is worse than no undo, because
 the user trusts it.
+
+**From T-022 (2026-11-12).** The confirm with the count already exists:
+`moveToTrash(ids, { toasts, list })` in `src/ui/app/trash.js` asks whenever it is
+given two or more ids, then shows one undo toast for them all. The panel reaches it
+from the Console as `bbPanel.trash(ids)`. Hand it the selection rather than writing a
+second one.

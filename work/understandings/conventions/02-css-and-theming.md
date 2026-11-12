@@ -167,6 +167,16 @@ other hand, is kept as a percentage and resolved by the property that uses it. T
 is why `body`'s padding and the fixed panel's width, both taken of the same
 1385px at 1400x900, still meet.
 
+**The dock moves clear of the open panel** (B-022). The dock is fixed 20px from the
+window's bottom-right corner and sits above the panel (T-017 R7), so until B-022 it
+covered the panel's corner: its last row, an open note's Save, the toast's Undo.
+From 768px, `body:has(> #bb-panel:not([hidden])) > #bb-dock` sets its `right` to
+`calc(var(--bb-panel-w, 30%) + 20px)`, inheriting `body`'s `--bb-panel-w`. Measured
+with the real `content.css` at 1400px on 2026-11-12: 20px left of the panel at 30%
+and at 45%, and back in the corner with the panel hidden. It does not follow a drag's
+preview width, only the committed one. Anything new pinned to the window's
+bottom-right has the same problem with the panel.
+
 ## Rules
 
 1. **Always give `var()` a fallback.** An undefined custom property invalidates
@@ -196,9 +206,26 @@ is why `body`'s padding and the fixed panel's width, both taken of the same
    user's hand test in their own Chrome on Windows confirmed it on 2026-11-12: a
    long Tamil note clamped to two clean lines at 280px. If a script does clip one
    day, raise `--bb-row-line` and leave `normal` alone.
-6. **Honour `prefers-reduced-motion`**, and put it last in the file as
+   **One row may be taller: the open one** (T-022). It holds the editor, takes
+   `height: auto` under `[data-bb-open]`, and `list.js` measures it and moves every
+   row after it down by the difference. Its editor goes back to `line-height:
+   normal`, since it has no height to keep.
+
+   **Anything new in a row goes inline, inside the clamp.** A note's title (T-022
+   R11) is a bold `<strong>` at the start of the preview, not a line of its own,
+   which would have made every row 98px instead of 78px.
+6. **Nothing inside a list row may float out of it.** A row clips what overflows,
+   and the list scrolls, which clips it again. So the editor's suggestion list is in
+   the flow under its field and the row grows while it is open, and the panel's
+   toasts are in the flow under the list, which shortens the list rather than
+   covering its last row (T-022 R6). The toast region is never `display: none`: it is
+   the live region, and has to exist before a toast is put in it to be announced.
+7. **A filled danger button needs two label colours.** White on light
+   `--bb-danger` (4.60:1), `#121212` on dark (5.38:1), so `ui.css` sets the dark one
+   under both `html.dark` and the OS-dark media query with `:root:not(.light)`.
+8. **Honour `prefers-reduced-motion`**, and put it last in the file as
    `content.css` does.
-7. **Measure contrast, and record it in a comment.** `--bb-track-on` deliberately
+9. **Measure contrast, and record it in a comment.** `--bb-track-on` deliberately
    departs from bible.com's own switch colour because the site's dark-mode "on"
    state measures 1.55:1 against its "off" state at this size.
 
