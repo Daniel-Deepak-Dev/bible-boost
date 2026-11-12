@@ -7,7 +7,9 @@ Confidence: **verified**.
 bible.com sets `html.light` or `html.dark` on the **documentElement**,
 **independently of the OS setting**. A user can run dark bible.com on a light OS.
 
-The extension does **no JS theme detection** today. It reacts in CSS only:
+On-page UI does **no JS theme detection**. It reacts in CSS only, below. The one
+exception is the panel's frame, which cannot see the class: `panel-host.js` reads it
+and relays it (T-020, and the trap below).
 
 ```css
 :root            { /* light defaults */ }
@@ -32,6 +34,11 @@ preference) must add its **own** small observer:
 new MutationObserver(onThemeChange)
   .observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 ```
+
+`panel-host.js` does exactly this, and only once the panel has first been opened.
+It compares the resolved theme with the last one it sent and posts nothing when
+they match, so a class write on `<html>` that leaves the theme alone costs one
+comparison.
 
 ## Fallbacks are mandatory
 

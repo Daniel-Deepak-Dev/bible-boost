@@ -149,3 +149,15 @@ html.dark {
   --bb-accent:    #3D79C2;
   --bb-danger:    #FF3D4D;
 }
+
+/* ---------- Color scheme ----------
+   Which way the browser draws the things it draws itself, such as a scrollbar or a native control.
+   The class decides when there is one, as it does for every colour above; with none, both are allowed
+   and the OS picks, the same fallback the tokens take. Without this a dark panel would keep the
+   light scrollbar that a page with no color-scheme is given.
+
+   Deliberately not copied into content.css. There these selectors would be bible.com's own <html>,
+   whose color-scheme is bible.com's to set: it writes one inline. */
+:root      { color-scheme: light dark; }
+html.light { color-scheme: light; }
+html.dark  { color-scheme: dark; }

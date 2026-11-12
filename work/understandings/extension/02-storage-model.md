@@ -7,7 +7,14 @@ Confidence: **design decision**, approved. Schema is normative.
 | Where | What | Why |
 |---|---|---|
 | IndexedDB `bibleboost` | notes, topics, tags, meta | indexed queries, partial reads, scales |
-| `chrome.storage.local` | panel open and pinned (`panelOpen`, `panelPinned`), panel width, last filter, `notesRev`, `lastExportAt`, `persistence` | per-device UI state and the change signal |
+| `chrome.storage.local` | panel open and pinned (`panelOpen`, `panelPinned`), panel width (`panelWidth`), last filter, `notesRev`, `lastExportAt`, `persistence` | per-device UI state and the change signal |
+
+`panelWidth` is a **percentage of the window** (a number, `30` by default), not
+pixels, so that a width chosen on a laptop is the same share of an external
+monitor (T-019 R3). It is stored as the drag or key press left it, rounded to a
+tenth, and `content.css` clamps it again to 280px and 50% of whatever window it is
+drawn in. Only a committed width is written: once at the end of a drag, and once
+when the arrow keys have been quiet for 300ms.
 | `chrome.storage.sync` | **existing settings only** | already working — do not migrate |
 
 One value sits outside those three: `bb-last-topic`, in the page's own

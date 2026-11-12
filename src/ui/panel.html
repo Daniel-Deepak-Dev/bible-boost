@@ -4,10 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BibleBoost notes</title>
+  <!-- Before anything that paints: it puts bible.com's theme class on <html> from the address, so
+       the first frame is already in the right palette (T-020). Classic and blocking on purpose. -->
+  <script src="theme-boot.js"></script>
   <link rel="stylesheet" href="../shared/theme.css">
+  <link rel="stylesheet" href="ui.css">
   <style>
-    /* The shell only, until T-021 gives the panel something to show. It follows the OS until T-020
-       relays bible.com's theme, because the html.light / html.dark in theme.css are not set yet.
+    /* The panel's frame. The theme is bible.com's, relayed by panel-host.js as html.light or html.dark
+       (T-020). Where no class arrives, theme.css falls back to the OS, so the panel is still readable
+       if the relay fails entirely (R5).
 
        The fill is the solid --bb-surface-2 and not the dock's translucent surface. This sits over
        verses, and a backdrop blur cannot reach through a frame, so anything translucent here would
@@ -32,7 +37,15 @@
       font-weight: 700;
     }
 
-    main { flex: 1; min-height: 0; overflow: auto; }
+    /* The note list (T-021) does its own scrolling, so that its status line and its rows can sit in
+       one column and only the rows scroll. */
+    main {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
 
     .bb-tools { display: flex; gap: 2px; }
 

@@ -126,6 +126,22 @@ it counts one or a few `schedule()` calls across the 0.2s transition is still no
 measured: the first run that could have shown it was in a hidden pane (below), and the
 hand test did not take the `DEBUG_SCHEDULE` log.
 
+The resize (T-019) keeps the page still until the drag ends. While the edge moves,
+`--bb-panel-width` is written on BibleBoost's own panel, tab and grip, where it
+outranks the value `body` reads from `<html>`. The page is narrowed once, on
+release. Measured through a stand-in of Psalm 119 (176 verses a column) on
+2026-11-11, with `content.js`'s `DEBUG_SCHEDULE` on and the panel pinned: 43
+pointer moves made no `schedule()` call, the release made one, and a burst of five
+arrow presses made one. That pane was hidden, which is documented below to
+withhold `ResizeObserver`, so the one call's source is not settled. On live bible.com
+the user's hand test of 2026-11-11 found a pinned drag, and a theme change, as
+cheap as T-019 and T-020 ask: few `schedule()` calls for a drag and none for a
+theme change. The exact counts were not reported.
+
+The theme relay (T-020) adds its own observer on `<html>`, `class` only, and posts
+to the frame. In the same stand-in, flipping `html.dark` to `html.light` and back
+made no `schedule()` call, and the panel followed both times.
+
 A marked root that shifts the text is still caught: the `ResizeObserver` on the
 columns calls `schedule()` independently of this guard. That only sees a change
 in the column's height, so UI placed inside the verse columns would need more
@@ -169,9 +185,10 @@ as `childList` records. See `../bible-com/06-verse-action-menu.md`.
 ## Related trap
 
 The observer watches **`body`**. The theme class is on **`html`**, outside it —
-see `../bible-com/05-theme-and-page-chrome.md`. Today that is handled in pure
-CSS; any JS that needs the theme must add its own observer on
-`document.documentElement`.
+see `../bible-com/05-theme-and-page-chrome.md`. On-page UI handles it in pure
+CSS. JS that needs the theme adds its own observer on
+`document.documentElement`, as `panel-host.js` does for the panel (T-020), and
+does not widen this one.
 
 ## Rule of thumb
 

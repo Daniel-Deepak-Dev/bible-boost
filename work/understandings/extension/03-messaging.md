@@ -193,6 +193,30 @@ empty ones is open in B-015's Notes. Read from `repo.js` on 2026-11-11.
 write. Without the queue, two overlapping writes both read 42 and both store 43, and
 the second one changes only `notesRevIds`.
 
+**Do not expect `notesRevIds` and `notesRevKind` in every event.** `onChanged`
+reports only keys whose value changed, so two updates of the same note in a row
+store the same ids and the same kind, and the second event can carry `notesRev`
+alone. That is Chrome's documented behaviour and was not provoked here.
+`onNotesChange` in `src/ui/app/store.js` keeps the last values it saw, and reads
+them once at the start, so a listener always gets `{ rev, kind, ids }`. Use it
+rather than listening to `onChanged` directly.
+
+The list's own rules for applying a change are in `src/ui/app/list.js`: a create
+or an edit goes to the top, since it is now the newest by `updatedAt`, and keeps
+the row's element. A trash or purge removes the row. A restore, a topic or tag
+change, and anything it cannot place with certainty reload what is on screen
+instead.
+
+**A `notes/list` answer can overtake the signal for a write it already includes.**
+`bumpRev()` runs after the commit and needs two storage calls, and a page asked for
+in that gap is worked out after the write and can arrive first. A surface that then
+patches the change applies it twice. The list therefore reloads, rather than
+patches, any change that arrives within 500ms of a page answer (`OVERTAKE_MS`).
+Worked out in review on 2026-11-11 and not provoked, because the gap is a few
+milliseconds. Any other surface that patches from `notesRev` needs the same care. Measured through a stand-in (T-021): editing one of 500 notes from
+another context moved it to the top with every row element on screen still the
+same object.
+
 Every surface listens with `chrome.storage.onChanged`. This works in content
 scripts and extension pages alike, needs no `tabs` permission, and lets a
 listener patch one row instead of refetching everything.
@@ -242,11 +266,17 @@ proxy of the real page, where the panel was on a second port.
 |---|---|---|
 | panel → host | `{bb:'ready'}` | the panel's listener exists, so the host can start sending |
 | host → panel | `{bb:'state', open, pinned, canPin}` | sent on `ready`, on every open, close or pin, and when the window crosses 768px. `canPin` is false below 768px, where the panel is full-width and nothing is squeezed. The host works it out because a media query inside the frame measures the frame (T-018) |
-| host → panel | `{bb:'theme', theme:'dark'}` | relay `html.dark` (the page observer cannot see it) |
+| host → panel | `{bb:'theme', theme:'dark'\|'light'}` | bible.com's `html.dark` / `html.light`, or the OS when it has set neither (T-020). Sent on `ready` and whenever the theme changes, from an observer of its own on `<html>`, because the page observer watches `body`. The frame's address also carries it as `#theme=dark`, which `theme-boot.js` reads before the first paint. The panel accepts only those two values |
 | host → panel | `{bb:'context', ref:'EXO.13', versions:[...]}` | what chapter is on screen |
 | host → panel | `{bb:'selection', draft}` | user hit save with a verse selected |
-| panel → host | `{bb:'resize', width}` | user dragged the edge |
 | panel → host | `{bb:'pin', pinned}` | squeeze vs overlay, from the pin button (T-018). The host stores it, which is safe only because of the `source` check. The button changes only when the host's `state` comes back |
 | panel → host | `{bb:'close'}` | collapse to the edge tab |
 
 Prefix every message with `bb:` so stray traffic is trivially ignored.
+
+**There is no `resize` message.** An earlier version of this table had
+`{bb:'resize', width}` going from the panel to the host. T-019 R4 put the drag in
+the host instead: the edge is `#bb-panel-grip`, a page element beside the frame,
+because a pointer dragging the edge leaves the frame at once. The width never
+crosses this channel. The panel learns nothing about it, and does not need to:
+its own layout follows the frame's size.

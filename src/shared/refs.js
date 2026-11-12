@@ -102,3 +102,53 @@ export function formatRange(usfms) {
   const spell = ({ from, to }) => (from === to ? `${from}` : `${from}-${to}`);
   return [...chapters].map(([key, runs]) => `${key}.${runs.map(spell).join(',')}`).join('; ');
 }
+
+// ---------- Captions in the page's own words ----------
+// What a list row calls a note (T-021 R4): "யாத்திராகமம் 13:2-4" when the note kept bible.com's
+// references, and formatRange's "EXO.13.2-4" when it did not. displayRef is stored per verse
+// (02-storage-model.md), so the first verse's alone would call a three-verse note "…13:2", and a
+// note's caption has to be built from all of them.
+//
+// This is captionOf in save-popover.js, which captions a selection the same way before it is saved, and
+// it is written out again there only because a classic script cannot import this file.
+// test/save-popover.test.js runs both over the same verses, so if they drift a test fails. The one
+// difference is that this one meets stored notes, which can come from an import and so in principle
+// from two books at once, where the popover only ever sees one page: so it orders with compareUsfm and
+// keeps chapters of different books apart, where the copy needs neither.
+//
+// Only the first verse of each chapter gives up its displayRef, and that is cut, not read: the verse's
+// own number comes off the end, and what is left is the heading, in whatever script or punctuation the
+// version writes it. Every other number comes from the key, so nothing here parses a localized name
+// (07-i18n-and-scripts.md). The heading is used only if every verse's reference ends in that verse's own
+// number, because a combined verse ("Romans 1:3-4" on ROM.1.3), a verse saved with Numbers and Titles
+// switched off (no reference at all, B-011) or a version that does not write ASCII digits would put the
+// cut in the wrong place. Any one of those sends the whole caption to the canonical form. The
+// lookbehind keeps "1-11" on JHN.1.1 from passing as ending in 1.
+//
+// A lone verse is the exception, and keeps its reference whole: nothing has to be added to it, and
+// "Romans 1:3-4" is right as it stands. A note with no verses captions as nothing, and the row decides
+// what to show instead.
+export function captionOf(verses) {
+  if (!Array.isArray(verses) || !verses.length) return '';
+  if (verses.length === 1) return verses[0].displayRef || verses[0].usfm || '';
+
+  const rows = verses.flatMap(({ usfm, displayRef: ref }) => {
+    const key = parseUsfm(usfm);
+    return key ? [{ ...key, ref }] : [];
+  }).sort((a, b) => compareUsfm(a.usfm, b.usfm));
+
+  const localized = rows.every(({ ref, verse }) => ref && new RegExp(`(?<!\\d)${verse}$`).test(ref));
+  const chapters = new Map();
+  for (const { book, chapter, verse, ref } of rows) {
+    const key = `${book}.${chapter}`;
+    if (!chapters.has(key)) {
+      chapters.set(key, { heading: localized ? ref.slice(0, -String(verse).length) : `${key}.`, runs: [] });
+    }
+    const { runs } = chapters.get(key);
+    const last = runs.at(-1);
+    if (last && verse <= last.to + 1) last.to = verse;
+    else runs.push({ from: verse, to: verse });
+  }
+  const spell = ({ from, to }) => (from === to ? `${from}` : `${from}-${to}`);
+  return [...chapters.values()].map(({ heading, runs }) => heading + runs.map(spell).join(',')).join('; ');
+}

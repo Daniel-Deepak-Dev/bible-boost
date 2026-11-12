@@ -633,15 +633,28 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
    The box is separate from the iframe because an iframe is a replaced element. Given top and bottom
    it keeps its intrinsic 150px, so #bb-panel takes the geometry and the frame fills it.
 
-   --bb-panel-width is not set by anything yet. It is here for T-019, and it is why the tab can ride on
-   the panel's left edge, and the pinned squeeze below can match the panel, with no measuring. hidden
-   needs stating because the tab sets display. */
+   --bb-panel-width is the share of the window the user dragged the panel to (T-019). panel-host.js
+   writes it on <html> while the panel is open, as a percentage, and on the panel, the tab and the grip
+   themselves for the length of a drag. --bb-panel-w is what everything actually draws with: that share
+   clamped to 280px at the least, where the compact list stops being readable, and half the window at
+   the most, where the reader does. It is defined on each of the four elements that read it, and not
+   once on <html>, because a var() inside a custom property is resolved where the property is declared:
+   declared on <html>, it would ignore the overrides a drag writes on the three below it. A clamp here
+   rather than in script is what keeps a saved width within bounds as the window itself is resized.
+
+   The same --bb-panel-w is why the tab can ride on the panel's left edge, and the pinned squeeze below
+   can match the panel, with no measuring. hidden needs stating because the tab sets display. */
+#bb-panel,
+#bb-panel-tab,
+#bb-panel-grip,
+body { --bb-panel-w: clamp(280px, var(--bb-panel-width, 30%), 50%); }
+
 #bb-panel-tab {
   position: fixed;
   top: 0;
   right: 0;
   bottom: calc(var(--tabbar-h, 0px) + var(--audio-bar-h, 0px));
-  z-index: 2147482001;
+  z-index: 2147482002;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -675,7 +688,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 }
 
 #bb-panel-tab[aria-expanded="true"] {
-  right: var(--bb-panel-width, 30%);
+  right: var(--bb-panel-w, 30%);
   opacity: 1;
 }
 
@@ -694,7 +707,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   bottom: calc(24px + var(--tabbar-h, 0px) + var(--audio-bar-h, 0px));
   z-index: 2147482000;
   box-sizing: border-box;
-  width: var(--bb-panel-width, 30%);
+  width: var(--bb-panel-w, 30%);
   overflow: hidden;
   border: 1px solid var(--bb-border, #DDDBDB);
   border-right: 0;
@@ -708,6 +721,60 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   border: 0;
 }
 
+/* ---------- Panel resize grip ----------
+   The panel's left edge, made draggable (T-019). Its own element and not part of #bb-panel, because
+   that box's overflow: hidden would clip anything reaching out over the page. 16px of hit area, twelve
+   over the page and four over the panel: past the panel's 1px border that is 3px of the frame, which
+   the list's rows leave clear with their 4px inset (ui.css), so a press on a row's edge is never taken
+   for a resize. Under the tab so the tab keeps its clicks, and over the panel by z-index rather than by
+   which was appended last.
+
+   What is drawn is the 6px band R1 asks for, centred on the edge (9px in from the hit area's left, so
+   3px each side of the edge), and only when wanted: compact at rest, as EPIC-02 insists, with the
+   cursor as the hint. The band is a pill inset by the panel's own corner radius, so it never
+   pokes past the rounded corners it runs between. --bb-text-3 on hover, because it holds 3.93:1 on
+   white and 3.20:1 on the dark panel, over the 3:1 a control's outline needs. --bb-focus while focused
+   from the keyboard or being dragged, and that band is the focus ring, so the outline goes.
+
+   touch-action and user-select because a drag here is never a scroll or a text selection. The bottom
+   matches the panel's, for the same bottom bars. */
+#bb-panel-grip {
+  position: fixed;
+  top: 0;
+  right: calc(var(--bb-panel-w, 30%) - 4px);
+  bottom: calc(24px + var(--tabbar-h, 0px) + var(--audio-bar-h, 0px));
+  z-index: 2147482001;
+  width: 16px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+#bb-panel-grip[hidden] { display: none; }
+#bb-panel-grip:focus { outline: none; }
+
+#bb-panel-grip::before {
+  content: "";
+  position: absolute;
+  top: var(--bb-radius-lg, 16px);
+  bottom: var(--bb-radius-lg, 16px);
+  left: 9px;
+  width: 6px;
+  border-radius: var(--bb-radius-pill, 999px);
+}
+
+#bb-panel-grip:hover::before { background: var(--bb-text-3, #828080); }
+
+#bb-panel-grip:focus-visible::before,
+#bb-panel-grip[data-bb-dragging]::before { background: var(--bb-focus, #3D79C2); }
+
+/* R7, R8 and R9: only a reset animates, so the transition exists only while panel-host.js holds
+   data-bb-easing on the three. A drag writes a new width every frame, and easing each of those would
+   make the edge trail the pointer. The tab restates its opacity transition, since this replaces it. */
+#bb-panel[data-bb-easing] { transition: width 0.2s ease; }
+#bb-panel-tab[data-bb-easing] { transition: opacity 0.18s ease, right 0.2s ease; }
+#bb-panel-grip[data-bb-easing] { transition: right 0.2s ease; }
+
 /* The same width the dock treats as a phone. The panel covers the reader here (R10), so the tab stays
    at the window's edge, on top of it, since the panel's left edge is now off the screen. */
 @media (max-width: 767px) {
@@ -720,6 +787,9 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   }
 
   #bb-panel-tab[aria-expanded="true"] { right: 0; }
+
+  /* A full-width panel has no edge on the screen to drag. */
+  #bb-panel-grip { display: none; }
 }
 
 /* ---------- Pinned squeeze ----------
@@ -743,8 +813,9 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 
    panel-host.js writes --bb-squeeze on <html> as 1 while pinned and open, and removes it otherwise. On
    its own the property does nothing, so it cannot narrow a page without this file. The multiply keeps
-   the geometry here, and --bb-panel-width is the variable the panel and the tab already read, so
-   T-019's width moves all three together.
+   the geometry here, and --bb-panel-w is the clamped width the panel and the tab already read, so
+   T-019's width moves all of them together. body reads only the value on <html>, never the overrides
+   a drag writes on BibleBoost's own elements, which is what keeps a drag from reflowing the page.
 
    Chrome's scroll anchoring stands aside for a padding change on an ancestor, so the verse being read
    is held in place by panel-host.js, not by the browser.
@@ -755,7 +826,7 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
 
 @media (min-width: 768px) {
   body {
-    padding-right: calc(var(--bb-squeeze, 0) * var(--bb-panel-width, 30%));
+    padding-right: calc(var(--bb-squeeze, 0) * var(--bb-panel-w, 30%));
     transition: padding-right 0.2s ease;
   }
 }
@@ -874,5 +945,8 @@ html[data-bb-align][data-bb-sep] [data-bb-col] [data-bb-v="sep"]::before {
   #bb-dock .bb-track,
   #bb-dock .bb-thumb,
   #bb-panel-tab,
+  #bb-panel[data-bb-easing],
+  #bb-panel-tab[data-bb-easing],
+  #bb-panel-grip[data-bb-easing],
   body { transition: none; }
 }

@@ -90,6 +90,13 @@ that changes the work **rewrites** the section rather than appending to it.
 - **When the user reports back, tick exactly the boxes their steps cover**, and
   write "Checked by hand by the user, <date>" in Notes. A step they skipped
   ticks nothing.
+- **A console snippet must not declare a name the window already owns.** `top`,
+  `parent`, `self`, `name`, `status`, `length`, `origin`, `frames`, `opener` and the
+  like are properties of `window`. At the console's top level, `const top = …` fails
+  with "Identifier 'top' has already been declared" and none of the line runs. The
+  same line works when a test tool wraps it in a function, so the snippet passed
+  every check before the user ran it. T-021's step 7 did exactly this. Use plain
+  names such as `first` or `row`.
 
 ## Checking page code from a console
 
@@ -235,6 +242,42 @@ Each of these cost a round of confusion during T-012.
 - **`fetch` from bible.com to localhost fails**, as `connect-src` says it will. To run the
   real `content.css` on the live page, minify it and paste it into a `CSSStyleSheet` with
   `replaceSync`. Found during B-019.
+- **The real panel and the real worker run together on one localhost port.** Serve
+  `panel.html` with a `chrome` stub injected at the top of `<head>`, whose `sendMessage`
+  routes to the listener `background.js` registers once the stub has `import()`ed it, and
+  whose `storage` fires `onChanged` only for keys whose value changed, as Chrome does.
+  `panel.js` is served with its `HOST_ORIGIN` swapped for the reader stand-in's origin, on a
+  second port. Two localhost ports are one site, so the panel framed in the reader saw the
+  same IndexedDB as the panel opened on its own, where the notes were seeded. Delete the
+  database afterwards, from a page with no connection open. Found during T-021.
+- **A probe in the stub reads the cross-origin frame.** The stub can answer a
+  `postMessage({ probe: '<code>' })` by running the code in the frame and posting the result
+  back, so the reader page can ask what the panel's `<html>` class is, or how many rows it
+  holds. Stand-in only, never in shipped code. Found during T-020.
+- **A made-up pointer cannot be captured.** `setPointerCapture` throws for the `pointerId`
+  of a synthetic `PointerEvent`. To drive drag logic from script, replace it on that one
+  element with a no-op for the test and put it back. That proves the logic and nothing about
+  capture itself, which needs a real mouse. Found during T-019.
+- **A hidden pane leaves a transition running even after its property is removed.**
+  Removing the rule that added `transition: width 0.2s` leaves the default `all 0s`, which
+  still matches, so the frozen transition is kept, and the element reads its start value
+  indefinitely. `el.getAnimations().forEach((a) => a.finish())` before measuring. A real,
+  visible page finishes in 0.2s and never meets this. Found during T-019.
+- **A hidden pane throttles `setTimeout` too**, so a test of what a 150ms timer shows needs a
+  delay far longer than that (2s worked) to mean anything. Found during T-021.
+- **A hidden pane gives `focus()` no focus events.** `document.activeElement` changes,
+  but `focus` and `focusin` never fire, so code that tracks focus only through `focusin`
+  looks broken there. The note list's tab stop was, and now also moves in the code that
+  calls `focus()`. A real window fires them, so the fix is for robustness, not for this
+  pane. Found during T-021.
+- **Drive a virtual list with its keys, not by scrolling, in a hidden pane.** Setting
+  `scrollTop` redraws through `requestAnimationFrame`, which the hidden pane throttles,
+  so the rows on screen stay stale and any comparison with the worker fails for no
+  reason. Home, End and PageUp go through code that draws at once. Found during T-021.
+- **Check which copy of a module ran.** Once, a page loaded straight after an edit ran the
+  file from before it, served with `no-store`. `performance.getEntriesByType('resource')`
+  gave the old `transferSize`, and a new query string on the page loaded the new file.
+  Found during T-021.
 
 ## Status values
 

@@ -64,11 +64,11 @@ suggestion.
 | Turning a message into a reply (lookup, unknown type, throws) | `src/background/router.js` (`dispatch`); the handler table is in `background.js` |
 | Note, topic and tag operations, the `notesRev` signal, choosing an index | `src/background/repo.js`; every write goes through its private `mutate()` |
 | Schema version, `newId()`, record defaults, validators and normalizers | `src/shared/schema.js` |
-| Reading a verse key, canonical order, range captions | `src/shared/refs.js`. The save popover's caption is `captionOf` in `save-popover.js`, a copy because a classic script cannot import a module, and `test/save-popover.test.js` holds the two together |
+| Reading a verse key, canonical order, range captions | `src/shared/refs.js`: `formatRange` in USFM, and `captionOf`, which a list row uses, in the page's own book names. The save popover's caption is a copy of `captionOf` in `save-popover.js`, because a classic script cannot import a module, and `test/save-popover.test.js` holds the two together |
 | The versions the popup offers | `src/shared/versions.js`, loaded by content scripts and re-exported by `refs.js` |
 | NFC, case folding and tokenizing, for anything that compares text | `src/shared/normalize.js` |
-| Any rendering of notes | `src/ui/app/*` |
-| Things both the worker and pages need | `src/shared/*` |
+| Any rendering of notes | `src/ui/app/*`: the list in `list.js` (T-021), styled by `src/ui/ui.css` |
+| The app's line to the worker, and hearing `notesRev` | `src/ui/app/store.js`: `ask()`, `loadLookups()`, `onNotesChange()` || Things both the worker and pages need | `src/shared/*` |
 
 ## Why not a framework
 

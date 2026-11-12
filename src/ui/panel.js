@@ -1,11 +1,13 @@
 /*
  * BibleBoost — the side panel's page
- * A shell for now, so that the host has something to open and the channel between them can be seen to
- * work (T-017), plus the pin (T-018). T-021 fills it with the note list.
+ * The frame panel-host.js opens on bible.com (T-017): its pin (T-018), the page's theme (T-020) and the
+ * note list (T-021).
  *
  * This page cannot see bible.com. Anything page-shaped comes from src/content/panel-host.js by
  * postMessage, and the table of those messages is in work/understandings/extension/03-messaging.md.
+ * Notes never go that way: the list asks the service worker itself, through src/ui/app/store.js.
  */
+import { createList } from './app/list.js';
 
 // The one page this can be framed in that means anything. Only www, because that is the only host the
 // content script matches.
@@ -43,6 +45,17 @@ const HANDLERS = {
     pin.title = pinned ? 'Pinned beside the page. Click to float over it' : 'Pin beside the page';
     pin.hidden = !msg.canPin;
   },
+
+  // bible.com's light or dark, from panel-host.js (T-020). The same class the page itself uses, on this
+  // document's <html>, because theme.css matches html.light and html.dark and nothing else: a data-theme
+  // attribute would leave the panel following the OS. Only the two known values, and the other one
+  // comes off, so a page script posting nonsense can at worst pick one of the two palettes.
+  theme(msg) {
+    if (msg.theme !== 'light' && msg.theme !== 'dark') return;
+    const root = document.documentElement;
+    root.classList.remove(msg.theme === 'dark' ? 'light' : 'dark');
+    root.classList.add(msg.theme);
+  },
 };
 
 // Own-property only, so that { bb: 'constructor' } finds nothing.
@@ -64,5 +77,17 @@ pin.addEventListener('click', () => {
   send({ bb: 'pin', pinned: pin.getAttribute('aria-pressed') !== 'true' });
 });
 
-// Last, so that the listener above already exists when the host answers.
+// After the listener above, so that it already exists when the host answers, and before the list, so
+// that nothing the list does can keep the × and the pin from working.
 send({ bb: 'ready' });
+
+// The list fills <main>. onOpen is left at its default, which does nothing, until T-022 expands a row
+// into its editor in place.
+//
+// The handle on globalThis is for the console, as save-popover.js keeps BB.savePopover.debug: in the
+// panel's own frame (right-click inside it, Inspect), bbPanel.list.stats says how many rows the DOM
+// holds, and bbPanel.list.setFilter({ tag: 'x' }) shows the filtered empty state before T-023 gives the
+// panel a filter of its own. Nothing outside this frame can reach it: the page that frames the panel is
+// another origin.
+const list = createList(document.querySelector('main'));
+globalThis.bbPanel = { list };

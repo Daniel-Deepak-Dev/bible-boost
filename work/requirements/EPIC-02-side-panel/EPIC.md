@@ -36,8 +36,8 @@ free.
 - [x] Opening it pinned squeezes the reader; both parallel columns stay fully
       visible and aligned
 - [x] Unpinned, it overlays with a shadow
-- [ ] Width is draggable and survives a reload
-- [ ] It follows bible.com's light/dark theme
+- [x] Width is draggable and survives a reload
+- [x] It follows bible.com's light/dark theme
 - [ ] Notes can be created, edited and deleted from it
 - [ ] It defaults to the chapter on screen
 - [ ] `Alt+B` toggles it
@@ -49,7 +49,8 @@ free.
 The user's words: *"side panel should be compact as possible, dont make it look
 overloaded."* Treat that as a hard constraint, not a preference.
 
-- A list row is a reference, a two-line preview and a topic dot. Nothing else.
+- A list row is a reference, a two-line preview, a topic dot and its tags, the
+  four things T-021 R2 names. Nothing else.
 - No toolbars at rest. Actions appear on hover, focus, or in an overflow menu.
 - Anything that needs more room belongs in the full page (EPIC-03), and the panel
   should offer a one-click way to get there.

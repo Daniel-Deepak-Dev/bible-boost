@@ -14,6 +14,8 @@ No preprocessor, no framework, no BEM. Three patterns:
   because nothing else shares the document.
 - **The panel and notes page** `<link>` `src/shared/theme.css` and use the same
   `--bb-*` names as the dock, so a surface beside the page shares its colours.
+  Then they link `src/ui/ui.css`, the styles of the shared views in `src/ui/app/`
+  (the note list since T-021), and keep only their own layout inline.
 
 State is expressed with **ARIA and data attributes**, not modifier classes:
 `[aria-checked="true"]`, `html[data-bb-align]`. Keep this — it means the
@@ -37,6 +39,11 @@ set its class.
 **Only the class is matched.** A `data-theme` attribute on `<html>` does nothing,
 and a surface that sets one quietly follows the OS. The panel and notes page set
 the `light` or `dark` class.
+
+`theme.css` ends with a `color-scheme` block for the same three cases, so that
+the scrollbar and native controls in the panel follow its theme too. It is
+deliberately **not** copied into `content.css`, where the same selectors would set
+`color-scheme` on bible.com's own `<html>`.
 
 **`html.light` must restate every colour.** On an OS-dark machine with the page
 set to light, the `@media` block has already overwritten `:root`, so anything
@@ -141,6 +148,25 @@ values. It has no `--bb-radius-lg` counterpart because it draws no floating surf
 draws its window. Its `.brand img` keeps a literal 5px, the one exception, because that
 rounds the app icon's artwork rather than a surface.
 
+## The panel's width
+
+`--bb-panel-width` is the share of the window the user chose (T-019). Nothing
+draws with it directly. `content.css` turns it into `--bb-panel-w`,
+`clamp(280px, var(--bb-panel-width, 30%), 50%)`, and the panel's width, the tab's
+`right`, the grip's `right` and the pinned squeeze on `body` all read that. The
+clamp lives in CSS so that a stored width stays within bounds as the window is
+resized, with no script running.
+
+**A `var()` inside a custom property is resolved where that property is
+declared.** So `--bb-panel-w` is declared on each of the four elements that use it,
+not once on `<html>`. Declared on `<html>`, it would be worked out there once, and
+the elements below would inherit the result. They would then ignore the
+`--bb-panel-width` a drag writes on the panel, tab and grip themselves, which is
+how a drag previews without reflowing the page. A percentage inside it, on the
+other hand, is kept as a percentage and resolved by the property that uses it. That
+is why `body`'s padding and the fixed panel's width, both taken of the same
+1385px at 1400x900, still meet.
+
 ## Rules
 
 1. **Always give `var()` a fallback.** An undefined custom property invalidates
@@ -158,6 +184,18 @@ rounds the app icon's artwork rather than a surface.
    a `web_accessible_resources` entry. Commit `a356301` removed a bundled Inter.
 5. **`line-height: normal` on small text.** The dock clipped descenders until
    this was fixed.
+
+   **The exception is a fixed-height row**, such as the note list's (T-021). It is
+   virtual above 200 rows and places each row at its index times one height, so
+   every row has to be the same height. With `normal`, a line's height follows the
+   font that draws it, and a Tamil line is documented as taller than a Latin one
+   (`../bible-com/07-i18n-and-scripts.md`). So `ui.css` gives the list a length,
+   20px for 13px text. In the built-in browser on 2026-11-11, Tamil and Latin at
+   13px in the panel's font stack both measured a 17.33px `normal` line, and
+   nothing was clipped at 20px, either at 1024px or with the panel at 280px. The
+   user's hand test in their own Chrome on Windows confirmed it on 2026-11-12: a
+   long Tamil note clamped to two clean lines at 280px. If a script does clip one
+   day, raise `--bb-row-line` and leave `normal` alone.
 6. **Honour `prefers-reduced-motion`**, and put it last in the file as
    `content.css` does.
 7. **Measure contrast, and record it in a comment.** `--bb-track-on` deliberately

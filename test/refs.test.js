@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BOOKS, VERSIONS, parseUsfm, compareUsfm, formatRange } from '../src/shared/refs.js';
+import { BOOKS, VERSIONS, parseUsfm, compareUsfm, formatRange, captionOf } from '../src/shared/refs.js';
 
 // ---------- parseUsfm ----------
 test('parseUsfm splits a key into book, chapter and verse', () => {
@@ -203,4 +203,44 @@ test('formatRange does not reorder the array it was given', () => {
   const given = ['EXO.13.4', 'EXO.13.2'];
   formatRange(given);
   assert.deepEqual(given, ['EXO.13.4', 'EXO.13.2']);
+});
+
+// ---------- captionOf ----------
+// What a list row calls a note (T-021 R4). The popover's own copy has its full set of cases in
+// save-popover.test.js, which also holds the two together; these are the ones only stored notes meet.
+const named = (name, chapter, ...numbers) => numbers.map((n) => ({ usfm: `EXO.${chapter}.${n}`, displayRef: `${name} ${chapter}:${n}` }));
+
+test('captionOf names a range with the version\'s own heading', () => {
+  assert.equal(captionOf(named('யாத்திராகமம்', 13, 2, 3, 4)), 'யாத்திராகமம் 13:2-4');
+  assert.equal(captionOf(named('Exodus', 13, 2, 4)), 'Exodus 13:2,4');
+});
+
+test('captionOf keeps a lone verse\'s reference whole', () => {
+  assert.equal(captionOf([{ usfm: 'ROM.1.3', displayRef: 'Romans 1:3-4' }]), 'Romans 1:3-4');
+  assert.equal(captionOf([{ usfm: 'EXO.13.2', displayRef: '' }]), 'EXO.13.2');
+});
+
+test('captionOf of a note with no verses is an empty string', () => {
+  assert.equal(captionOf([]), '');
+  assert.equal(captionOf(undefined), '');
+});
+
+test('captionOf falls back to formatRange when any verse lacks a reference', () => {
+  const [a, b] = named('Exodus', 13, 2, 3);
+  assert.equal(captionOf([a, { ...b, displayRef: null }]), formatRange(['EXO.13.2', 'EXO.13.3']));
+});
+
+// Only an imported note can do this, since one page is one book. Canonical order, not code order: EXO
+// before JHN, and never one chapter of each run together.
+test('captionOf keeps two books apart and in canonical order', () => {
+  const verses = [
+    { usfm: 'JHN.1.1', displayRef: 'John 1:1' },
+    { usfm: 'EXO.13.2', displayRef: 'Exodus 13:2' },
+  ];
+  assert.equal(captionOf(verses), 'Exodus 13:2; John 1:1');
+});
+
+test('captionOf drops a verse it cannot read and captions the rest', () => {
+  const [a, b] = named('Exodus', 13, 2, 3);
+  assert.equal(captionOf([a, { usfm: 'JHN.INTRO1', displayRef: 'Intro' }, b]), 'Exodus 13:2-3');
 });

@@ -16,7 +16,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { cleanNoteDraft } from '../src/shared/schema.js';
-import { formatRange } from '../src/shared/refs.js';
+import { formatRange, captionOf as sharedCaptionOf } from '../src/shared/refs.js';
 
 const SOURCE = readFileSync(new URL('../src/content/save-popover.js', import.meta.url), 'utf8');
 const VID_RE = /(?:^|[\s_])vid(\d+)(?:\s|$)/;
@@ -206,6 +206,29 @@ test('with no references the caption is exactly what formatRange gives', () => {
   ];
   for (const usfms of cases) {
     assert.equal(captionOf(usfms.map((usfm) => ({ usfm, displayRef: null }))), formatRange(usfms), usfms.join());
+  }
+});
+
+// refs.js has a second captionOf, for notes once they are stored, which the panel's list uses (T-021).
+// Both caption the same selection, so on anything one page can produce they must agree word for word.
+test('the caption is exactly what refs.js gives a stored note', () => {
+  const cases = [
+    exodus13(2, 3, 4),
+    inExodus('யாத்திராகமம்', 13, 2, 3, 4),
+    inExodus('2. Mose', 13, 2, 3),
+    exodus13(2, 3, 4, 6, 8, 9),
+    exodus13(9, 10, 11),
+    exodus13(4, 2, 3),
+    [...inExodus('Exodus', 14, 1), ...exodus13(2, 3)],
+    [{ usfm: 'ROM.1.3', displayRef: 'Romans 1:3-4' }, { usfm: 'ROM.1.5', displayRef: 'Romans 1:5' }],
+    [{ usfm: 'JHN.1.1', displayRef: 'John 1:1-11' }, { usfm: 'JHN.1.12', displayRef: 'John 1:12' }],
+    [{ usfm: 'EXO.13.2', displayRef: 'خروج ١٣:٢' }, { usfm: 'EXO.13.3', displayRef: 'خروج ١٣:٣' }],
+    [{ usfm: 'ROM.1.3', displayRef: 'Romans 1:3-4' }],
+    [{ usfm: 'EXO.13.2', displayRef: null }],
+    [...exodus13(2), { usfm: 'EXO.13.3', displayRef: null }],
+  ];
+  for (const verses of cases) {
+    assert.equal(captionOf(verses), sharedCaptionOf(wire(verses)), verses.map((v) => v.usfm).join());
   }
 });
 

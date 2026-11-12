@@ -1,0 +1,211 @@
+/* ---------- The notes app's shared styles ----------
+   For the views in src/ui/app/, which the panel uses now and the notes page will from EPIC-03. Every
+   colour, corner and gap is a token from theme.css, linked before this file, and every var() keeps a
+   fallback: an undefined property invalidates its declaration and takes the rule with it, silently.
+
+   Designed at the panel's 280px minimum first (T-021's last Acceptance box), so that a wider panel only
+   has more room to breathe and never a different layout. */
+
+/* ---------- Note list ----------
+   A row is one fixed height, and that is a decision, not a convenience. The list is virtual above 200
+   rows (R7): only what is on screen exists, and a row's position is its index times the height, which
+   only works if every row is the same height. list.js reads the height off a real row, so this file
+   is the one place it is decided.
+
+   The line heights are lengths for the same reason, and deliberately not the `normal` that the
+   conventions ask for on small text. With `normal`, a line's height follows the font that draws it,
+   and a Tamil line box is taller than a Latin one at the same size (07-i18n-and-scripts.md), so a
+   Tamil note's row would come out taller than an English one. A length gives every script the same
+   line, and the glyphs sit in it. Whether 20px holds Tamil at 13px without clipping is checked in
+   T-021's Notes, measured, because the clamp below clips whatever spills past it.
+
+   The pieces are custom properties on the list so that a denser or roomier host can change them in
+   one place: two paddings, the head's line, a 2px gap and the preview's two lines. */
+.bb-list {
+  --bb-row-pad: var(--bb-gap-md, 8px);
+  --bb-row-line: 20px;
+  --bb-row-h: calc(2 * var(--bb-row-pad, 8px) + 3 * var(--bb-row-line, 20px) + 2px);
+
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* The panel sits over the reader, and a list scrolled to its end must not carry on scrolling the
+     chapter underneath. */
+  overscroll-behavior: contain;
+}
+
+.bb-list[hidden],
+.bb-list-status[hidden] { display: none; }
+
+/* The list's full height, so the scrollbar is honest while only a window of rows exists. The padding
+   is the room below the last row. */
+.bb-list-spacer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  padding-bottom: var(--bb-gap-md, 8px);
+  visibility: hidden;
+}
+
+/* Inset from both sides so that the hover fill is a rounded control, as a list option is everywhere
+   else BibleBoost draws one (--bb-radius), and so that the 3px of the host's resize grip that reach
+   into this frame (content.css, past the panel's 1px border) fall on the inset and not on a row: a
+   press there would start a resize. No margin on top: list.js places rows from their measured height,
+   which a margin is not part of, so the room above the first row is its INSET instead. */
+.bb-row {
+  position: absolute;
+  left: var(--bb-gap-sm, 4px);
+  right: var(--bb-gap-sm, 4px);
+  box-sizing: border-box;
+  height: var(--bb-row-h, 78px);
+  padding: var(--bb-row-pad, 8px);
+  overflow: hidden;
+  border-radius: var(--bb-radius, 4px);
+  color: var(--bb-text, #121212);
+  font-size: 13px;
+  line-height: var(--bb-row-line, 20px);
+  cursor: pointer;
+}
+
+/* Solid, and one step off the panel's own fill, rather than the translucent --bb-hover, so that the
+   actions below can take exactly the row's colour and cover what is under them. */
+.bb-row:hover,
+.bb-row:focus-within { background: var(--bb-surface-3, #EDEBEB); }
+
+.bb-row:focus { outline: none; }
+.bb-row:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); outline-offset: -2px; }
+
+/* The dot, the reference and the tags share one line. The reference keeps its full width first and
+   ellipsizes only when it alone overflows; the tags take whatever is left, starting from 0. */
+.bb-row-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--bb-row-line, 20px);
+  white-space: nowrap;
+}
+
+/* R2's topic dot. A topic with no colour draws it in --bb-text-3, and Uncategorized is a ring, so that
+   "no topic" does not read as one more colour. */
+.bb-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--bb-radius-pill, 999px);
+  background: var(--bb-text-3, #828080);
+}
+
+.bb-dot[data-bb-none] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--bb-text-3, #828080);
+}
+
+.bb-ref {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+/* One line of chips, cut at the right with a fade rather than wrapped, because a wrap would change the
+   row's height. The fade only ever covers the last 16px, which is empty unless the chips overflow. */
+.bb-tags {
+  display: flex;
+  flex: 1 1 0;
+  gap: var(--bb-gap-sm, 4px);
+  min-width: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+}
+
+/* Translucent, so a chip shows on the panel's fill and on a hovered row's alike. */
+.bb-chip {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--bb-radius-pill, 999px);
+  background: var(--bb-hover, rgba(8, 7, 7, 0.08));
+  color: var(--bb-text-2, #636161);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+/* R6. The clamp and not a cut string, so that the line breaks where the browser's own line breaking
+   puts it, in Tamil as in English. Cutting at a character count is wrong for a script with combining
+   marks, which a count would split. */
+.bb-preview {
+  display: -webkit-box;
+  margin: 2px 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  height: calc(2 * var(--bb-row-line, 20px));
+  overflow-wrap: anywhere;
+}
+
+/* A note with no body shows its verse, in the secondary colour so it does not pass for the note. */
+.bb-preview[data-bb-verse] { color: var(--bb-text-2, #636161); }
+
+/* R3. Hidden at rest, there on hover and while the row holds focus. visibility rather than display, so
+   the button keeps its place, and a hidden button cannot take focus, which keeps every other row's
+   button out of the tab order without any tabindex bookkeeping. */
+.bb-actions {
+  position: absolute;
+  top: var(--bb-gap-sm, 4px);
+  right: var(--bb-gap-sm, 4px);
+  display: flex;
+  visibility: hidden;
+  border-radius: var(--bb-radius, 4px);
+  background: inherit;
+}
+
+.bb-row:hover .bb-actions,
+.bb-row:focus-within .bb-actions { visibility: visible; }
+
+.bb-act {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--bb-radius, 4px);
+  background: transparent;
+  color: var(--bb-text-2, #636161);
+  cursor: pointer;
+}
+
+/* Red on the way in, because this one removes something. It is a colour and an icon, so its name is
+   in its label and its tooltip as well (theme.css: accent and danger differ by hue alone). */
+.bb-act:hover {
+  background: var(--bb-hover, rgba(8, 7, 7, 0.08));
+  color: var(--bb-danger, #DE2E3C);
+}
+
+.bb-act:focus { outline: none; }
+.bb-act:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); outline-offset: -2px; }
+
+.bb-act svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Loading, empty and error, one line each (R10, R11). */
+.bb-list-status {
+  margin: 0;
+  padding: 16px 12px;
+  color: var(--bb-text-2, #636161);
+  font-size: 13px;
+  line-height: 20px;
+}

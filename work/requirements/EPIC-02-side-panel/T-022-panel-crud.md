@@ -96,6 +96,7 @@ collapses and saves immediately.
 - [ ] A standalone note with no verse can be created and saved
 - [ ] Deleting three selected notes asks for confirmation with the count
 - [ ] Escape and Ctrl/Cmd+Enter behave as specified
+- [ ] Enter on a focused row expands it, as a click does (moved from T-021)
 - [ ] `notesRev` increments on every operation
 - [ ] At 280px the editor is still usable
 
@@ -104,3 +105,21 @@ collapses and saves immediately.
 R3 is easy to get wrong and hard to notice: sending the whole record works
 perfectly until two surfaces are open, which is exactly the configuration this
 project is building toward.
+
+**What T-021 left for this task (2026-11-11).**
+
+- `createList(host, { onOpen })` in `src/ui/app/list.js` calls `onOpen(note)` for
+  Enter on a row and for a click on one. `panel.js` passes nothing yet, so both do
+  nothing. That hook is where R1's editor goes, and Enter on a row expanding it is
+  this task's to check, moved here from T-021's keyboard box.
+- **The list is virtual above 200 rows and assumes every row is one height**
+  (78px, read off a real row; `ui.css` explains why). Expanding a row in place
+  breaks that, so the list has to learn one taller row at the open index before R1
+  works on a long list. Rows after it move down by the difference.
+- Delete already exists: the row's trash button and the Delete key send
+  `notes/trash` with no Undo, by the user's choice for T-021. R5's toast goes on
+  top of that, and the hand test meanwhile restores with `notes/restore` from the
+  console.
+- The list moves an edited note to the top, because it is now the newest by
+  `updatedAt`. A note being edited in place would jump on the first autosave.
+  Decide here whether the open row stays put until it closes.
