@@ -44,6 +44,20 @@ test('a chapter is a prefix range on byVerse that cannot reach the next chapter 
   assert.ok(!('EXO.13.2' >= p.range.lower && 'EXO.13.2' <= p.range.upper), 'EXO.13.2 is not in EXO.1');
 });
 
+// T-023 R8: the book scope reads byVerse too, and never the whole store.
+test('a book is a prefix range on byVerse that takes every chapter and no other book', () => {
+  const p = plan({ book: 'EXO' });
+  assert.equal(p.index, 'byVerse');
+  assert.equal(p.ordered, false);
+  const inside = (key) => key >= p.range.lower && key <= p.range.upper;
+  assert.ok(inside('EXO.1.1') && inside('EXO.13.2') && inside('EXO.40.38'));
+  assert.ok(!inside('EZK.1.1') && !inside('GEN.50.26') && !inside('LEV.1.1'));
+});
+
+test('a chapter outranks its book, being narrower', () => {
+  assert.equal(plan({ book: 'EXO', chapter: 'EXO.13' }).range.lower, 'EXO.13.');
+});
+
 // byTopic cannot find these: a null is not a valid key, so the row is not in the index at all.
 test('Uncategorized cannot use byTopic and walks byUpdated, counting as it goes', () => {
   const p = plan({ topicId: null });
@@ -116,6 +130,14 @@ test('a chapter matches any verse in it, and not a chapter sharing its digits', 
   assert.equal(matches({ chapter: 'EXO.13' }), true);
   assert.equal(matches({ chapter: 'EXO.1' }), false);
   assert.equal(matches({ chapter: 'GEN.13' }), false);
+});
+
+// A note saved on EXO.13.2 belongs to Exodus whichever chapter is on screen (T-023 R8).
+test('a book matches any verse in it, and not a book sharing a letter', () => {
+  assert.equal(matches({ book: 'EXO' }), true);
+  assert.equal(matches({ book: 'EZK' }), false);
+  assert.equal(matches({ book: 'EXO' }, { ...NOTE, verseKeys: ['GEN.1.1', 'EXO.40.38'] }), true);
+  assert.equal(matches({ book: 'EXO' }, { ...NOTE, verseKeys: [] }), false);
 });
 
 test('a date range includes both ends', () => {

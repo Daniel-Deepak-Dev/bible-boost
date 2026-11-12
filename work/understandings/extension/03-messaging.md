@@ -153,7 +153,7 @@ Everything not listed is ignored, so a caller cannot set `id`, timestamps,
 |---|---|
 | `draft` | `source` (required: `menu`, `panel`, `page` or `import`), plus any of the `patch` fields; needs a verse or a non-blank body |
 | `patch` | `title`, `body`, `topicId`, `tags`, `verses`, `color`, `pinned`; only what is sent changes |
-| `filter` | `trashed` (literal `true`: Trash only), `topicId` (`null` is Uncategorized), `tag`, `verseKey`, `chapter` (`EXO.13`), `from` and `to` (ms, on `updatedAt`) |
+| `filter` | `trashed` (literal `true`: Trash only), `topicId` (`null` is Uncategorized), `tag`, `verseKey`, `chapter` (`EXO.13`), `book` (`EXO`, the code, never a name; T-023), `from` and `to` (ms, on `updatedAt`) |
 | `sort` | `{ by, dir }`: `updatedAt`, `createdAt`, or `deletedAt` in Trash; `asc` or `desc`. Newest first by default |
 | `page` | `{ offset, limit }`: limit defaults to 100, caps at 500, and `0` returns only `total` |
 
@@ -282,7 +282,7 @@ proxy of the real page, where the panel was on a second port.
 | panel → host | `{bb:'ready'}` | the panel's listener exists, so the host can start sending |
 | host → panel | `{bb:'state', open, pinned, canPin}` | sent on `ready`, on every open, close or pin, and when the window crosses 768px. `canPin` is false below 768px, where the panel is full-width and nothing is squeezed. The host works it out because a media query inside the frame measures the frame (T-018) |
 | host → panel | `{bb:'theme', theme:'dark'\|'light'}` | bible.com's `html.dark` / `html.light`, or the OS when it has set neither (T-020). Sent on `ready` and whenever the theme changes, from an observer of its own on `<html>`, because the page observer watches `body`. The frame's address also carries it as `#theme=dark`, which `theme-boot.js` reads before the first paint. The panel accepts only those two values |
-| host → panel | `{bb:'context', ref:'EXO.13', versions:[...]}` | what chapter is on screen |
+| host → panel | `{bb:'context', ref:'EXO.13', label, versions:[...]}` | what chapter is on screen (T-023). Sent on `ready` and from `render()` whenever it differs from the last one sent, so client-side navigation reaches the panel on the `refresh()` pass that re-aligns. Not sent away from a reader page. `ref` is `parseUrl().ref`, `null` on a book intro. `label` is the primary column's `<h1>` ("யாத்திராகமம் 13"), or `null` unless it ends in `ref`'s chapter number. `versions` is the address's version ids, primary first, unread so far. The panel re-checks `ref` and `label`, since a page script can post one too, and uses them for display only |
 | host → panel | `{bb:'selection', draft}` | user hit save with a verse selected |
 | panel → host | `{bb:'pin', pinned}` | squeeze vs overlay, from the pin button (T-018). The host stores it, which is safe only because of the `source` check. The button changes only when the host's `state` comes back |
 | panel → host | `{bb:'close'}` | collapse to the edge tab |

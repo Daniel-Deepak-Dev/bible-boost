@@ -125,6 +125,10 @@ function icon(paths) {
 //   onGone(id)     the open note was trashed or purged somewhere else. Its row stays, editor and all,
 //                  until the host has saved what is in it and called collapse().
 //
+// filter is the list to start on. null starts nothing until the host calls setFilter(), for a host that
+// has to hear something first: the panel waits for the chapter on screen (T-023), and asking for every
+// note meanwhile would show them all for a moment and then swap them for the chapter's.
+//
 // The model is three things: ids, the note id at each position of the sorted list, with holes where a
 // page has not arrived; notes, each loaded note by id; and total, which the worker reports. The view is
 // rows, the elements currently in the DOM, keyed by note id. A row is built once for its note and then
@@ -135,7 +139,7 @@ function icon(paths) {
 // sees it. So paging, patching and the reloads below are untouched by an editor being open, and the open
 // row stays put even when a change from elsewhere makes its note the newest. Anchoring to a neighbour
 // rather than to a position keeps it beside the same notes when one is created or trashed above it.
-export function createList(host, { onOpen = () => {}, onTrash = null, onGone = () => {} } = {}) {
+export function createList(host, { onOpen = () => {}, onTrash = null, onGone = () => {}, filter: initial = {} } = {}) {
   const status = make('p', 'bb-list-status');
   status.setAttribute('role', 'status');
   status.hidden = true;
@@ -151,11 +155,15 @@ export function createList(host, { onOpen = () => {}, onTrash = null, onGone = (
   scroller.append(spacer);
   host.append(status, scroller);
 
-  let filter = {};
+  let filter = { ...initial };
+  // False while a host that passed filter: null has not chosen one yet. Nothing is asked for until then.
+  let started = initial !== null;
   let ids = [];
   let total = null;
   let error = null;
   let emptyText = EMPTY_NONE;
+  // What the host would rather an empty filtered list said, or null for the list's own words (T-023 R3).
+  let emptyOverride = null;
   const notes = new Map();
   const rows = new Map();
   let lookups = { topics: new Map(), tags: new Map() };
@@ -338,9 +346,11 @@ export function createList(host, { onOpen = () => {}, onTrash = null, onGone = (
   }
 
   // R10. With a filter on, an empty list means nothing until it is known whether there are notes at
-  // all. A page of limit 0 answers only the total, from index counts.
+  // all. A page of limit 0 answers only the total, from index counts. A host that knows better, the
+  // panel naming the chapter it looked in, says so with setFilter's empty or setEmpty().
   async function emptyMessage(gen) {
     if (!filtering()) return EMPTY_NONE;
+    if (emptyOverride !== null) return emptyOverride;
     const all = await ask({ type: 'notes/list', page: { offset: 0, limit: 0 } });
     if (gen !== generation) return emptyText;
     return all.ok && all.total === 0 ? EMPTY_NONE : EMPTY_FILTERED;
@@ -371,6 +381,7 @@ export function createList(host, { onOpen = () => {}, onTrash = null, onGone = (
   // there is no window to ask for, so it asks for the first page directly: otherwise restoring the only
   // note would leave "No notes yet" showing over a list of one.
   function reload() {
+    if (!started) return;
     newGeneration();
     fresh.clear();
     if (total) draw();
@@ -861,14 +872,19 @@ export function createList(host, { onOpen = () => {}, onTrash = null, onGone = (
 
   // The lookups come in beside the first page, and repaint whatever rows that page has already drawn.
   refreshLookups();
-  loadPage(0);
+  if (started) loadPage(0);
 
-  // setFilter is T-023's way in, and the console's until then. A new filter is a different list, so it
-  // starts from the top with nothing on screen.
+  // The panel's scope control and its following the chapter on screen are the callers (T-023), and the
+  // console. A new filter is a different list, so it starts from the top with nothing on screen.
   //
-  // An open row survives it, at the top, because it holds an editor. The host should close its editor
-  // first (T-030 R1 asks for a flush before a filter change), and T-023 will.
-  function setFilter(next = {}) {
+  // An open row survives it, at the top, because it holds an editor. The panel closes its editor first,
+  // or waits for it to close (T-023 R6), so that a note from another chapter is never left open over a
+  // new chapter's list (T-030 R1 asks for the same flush).
+  //
+  // empty is what the list says if this filter finds nothing, or null for its own words.
+  function setFilter(next = {}, { empty = null } = {}) {
+    started = true;
+    emptyOverride = empty;
     filter = { ...next };
     newGeneration();
     fresh.clear();
@@ -883,6 +899,15 @@ export function createList(host, { onOpen = () => {}, onTrash = null, onGone = (
     startLoading();
     draw();
     loadPage(0);
+  }
+
+  // The empty text again, for the same filter, when what it depends on has changed: the panel's counts
+  // of the other scopes arrive after the list does (T-023 R3). Shown at once if the list is empty now.
+  function setEmpty(text = null) {
+    emptyOverride = text;
+    if (total !== 0 || !filtering()) return;
+    emptyText = text ?? EMPTY_FILTERED;
+    draw();
   }
 
   // ---------- The open row (T-022) ----------
@@ -1017,6 +1042,7 @@ export function createList(host, { onOpen = () => {}, onTrash = null, onGone = (
 
   return {
     setFilter,
+    setEmpty,
     reload,
     open: openRow,
     openNew,

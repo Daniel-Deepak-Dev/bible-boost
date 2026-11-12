@@ -558,6 +558,9 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     resolveVersion,
     displayRef,
     versePair,
+    // panel-host.js names the chapter on screen with it (T-023 R6), and a second copy of how a column's
+    // own <h1> is found is the one that would not get fixed when the layout changes.
+    headingOf,
     // For the console, from the extension's own context: the acceptance check that overwrites the
     // cached class to prove it gets rediscovered needs some way to reach it.
     debug: {

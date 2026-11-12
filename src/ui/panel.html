@@ -27,15 +27,107 @@
       font: 400 14px/normal aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
     }
 
-    /* Compact because EPIC-02 says so. New note (T-022), the pin (T-018) and the × are the only controls
-       at rest. */
+    /* Compact because EPIC-02 says so. One row: the scope (T-023) where the title was, then New note
+       (T-022), the pin (T-018) and the ×. The title gave way to the scope because the two do not fit side
+       by side at 280px, and the user chose the scope from a mock (2026-11-12). The frame's own title
+       still names the panel for a screen reader. */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: var(--bb-gap-sm, 4px);
+      padding: var(--bb-gap-sm, 4px);
+      border-bottom: 1px solid var(--bb-surface-3, #EDEBEB);
+    }
+
+    /* R2, the scope: one group of three, as the mock drew it, "[Chap 3|Book 12|All 40]". The group is
+       the control, so it takes --bb-radius and clips the segments, and the segments draw no corners of
+       their own (02-css-and-theming.md, Corner radius, rule 4).
+
+       Drawn with fills and not a border, the way the editor's fields are: dark --bb-border is the same
+       #353333 as the dark panel, and a bordered group vanished there when it was first tried. So the
+       group is a --bb-surface-3 track, the checked segment takes --bb-surface in the full text colour,
+       and the lines between segments are the panel's own --bb-surface-2, which shows on the track in
+       both themes. --bb-text-2 on the track is 5.4:1 light and 6:1 dark.
+
+       min-width: 0 lets the group give way before the buttons beside it do, should a count be wide. 12px
+       on a 16px line with 3px above and below comes to the 22px of the buttons beside it, so the header
+       keeps its height. normal is not used for the line: the words are ASCII and the digits are the
+       font's, so no script is taller here than the 16px it is given. At 280px the three measured 146px
+       with the pin showing, leaving 50px spare. */
+    #bb-scope {
+      display: flex;
+      flex: 0 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      border-radius: var(--bb-radius, 4px);
+      background: var(--bb-surface-3, #EDEBEB);
+    }
+
+    #bb-scope button {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      min-width: 0;
+      padding: 3px 8px;
+      border: 0;
+      background: transparent;
+      color: var(--bb-text-2, #636161);
+      font: 600 12px/16px aktiv-grotesk, system-ui, 'Segoe UI', Arial, sans-serif;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    #bb-scope button + button { box-shadow: inset 1px 0 var(--bb-surface-2, #F6F4F4); }
+
+    #bb-scope button:hover { background: var(--bb-hover, rgba(8, 7, 7, 0.08)); }
+
+    #bb-scope button[aria-checked="true"] {
+      background: var(--bb-surface, rgba(255, 255, 255, 0.92));
+      color: var(--bb-text, #121212);
+    }
+
+    /* Chap and Book on a book intro (R9), kept in place so the header does not change shape. */
+    #bb-scope button[aria-disabled="true"] {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    #bb-scope button[aria-disabled="true"]:hover { background: transparent; }
+
+    #bb-scope button:focus { outline: none; }
+    #bb-scope button:focus-visible { outline: 2px solid var(--bb-focus, #3D79C2); outline-offset: -2px; }
+
+    /* R3's count, lighter than its word and in tabular figures, so 9 to 10 does not jolt the row. */
+    .bb-count {
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bb-count:empty { display: none; }
+
+    /* R6. The chapter changed while a note is open, and the list waits for it to close. One quiet line
+       under the header saying so, with a way to switch now. In the flow, so it pushes the list down
+       rather than covering its first row. */
+    .bb-reading {
+      display: flex;
+      align-items: center;
+      gap: var(--bb-gap-md, 8px);
       padding: var(--bb-gap-sm, 4px) var(--bb-gap-sm, 4px) var(--bb-gap-sm, 4px) 12px;
       border-bottom: 1px solid var(--bb-surface-3, #EDEBEB);
-      font-weight: 700;
+      color: var(--bb-text-2, #636161);
+      font-size: 12px;
+      line-height: normal;
+    }
+
+    .bb-reading[hidden] { display: none; }
+
+    .bb-reading-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     /* The note list (T-021) does its own scrolling, so that its status line and its rows can sit in
@@ -110,7 +202,11 @@
 </head>
 <body>
   <header>
-    <span>BibleBoost</span>
+    <div id="bb-scope" role="radiogroup" aria-label="Show notes from">
+      <button type="button" role="radio" data-bb-scope="chapter" aria-checked="true" aria-label="This chapter">Chap<span class="bb-count"></span></button>
+      <button type="button" role="radio" data-bb-scope="book" aria-checked="false" aria-label="This book" tabindex="-1">Book<span class="bb-count"></span></button>
+      <button type="button" role="radio" data-bb-scope="all" aria-checked="false" aria-label="All" tabindex="-1">All<span class="bb-count"></span></button>
+    </div>
     <div class="bb-tools">
       <button id="bb-new" type="button" aria-label="New note" title="New note">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -128,6 +224,10 @@
       <button id="bb-close" type="button" aria-label="Close panel">×</button>
     </div>
   </header>
+  <div id="bb-reading" class="bb-reading" role="status" hidden>
+    <span class="bb-reading-text"></span>
+    <button type="button" class="bb-btn">Show</button>
+  </div>
   <main></main>
   <script type="module" src="panel.js"></script>
 </body>

@@ -70,6 +70,7 @@ suggestion.
 | Any rendering of notes | `src/ui/app/*`, styled by `src/ui/ui.css`: the list in `list.js` (T-021), which also makes room for an open row; the editor in `editor.js` (T-022) |
 | The topic and tag combobox in the editor | `src/ui/app/suggest.js`, a copy of the save popover's `suggestionList`, because a classic script cannot import an ES module. `test/save-popover.test.js` holds the two `startRow` functions together |
 | Trashing notes with an undo toast, and the count confirm for several | `src/ui/app/trash.js` (`moveToTrash`, `offerUndo`), on `toast.js` and `dialog.js` (T-022) |
+| Which notes the side panel lists: chapter, book or all, and its header control | `src/ui/app/scope.js`, rules held by `test/scope.test.js`; `panel.js` follows the chapter from the host's `context` message, counts the three scopes and holds the list while an editor is open (T-023). The notes page does not use it |
 | The app's line to the worker, and hearing `notesRev` | `src/ui/app/store.js`: `ask()`, `loadLookups()`, `onNotesChange()` |
 | Things both the worker and pages need | `src/shared/*` |
 

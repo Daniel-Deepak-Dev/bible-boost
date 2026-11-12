@@ -378,6 +378,14 @@ test('a chapter or verse must look like one', () => {
   assert.throws(() => cleanNoteFilter({ verseKey: 'EXO.13' }), /not a verse/);
 });
 
+test('a book must be a three-character code', () => {
+  assert.equal(cleanNoteFilter({ book: 'EXO' }).book, 'EXO');
+  assert.equal(cleanNoteFilter({ book: '1CO' }).book, '1CO');
+  assert.throws(() => cleanNoteFilter({ book: 'EXO.13' }), /not a book/);
+  assert.throws(() => cleanNoteFilter({ book: 'Exodus' }), /not a book/);
+  assert.throws(() => cleanNoteFilter({ book: 'exo' }), /not a book/);
+});
+
 test('a date range must be numbers, in order', () => {
   assert.deepEqual(cleanNoteFilter({ from: 1, to: 2 }), { trashed: false, from: 1, to: 2 });
   assert.throws(() => cleanNoteFilter({ from: 'today' }), /timestamp/);

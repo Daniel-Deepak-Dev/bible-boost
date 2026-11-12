@@ -10,7 +10,8 @@
  *
  * Nothing here reads the panel's contents or knows what it shows. It places the box, remembers whether
  * it was open and pinned and how wide, narrows the page beside a pinned panel (T-018), lets the user
- * drag its edge (T-019), tells it which theme bible.com is in (T-020), and carries messages.
+ * drag its edge (T-019), tells it which theme bible.com is in (T-020) and which chapter is on screen
+ * (T-023), and carries messages.
  *
  * Classic script, and the manifest runs it AFTER bible-dom.js, which it reads as it loads. content.js
  * runs before this file and reaches it through BB.panel?. at the moment of each refresh.
@@ -90,7 +91,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // pin writes storage on the panel's say-so, which is safe only because onMessage below checks the
   // sender's window and not just its origin (B-012).
   const HANDLERS = {
-    ready() { frameReady = true; announce(); relayTheme(true); },
+    ready() { frameReady = true; announce(); relayTheme(true); relayContext(true); },
     close() { setOpen(false); },
     pin(msg) { if (typeof msg.pinned === 'boolean') setPinned(msg.pinned); },
   };
@@ -169,6 +170,56 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // before the panel's body exists. The page can frame its own copy with any hash it likes (B-012), and
   // all that buys it is the colour of a panel it made, so it is fit for display and nothing else.
   const panelSrc = () => `${PANEL_URL}#theme=${pageTheme()}`;
+
+  // ---------- Context ----------
+  // T-023 R4. The panel lists the notes of the chapter on screen, and the frame cannot see the page, so
+  // this says which chapter that is: { bb: 'context', ref: 'EXO.13', label, versions }. ref is parseUrl's
+  // chapter, null on a book intro (01-urls-and-routing.md, trap 1), where the panel falls back to All.
+  // versions is the two version ids in the address, primary first, which nothing in the panel reads yet.
+  //
+  // label is the chapter in the reader's own words, "யாத்திராகமம் 13", for the panel's "Now reading"
+  // line (R6). Localized book names exist only in the page (07-i18n-and-scripts.md), so it is the
+  // primary column's <h1>, found the way capture.js finds it for a verse's displayRef. It is sent only
+  // when it ends in the address's chapter number. Client-side navigation changes the address and the
+  // heading at different moments, in either order, and in between the heading names the other chapter;
+  // null then is right, and the panel shows the USFM until the next pass brings both into line. Capped
+  // because it comes from the page and is shown in a 280px line.
+  const LABEL_MAX = 80;
+
+  function chapterLabel(loc) {
+    if (!loc.ref) return null;
+    const col = primaryColumn();
+    const heading = col && BB.capture?.headingOf?.(col);
+    const text = heading?.textContent.replace(/\s+/g, ' ').trim().normalize('NFC');
+    if (!text || text.length > LABEL_MAX) return null;
+    const chapter = loc.ref.split('.')[1];
+    return new RegExp(`(?<!\\d)${chapter}$`).test(text) ? text : null;
+  }
+
+  // Sent from render(), which content.js calls at the end of every refresh(), so a chapter changed by
+  // client-side navigation reaches the panel on the same pass that re-aligns it, with no observer or
+  // poll of its own (01-urls-and-routing.md: hook schedule(), do not add a fifth loop). Compared as a
+  // string first, because that pass runs on every mutation burst and the chapter rarely changes.
+  //
+  // Only once the frame is listening, which is also what keeps a page where the panel was never opened
+  // from paying for the heading lookup. Not away from a reader page, where the panel is hidden and the
+  // chapter it last showed is still the most useful one to come back to.
+  let relayedContext = null;
+
+  function relayContext(force = false) {
+    const loc = frameReady && parseUrl();
+    if (!loc) return;
+    const msg = {
+      bb: 'context',
+      ref: loc.ref,
+      label: chapterLabel(loc),
+      versions: [...new Set([loc.id, loc.parallel].filter(Boolean))],
+    };
+    const key = JSON.stringify(msg);
+    if (key === relayedContext && !force) return;
+    relayedContext = key;
+    send(msg);
+  }
 
   // ---------- Building ----------
   // A real button, for what that gives away for free: Tab reaches it, and Enter and Space click it.
@@ -328,10 +379,14 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
   // The primary column, found by its vid and never by position (03-columns-and-versions.md), because it
   // is the one every reader page has. After align() the other column's verses start level with it.
   // The first verse stands in when the reader is above all of them, at the top of the chapter.
-  function readAnchor() {
+  function primaryColumn() {
     const id = parseUrl()?.id;
     const cols = columnEls();
-    const col = cols.find((c) => c.getAttribute('class').match(VID_RE)[1] === id) || cols[0];
+    return cols.find((c) => c.getAttribute('class').match(VID_RE)[1] === id) || cols[0] || null;
+  }
+
+  function readAnchor() {
+    const col = primaryColumn();
     if (!col) return null;
     const line = innerHeight * READING_LINE;
     let anchor = null;
@@ -567,6 +622,7 @@ var BB = (typeof BB !== 'undefined') ? BB : {};
     setRootProp('--bb-panel-width', shown ? `${state.panelWidth}%` : null);
     setSqueeze(squeezing());
     keepPlace();
+    relayContext();
   }
 
   // ---------- Opening, closing and pinning ----------

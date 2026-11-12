@@ -87,7 +87,19 @@ taller, and it fires. Nothing else calls `schedule()` for a pin. Seen working in
 real Chrome on 2026-11-11, after both pin and unpin.
 
 **If you add a feature that must survive navigation, hook `schedule()` — do not
-add a fifth polling loop.**
+add a fifth polling loop.** The side panel's chapter relay (T-023) does: it runs
+from `panel-host.js`'s `render()`, which `refresh()` calls on every pass.
+
+**The address and the chapter heading change together.** The reader's chapter
+arrows are links labelled **Previous Chapter** and **Next Chapter**, round
+**‹** and **›** buttons at the lower left and right of the reader. On Exodus 13,
+clicking **Next Chapter** changed the path to `EXO.14` and the primary `<h1>` to
+"யாத்திராகமம் 14" within one 10 ms sample, 95 ms after the click (measured
+2026-11-12, on the live page, with no extension). One navigation, so code that
+reads both should still tolerate them disagreeing for a pass.
+
+`/bible/111/JHN.INTRO1.NIV` is a real book intro to test against: its `<h1>` is
+"John Intro", and its **Next Chapter** goes to `JHN.1.NIV`.
 
 A full load is different: both columns are in the server's HTML, verse 140 of Psalm
 119 included (measured 2026-11-10), so they exist when a content script runs at

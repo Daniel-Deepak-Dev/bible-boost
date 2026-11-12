@@ -281,6 +281,14 @@ Each of these cost a round of confusion during T-012.
   through the listener that registered. `panel.js` posts `ready` to a parent that is
   itself and is refused with a warning about the target origin, which is harmless.
   The editor, the toasts and the dialog of T-022 were all checked this way.
+
+  **The page can stand in for the host.** Serve `panel.js` with its `HOST_ORIGIN`
+  replaced by `location.origin`. On its own, the panel's `window.parent` is the
+  window itself, so `window.postMessage({ bb: 'context', ref: 'EXO.14', label:
+  'Exodus 14' }, location.origin)` passes `isFromHost()` and plays `panel-host.js`
+  moving to another chapter. T-023's scope, counts and hold were all driven this
+  way. Keep the stub's `storage` in `localStorage` if a check needs the panel's
+  stored choice to survive a reload.
 - **A hidden pane never delivers a `<dialog>`'s `close` event.** `close()` shut it and
   the event never came, so code waiting on the event waited for good: the panel's
   queue of actions stopped behind it. `dialog.js` now answers from its buttons and

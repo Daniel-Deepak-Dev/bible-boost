@@ -1,7 +1,8 @@
 /*
  * BibleBoost — the side panel's page
  * The frame panel-host.js opens on bible.com (T-017): its pin (T-018), the page's theme (T-020), the
- * note list (T-021), and editing, creating and trashing notes in it (T-022).
+ * note list (T-021), editing, creating and trashing notes in it (T-022), and listing the chapter on
+ * screen first (T-023).
  *
  * This page cannot see bible.com. Anything page-shaped comes from src/content/panel-host.js by
  * postMessage, and the table of those messages is in work/understandings/extension/03-messaging.md.
@@ -13,7 +14,11 @@ import { createEditor } from './app/editor.js';
 import { createToasts } from './app/toast.js';
 import { moveToTrash, offerUndo } from './app/trash.js';
 import { chooseDialog } from './app/dialog.js';
-import { ask } from './app/store.js';
+import { ask, onNotesChange } from './app/store.js';
+import {
+  DEFAULT_SCOPE, bookOf, chapterName, cleanLabel, cleanRef, cleanScope, createScopeControl,
+  effectiveScope, emptyText, filterFor, inFilter, sameFilter,
+} from './app/scope.js';
 
 // The one page this can be framed in that means anything. Only www, because that is the only host the
 // content script matches.
@@ -62,6 +67,13 @@ const HANDLERS = {
     root.classList.remove(msg.theme === 'dark' ? 'light' : 'dark');
     root.classList.add(msg.theme);
   },
+
+  // The chapter on screen, from panel-host.js (T-023 R4). Checked here and not trusted: a page script
+  // can post one too, and the most it can then do is show the user a different chapter of their own
+  // notes. Nothing it sends is written anywhere. versions is not read yet.
+  context(msg) {
+    onContext({ ref: cleanRef(msg.ref), label: cleanLabel(msg.label) });
+  },
 };
 
 // Own-property only, so that { bb: 'constructor' } finds nothing.
@@ -108,6 +120,13 @@ let keepId = null;
 // A note that closes by being saved has moved to the top, as the newest, and its row is highlighted
 // there so that it can be seen what was updated (decided with the user, 2026-11-12). A new note's row
 // becomes the stored note's row first.
+//
+// A note written here has no verse (T-022 R4), so it is in no chapter and no book, and with either scope
+// on it leaves the list the moment it is saved. The toast says where it went, and takes the user there.
+//
+// The chapter may have changed while the editor was open (T-023 R6). Its closing is "when they finish",
+// so the list follows the page now, behind whatever else is in the queue: when the editor closed because
+// another note is opening, that note's editor is open by the time this runs, and the list waits again.
 function startEditor(note) {
   const ed = createEditor({
     note,
@@ -117,6 +136,10 @@ function startEditor(note) {
       if (editor === ed) editor = null;
       if (saved && list.openId === NEW_ROW) list.adopt(saved.id);
       list.collapse({ focus, keep: keepId, flash: !!saved });
+      if (saved && !note && shown && !inFilter(saved, shown.filter)) {
+        toasts.show({ message: 'Saved under All, as it has no verse.', action: { label: 'Show', run: () => choose('all') } });
+      }
+      if (pending) serial(follow);
     },
   });
   editor = ed;
@@ -202,15 +225,213 @@ function onGone(id) {
 
 document.getElementById('bb-new').addEventListener('click', newNote);
 
+// ---------- Scope (T-023) ----------
+// The panel opens on the chapter being read, because the three notes that matter right now should not
+// be hunted for among all of them. The notes page will list everything; this is what makes the panel
+// part of reading rather than an archive.
+//
+// scope is the user's choice, from storage.local (R7), and context is the chapter on screen as the host
+// last said (R4). Both are null until they are known, and the list asks for nothing until both are, so
+// it never shows every note for a moment before the chapter's.
+//
+// shown is what the list is showing, { scope, ref, label, filter }, where scope is what the user chose
+// unless the page has no chapter (R9). pending is true while the page has moved to another chapter and
+// an open editor holds the list where it was (R6).
+//
+// panelScope sits in storage.local beside the host's panelOpen, panelPinned and panelWidth, and for the
+// same reason: it is how this device's panel was left, not a setting that should follow the user.
+const SCOPE_KEY = 'panelScope';
+
+// The host answers 'ready' with the chapter at once. If it never does, as with the panel opened on its
+// own for a test, the panel stops waiting and lists everything, as on a page with no chapter.
+const CONTEXT_WAIT_MS = 1000;
+
+// A bulk change arrives as several signals in a row, and each would recount all three scopes.
+const COUNT_SETTLE_MS = 50;
+
+let scope = null;
+let context = null;
+let shown = null;
+let pending = false;
+
+const reading = document.getElementById('bb-reading');
+const readingText = reading.querySelector('.bb-reading-text');
+const scopeControl = createScopeControl(document.getElementById('bb-scope'), { onChoose: choose });
+
+// The chapter the counts and the control speak of: while the list waits, the one it is still showing, so
+// that the numbers agree with the rows under them; otherwise the one on screen.
+const here = () => (pending ? shown : context) ?? { ref: null, label: null };
+
+function paintScope() {
+  const { ref, label } = here();
+  scopeControl.set({ shown: shown?.scope ?? effectiveScope(scope ?? DEFAULT_SCOPE, ref), ref, label, counts: counted.ref === ref ? counts : { all: counts.all } });
+}
+
+// R6's line under the header. A page with no chapter has nothing to name, and still changes the list,
+// to All.
+function setPending(on) {
+  pending = on;
+  reading.hidden = !on;
+  if (on) {
+    readingText.textContent = context.ref ? `Now reading ${chapterName(context.ref, context.label)}` : 'Now on a page with no chapter';
+  }
+}
+
+// ---------- Counts ----------
+// R3: how many notes each scope holds, so that "Chap 0" beside "Book 12" says the chapter is empty, and
+// not that the panel is broken. Three asks of limit 0, which the worker answers with the total alone
+// (schema.js, cleanPage): the chapter's and the book's from byVerse, All's from two index counts.
+//
+// Asked again on every change to the notes and every move to another chapter. The generation drops an
+// answer overtaken by a later question, and counted is the chapter they were asked for, so a count
+// is never drawn against a chapter it is not about: until the new ones arrive, Chap and Book show none.
+let counts = { chapter: null, book: null, all: null };
+let counted = { ref: undefined };
+let countGen = 0;
+let countTimer = 0;
+
+function recount() {
+  clearTimeout(countTimer);
+  countTimer = setTimeout(countNow, COUNT_SETTLE_MS);
+}
+
+async function countNow() {
+  const gen = ++countGen;
+  const { ref } = here();
+  const total = async (filter) => {
+    const reply = await ask({ type: 'notes/list', filter, page: { offset: 0, limit: 0 } });
+    return reply.ok ? reply.total : null;
+  };
+  const [chapter, book, all] = await Promise.all([
+    ref ? total({ chapter: ref }) : null,
+    ref ? total({ book: bookOf(ref) }) : null,
+    total({}),
+  ]);
+  if (gen !== countGen) return;
+  counts = { chapter, book, all };
+  counted = { ref };
+  paintScope();
+  if (shown && shown.ref === ref) list.setEmpty(emptyText(shown.scope, shown.ref, shown.label, counts));
+}
+
+// ---------- Following the page ----------
+// Puts the list on the chapter on screen, in the user's scope. Only with no editor open: every caller
+// either has none or has just closed it.
+function show() {
+  const { ref, label } = context;
+  const filter = filterFor(scope, ref);
+  shown = { scope: effectiveScope(scope, ref), ref, label, filter };
+  setPending(false);
+  list.setFilter(filter, { empty: emptyText(shown.scope, ref, label, counted.ref === ref ? counts : {}) });
+  paintScope();
+  recount();
+}
+
+// The list starts the first time both the scope and the chapter are known, whichever comes second.
+function start() {
+  if (shown || scope === null || context === null) return;
+  show();
+}
+
+// R5, after a client-side move to another chapter, and whenever an editor closes with the list held.
+//
+// All is the user's own choice of everything, and it is left alone. The chapter and the book follow the
+// page, and a move inside one book changes nothing in book scope but the name. With an editor open the
+// list stays as it is (R6), with the line under the header to say the page has moved on, and its Show
+// to go there now.
+async function follow() {
+  if (!shown) return;
+  if (scope === 'all') {
+    paintScope();
+    return;
+  }
+  const filter = filterFor(scope, context.ref);
+  if (sameFilter(filter, shown.filter)) {
+    shown = { ...shown, scope: effectiveScope(scope, context.ref), ref: context.ref, label: context.label };
+    setPending(false);
+    list.setEmpty(emptyText(shown.scope, shown.ref, shown.label, counted.ref === shown.ref ? counts : {}));
+    paintScope();
+    return;
+  }
+  if (editor) {
+    setPending(true);
+    paintScope();
+    return;
+  }
+  show();
+}
+
+function onContext(next) {
+  clearTimeout(contextTimer);
+  const moved = next.ref !== context?.ref;
+  context = next;
+  if (moved) paintScope();
+  recount();
+  if (!shown) start();
+  else serial(follow);
+}
+
+const contextTimer = setTimeout(() => {
+  if (context === null) onContext({ ref: null, label: null });
+}, CONTEXT_WAIT_MS);
+
+// R2, from the control. The open editor closes first, asking about any changes (T-022's note on this
+// task): a note from another chapter left open over a new list would confuse, and Keep editing leaves
+// the scope as it was. Choosing the scope already shown, while the list is held, is the same as Show.
+//
+// Written to storage only when it changes (AGENTS.md rule 8), and only from here, never because of a
+// message from the page.
+function choose(next) {
+  return serial(async () => {
+    if (!shown || (next === scope && !pending)) return;
+    if (!(await closeEditor())) return;
+    if (next !== scope) {
+      scope = next;
+      remember(next);
+    }
+    show();
+  });
+}
+
+function remember(value) {
+  try {
+    chrome.storage.local.set({ [SCOPE_KEY]: value }, () => void chrome.runtime.lastError);
+  } catch (err) {
+    console.debug('[BibleBoost] panel: could not remember the scope', err);
+  }
+}
+
+reading.querySelector('button').addEventListener('click', () => serial(async () => {
+  if (await closeEditor()) await follow();
+}));
+
+// R7. A choice that cannot be read is the default, and the list still starts.
+try {
+  chrome.storage.local.get({ [SCOPE_KEY]: DEFAULT_SCOPE }, (got) => {
+    scope = cleanScope(chrome.runtime.lastError ? DEFAULT_SCOPE : got[SCOPE_KEY]);
+    start();
+  });
+} catch (err) {
+  console.debug('[BibleBoost] panel: could not read the scope', err);
+  scope = DEFAULT_SCOPE;
+}
+
 // The list fills <main>, and the toasts sit under it, in the flow, so that they shorten the list
 // rather than cover its last row (R6).
 //
 // The handle on globalThis is for the console, as save-popover.js keeps BB.savePopover.debug: in the
 // panel's own frame (right-click inside it, Inspect), bbPanel.list.stats says how many rows the DOM
-// holds, bbPanel.list.setFilter({ tag: 'x' }) shows the filtered empty state before T-023 gives the
-// panel a filter of its own, and bbPanel.trash([...ids]) trashes several notes at once the way T-027's
-// selection will (decided with the user, 2026-11-12). Nothing outside this frame can reach it: the page
-// that frames the panel is another origin.
-const list = createList(document.querySelector('main'), { onOpen, onTrash, onGone });
+// holds, bbPanel.list.setFilter({ tag: 'x' }) shows a filter the panel has no control for yet,
+// bbPanel.trash([...ids]) trashes several notes at once the way T-027's selection will (decided with the
+// user, 2026-11-12), and bbPanel.scope says what the list is showing and what the counts are (T-023).
+// Nothing outside this frame can reach it: the page that frames the panel is another origin.
+//
+// filter: null, so the list waits for the scope and the chapter (T-023) before it asks for anything.
+const list = createList(document.querySelector('main'), { onOpen, onTrash, onGone, filter: null });
 const toasts = createToasts(document.body, { onFocusLost: () => list.focus() });
-globalThis.bbPanel = { list, trash: onTrash };
+onNotesChange(recount);
+globalThis.bbPanel = {
+  list,
+  trash: onTrash,
+  get scope() { return { chosen: scope, shown, context, pending, counts: { ...counts, for: counted.ref } }; },
+};

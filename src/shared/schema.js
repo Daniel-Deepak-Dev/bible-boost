@@ -173,6 +173,7 @@ export function retag(tags, sources, target) {
 // nothing else, and a capture that does not fit should fail where it can be seen.
 const USFM_RE = /^([A-Z0-9]{3})\.(\d+)\.(\d+)$/;
 const CHAPTER_RE = /^[A-Z0-9]{3}\.\d+$/;
+const BOOK_RE = /^[A-Z0-9]{3}$/;
 
 // bible.com can write a combined verse as "JHN.1.1+JHN.1.2" in data-usfm, and the rule everywhere
 // is to take the part before the plus (02-verse-dom.md).
@@ -293,6 +294,13 @@ export function cleanNoteFilter(raw) {
   if (raw.chapter !== undefined) {
     if (typeof raw.chapter !== 'string' || !CHAPTER_RE.test(raw.chapter)) throw new Error(`"${raw.chapter}" is not a chapter reference.`);
     filter.chapter = raw.chapter;
+  }
+  // T-023's book scope. The code alone, as a verse key starts with it: "EXO", never "Exodus", since a
+  // localized name exists only in bible.com's DOM (07-i18n-and-scripts.md). Any three characters of the
+  // key's shape, as USFM_RE takes them, so a note under a code outside the 66 can still be found.
+  if (raw.book !== undefined) {
+    if (typeof raw.book !== 'string' || !BOOK_RE.test(raw.book)) throw new Error(`"${raw.book}" is not a book code.`);
+    filter.book = raw.book;
   }
   for (const end of ['from', 'to']) {
     if (raw[end] === undefined) continue;

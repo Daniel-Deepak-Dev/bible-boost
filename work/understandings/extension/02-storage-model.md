@@ -7,7 +7,7 @@ Confidence: **design decision**, approved. Schema is normative.
 | Where | What | Why |
 |---|---|---|
 | IndexedDB `bibleboost` | notes, topics, tags, meta | indexed queries, partial reads, scales |
-| `chrome.storage.local` | panel open and pinned (`panelOpen`, `panelPinned`), panel width (`panelWidth`), last filter, `notesRev`, `lastExportAt`, `persistence` | per-device UI state and the change signal |
+| `chrome.storage.local` | panel open and pinned (`panelOpen`, `panelPinned`), panel width (`panelWidth`), the panel's scope (`panelScope`: `chapter`, `book` or `all`, written by `panel.js` on a click and never on a message, T-023), `notesRev`, `lastExportAt`, `persistence` | per-device UI state and the change signal |
 
 `panelWidth` is a **percentage of the window** (a number, `30` by default), not
 pixels, so that a width chosen on a laptop is the same share of an external
@@ -144,8 +144,10 @@ in a Chrome 152 page on 2026-11-09 (T-005).
   not always the page's primary version: read its `abbr` rather than assuming. Blank
   text is different: `''` passes, and it is what NIV's Matthew 17:21 gives.
 
-How `notes/list` chooses an index, in `planNoteQuery`: verse, chapter, tag or topic
-narrow it and sort in memory. Otherwise a cursor walks `byUpdated` (or `byDeleted`
+How `notes/list` chooses an index, in `planNoteQuery`: verse, chapter, book, tag or
+topic narrow it and sort in memory. A chapter is the `byVerse` range from `EXO.13.`
+and a book the one from `EXO.`, each ending in a dot so that `EXO.1` cannot reach
+`EXO.13` (T-023 R8). Otherwise a cursor walks `byUpdated` (or `byDeleted`
 for Trash, or the store itself for created order) and keeps only the page. The
 unfiltered list and Trash get `total` from index counts, so they stop at the page.
 

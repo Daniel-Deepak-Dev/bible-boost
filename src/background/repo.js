@@ -212,6 +212,9 @@ export async function purgeNotes(ids) {
 // A note with several verses in one chapter sits in byVerse once per verse, so the prefix ends in a
 // dot: without it EXO.1 would also match every key of EXO.13. ￿ is the top of the UTF-16 range
 // IndexedDB compares strings by, so the upper bound is past anything after that prefix.
+//
+// A book is the same range one level up (T-023 R8): "EXO." takes in every chapter of Exodus and
+// nothing of any other book, since every code is exactly three characters.
 const prefixRange = (prefix) => ({ lower: prefix, upper: `${prefix}￿` });
 
 // R6 and T-005's note on nulls. Picks the one index a query reads, without touching a database, so
@@ -231,6 +234,7 @@ export function planNoteQuery(filter, sort) {
   const narrow =
     filter.verseKey !== undefined ? { index: 'byVerse', range: { only: filter.verseKey } } :
     filter.chapter !== undefined ? { index: 'byVerse', range: prefixRange(`${filter.chapter}.`) } :
+    filter.book !== undefined ? { index: 'byVerse', range: prefixRange(`${filter.book}.`) } :
     filter.tag !== undefined ? { index: 'byTag', range: { only: filter.tag } } :
     typeof filter.topicId === 'string' ? { index: 'byTopic', range: { only: filter.topicId } } :
     null;
@@ -261,6 +265,7 @@ export function noteMatches(note, filter) {
   if (filter.tag !== undefined && !note.tags.includes(filter.tag)) return false;
   if (filter.verseKey !== undefined && !note.verseKeys.includes(filter.verseKey)) return false;
   if (filter.chapter !== undefined && !note.verseKeys.some((k) => k.startsWith(`${filter.chapter}.`))) return false;
+  if (filter.book !== undefined && !note.verseKeys.some((k) => k.startsWith(`${filter.book}.`))) return false;
   if (filter.from !== undefined && note.updatedAt < filter.from) return false;
   if (filter.to !== undefined && note.updatedAt > filter.to) return false;
   return true;
